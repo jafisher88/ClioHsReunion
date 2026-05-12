@@ -17,6 +17,13 @@ interface BlastRow {
   SentAt: string;
 }
 
+interface UnsubRow {
+  Email: string;
+  Source: string;
+  UnsubscribedAt: string | null;
+  SyncedAt: string;
+}
+
 // Precompute recipient counts so admins see scope before composing. Each
 // count subtracts anyone on the local Unsubscribes mirror (LEFT JOIN ... IS NULL).
 const [yes, maybe, all, vols, every, history, optedOut] = await Promise.all([
@@ -58,6 +65,16 @@ const [yes, maybe, all, vols, every, history, optedOut] = await Promise.all([
   env.DB.prepare(`SELECT COUNT(*) AS n FROM Unsubscribes`).first<{ n: number }>(),
 ]);
 const optedOutCount = optedOut?.n ?? 0;
+
+const unsubsResult = await env.DB
+  .prepare(`SELECT Email, Source, UnsubscribedAt, SyncedAt FROM Unsubscribes ORDER BY SyncedAt DESC`)
+  .all<UnsubRow>();
+const unsubs = unsubsResult.results ?? [];
+
+const audienceRow = await env.DB
+  .prepare(`SELECT Value FROM Settings WHERE Key = 'resend_audience_id'`)
+  .first<{ Value: string }>();
+const audienceConfigured = !!audienceRow?.Value;
 
 const counts = {
   'rsvp-yes':   yes?.n ?? 0,
@@ -106,7 +123,7 @@ const audienceLabel: Record<string, string> = {
       </p>
     </div>
     {optedOutCount > 0 && (
-      <a href="/admin/unsubscribes" class="inline-flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-300 hover:bg-brand-50 hover:ring-brand-300">
+      <a href="#unsubscribes" class="inline-flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-300 hover:bg-brand-50 hover:ring-brand-300">
         <span class="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true"></span>
         {optedOutCount} unsubscribed · auto-excluded
       </a>
@@ -206,6 +223,58 @@ const audienceLabel: Record<string, string> = {
         </div>
       </form>
     </div>
+  </section>
+
+  <section id="unsubscribes" class="mb-12">
+    <header class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+      <div>
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">
+          Unsubscribes
+          <span class="ml-1 font-mono text-xs font-bold text-brand-700">·{unsubs.length}</span>
+        </h2>
+        <p class="mt-1 max-w-2xl text-xs text-cream-700">
+          Mirrored from the Resend audience. These addresses are auto-excluded from every send.
+          {!audienceConfigured && <span class="text-rose-700"> Audience not created yet — click sync once to create it.</span>}
+        </p>
+      </div>
+      <button
+        id="unsubs-sync-btn"
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-400 transition-all hover:bg-brand-50 hover:ring-brand-300"
+      >
+        <span id="unsubs-sync-label">Sync from Resend</span>
+        <span aria-hidden="true">⟳</span>
+      </button>
+    </header>
+    <p id="unsubs-sync-message" class="mb-3 hidden rounded-lg border px-4 py-2 text-sm"></p>
+    {unsubs.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-6 text-center">
+        <p class="text-sm text-cream-700">No opt-outs yet. Unsubscribe clicks from reunion emails will appear here after the next sync.</p>
+      </div>
+    ) : (
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Source</th>
+              <th>Unsubscribed</th>
+              <th>Last synced</th>
+            </tr>
+          </thead>
+          <tbody>
+            {unsubs.map((u) => (
+              <tr>
+                <td class="mono">{u.Email}</td>
+                <td><span class="pill self">{u.Source}</span></td>
+                <td class="mono dim whitespace-nowrap">{fmtDate(u.UnsubscribedAt ?? '') || '—'}</td>
+                <td class="mono dim whitespace-nowrap">{fmtDate(u.SyncedAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
   </section>
 
   {blastHistory.length > 0 && (
@@ -363,6 +432,41 @@ const audienceLabel: Record<string, string> = {
       const label = audienceLabels[payload.audience] ?? payload.audience;
       if (!confirm(`Send "${payload.subject}" to ${label}? This cannot be unsent.`)) return;
       send(false);
+    });
+  })();
+
+  // Unsubscribes sync
+  (function () {
+    const btn = document.getElementById('unsubs-sync-btn');
+    const label = document.getElementById('unsubs-sync-label');
+    const msg = document.getElementById('unsubs-sync-message');
+    if (!btn || !label || !msg) return;
+    function show(text, tone) {
+      msg.textContent = text;
+      msg.classList.remove('hidden', 'border-rose-300', 'bg-rose-50', 'text-rose-800', 'border-emerald-300', 'bg-emerald-50', 'text-emerald-800', 'border-cream-300', 'bg-white/70', 'text-brand-800');
+      if (tone === 'error') msg.classList.add('border-rose-300', 'bg-rose-50', 'text-rose-800');
+      else if (tone === 'ok') msg.classList.add('border-emerald-300', 'bg-emerald-50', 'text-emerald-800');
+      else msg.classList.add('border-cream-300', 'bg-white/70', 'text-brand-800');
+    }
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      label.textContent = 'Syncing…';
+      try {
+        const res = await fetch('/api/admin/unsubscribes/sync', { method: 'POST' });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          show(body && body.error ? body.error : `Sync failed (${res.status})`, 'error');
+          btn.disabled = false;
+          label.textContent = 'Sync from Resend';
+          return;
+        }
+        show(`Synced — ${body.fetched} contacts · ${body.upserted} opted out · ${body.cleared} re-subscribed. Reloading…`, 'ok');
+        setTimeout(() => location.reload(), 1200);
+      } catch {
+        show('Network error.', 'error');
+        btn.disabled = false;
+        label.textContent = 'Sync from Resend';
+      }
     });
   })();
 </script>
