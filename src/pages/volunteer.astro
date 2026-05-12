@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+import VolunteerForm from '../components/VolunteerForm.tsx';
+---
+
+<Layout title="Volunteer">
+  <div class="mx-auto max-w-2xl">
+    <header class="animate-fade-in text-center">
+      <p class="font-script text-2xl text-accent-600">Lend a hand</p>
+      <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Volunteer</h1>
+      <p class="mt-4 text-brand-700">
+        A reunion this good doesn't run itself. We need a few hands to set things up
+        the day before and a few more to clean up the day after. Either one earns you
+        bragging rights and the eternal thanks of the planning crew.
+      </p>
+    </header>
+
+    <div class="mt-10 rounded-2xl border-2 border-cream-300 bg-white/80 p-6 shadow-sm sm:p-10 animate-fade-up">
+      <VolunteerForm client:load />
+    </div>
+
+    <p class="mt-8 text-center text-sm text-brand-600">
+      Already RSVP'd? Cool — you can still sign up to help, separate from your attendance.
+    </p>
+  </div>
+</Layout>

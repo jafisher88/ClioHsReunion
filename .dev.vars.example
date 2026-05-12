@@ -2,6 +2,10 @@
 # Copy this file to .dev.vars and fill in your values
 # NEVER commit .dev.vars — it contains credentials
 
+# Shared password for the /admin page. Required for /admin to be reachable.
+# In production, set with: npx wrangler secret put ADMIN_PASSWORD
+ADMIN_PASSWORD=
+
 # Optional: Resend API key for emailing RSVP confirmations to the organizer.
 # Leave blank to skip email and only persist RSVPs to D1.
 RESEND_API_KEY=

@@ -4,6 +4,7 @@ const links = [
   { href: '/', label: 'Home' },
   { href: '/event', label: 'Event' },
   { href: '/rsvp', label: 'RSVP' },
+  { href: '/volunteer', label: 'Volunteer' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/classmates', label: 'Classmates' },
   { href: '/contact', label: 'Contact' },

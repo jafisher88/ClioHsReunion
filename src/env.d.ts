@@ -7,6 +7,7 @@ declare namespace Cloudflare {
     DB: D1Database;
     EVENT_NAME: string;
     VENUE: string;
+    ADMIN_PASSWORD?: string;
     RESEND_API_KEY?: string;
     ORGANIZER_EMAIL?: string;
   }
