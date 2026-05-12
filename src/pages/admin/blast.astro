@@ -17,22 +17,47 @@ interface BlastRow {
   SentAt: string;
 }
 
-// Precompute recipient counts so admins see scope before composing.
-const [yes, maybe, all, vols, every, history] = await Promise.all([
-  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'yes'`).first<{ n: number }>(),
-  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'maybe'`).first<{ n: number }>(),
-  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps`).first<{ n: number }>(),
-  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Volunteers`).first<{ n: number }>(),
-  env.DB.prepare(`SELECT COUNT(*) AS n FROM (
-    SELECT DISTINCT LOWER(Email) AS e FROM Rsvps
-    UNION
-    SELECT DISTINCT LOWER(Email) AS e FROM Volunteers
-  )`).first<{ n: number }>(),
+// Precompute recipient counts so admins see scope before composing. Each
+// count subtracts anyone on the local Unsubscribes mirror (LEFT JOIN ... IS NULL).
+const [yes, maybe, all, vols, every, history, optedOut] = await Promise.all([
+  env.DB.prepare(`
+    SELECT COUNT(DISTINCT LOWER(r.Email)) AS n FROM Rsvps r
+      LEFT JOIN Unsubscribes u ON u.Email = LOWER(r.Email)
+     WHERE r.Attending = 'yes' AND u.Email IS NULL
+  `).first<{ n: number }>(),
+  env.DB.prepare(`
+    SELECT COUNT(DISTINCT LOWER(r.Email)) AS n FROM Rsvps r
+      LEFT JOIN Unsubscribes u ON u.Email = LOWER(r.Email)
+     WHERE r.Attending = 'maybe' AND u.Email IS NULL
+  `).first<{ n: number }>(),
+  env.DB.prepare(`
+    SELECT COUNT(DISTINCT LOWER(r.Email)) AS n FROM Rsvps r
+      LEFT JOIN Unsubscribes u ON u.Email = LOWER(r.Email)
+     WHERE u.Email IS NULL
+  `).first<{ n: number }>(),
+  env.DB.prepare(`
+    SELECT COUNT(DISTINCT LOWER(v.Email)) AS n FROM Volunteers v
+      LEFT JOIN Unsubscribes u ON u.Email = LOWER(v.Email)
+     WHERE u.Email IS NULL
+  `).first<{ n: number }>(),
+  env.DB.prepare(`
+    SELECT COUNT(*) AS n FROM (
+      SELECT DISTINCT LOWER(r.Email) AS e FROM Rsvps r
+        LEFT JOIN Unsubscribes u ON u.Email = LOWER(r.Email)
+       WHERE u.Email IS NULL
+      UNION
+      SELECT DISTINCT LOWER(v.Email) AS e FROM Volunteers v
+        LEFT JOIN Unsubscribes u ON u.Email = LOWER(v.Email)
+       WHERE u.Email IS NULL
+    )
+  `).first<{ n: number }>(),
   env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt
                     FROM EmailBlasts
                 ORDER BY SentAt DESC
                    LIMIT 10`).all<BlastRow>(),
+  env.DB.prepare(`SELECT COUNT(*) AS n FROM Unsubscribes`).first<{ n: number }>(),
 ]);
+const optedOutCount = optedOut?.n ?? 0;
 
 const counts = {
   'rsvp-yes':   yes?.n ?? 0,
@@ -80,6 +105,12 @@ const audienceLabel: Record<string, string> = {
         replies route back to <span class="font-mono text-brand-700">{admin.email}</span>.
       </p>
     </div>
+    {optedOutCount > 0 && (
+      <a href="/admin/unsubscribes" class="inline-flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-300 hover:bg-brand-50 hover:ring-brand-300">
+        <span class="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true"></span>
+        {optedOutCount} unsubscribed · auto-excluded
+      </a>
+    )}
   </header>
 
   <section class="mb-12">

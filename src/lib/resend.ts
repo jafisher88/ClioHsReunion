@@ -19,6 +19,22 @@ export interface ResendEmail {
   html: string;
   text: string;
   replyTo?: string;
+  audienceId?: string;       // associates the send with a Resend audience so unsubscribes flow back
+  headers?: Record<string, string>;
+}
+
+export interface ResendAudience {
+  id: string;
+  name: string;
+}
+
+export interface ResendContact {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  unsubscribed?: boolean;
+  created_at?: string;
 }
 
 export interface ResendSendResult {
@@ -85,6 +101,7 @@ export function renderHtmlEmail(args: { subject: string; bodyText: string }): st
             <td style="padding:16px 32px 32px 32px;border-top:1px solid #efe5cf;color:#6b5b37;font-size:12px;line-height:1.5">
               <p style="margin:8px 0 4px 0">You're getting this because you RSVP'd or volunteered for the Clio HS Class of 2006 reunion.</p>
               <p style="margin:0 0 4px 0">Reunion site: <a href="https://cliohsreunion.com" style="color:#c75603;text-decoration:underline">cliohsreunion.com</a></p>
+              <p style="margin:8px 0 4px 0">Don't want these? <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#c75603;text-decoration:underline">Unsubscribe</a>.</p>
               <p style="margin:0;color:#8d7849;font-size:11px;letter-spacing:0.06em">Once a Mustang, always a Mustang.</p>
             </td>
           </tr>
@@ -96,10 +113,7 @@ export function renderHtmlEmail(args: { subject: string; bodyText: string }): st
 </html>`;
 }
 
-/**
- * Send a single email via Resend.
- */
-export async function resendSend(apiKey: string, msg: ResendEmail): Promise<ResendSendResult> {
+function buildPayload(msg: ResendEmail): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     from: REUNION_FROM,
     to: [msg.to],
@@ -108,14 +122,22 @@ export async function resendSend(apiKey: string, msg: ResendEmail): Promise<Rese
     text: msg.text,
   };
   if (msg.replyTo) payload.reply_to = msg.replyTo;
+  if (msg.audienceId) payload.audience_id = msg.audienceId;
+  if (msg.headers && Object.keys(msg.headers).length > 0) payload.headers = msg.headers;
+  return payload;
+}
 
+/**
+ * Send a single email via Resend.
+ */
+export async function resendSend(apiKey: string, msg: ResendEmail): Promise<ResendSendResult> {
   const res = await fetch(`${RESEND_API}/emails`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(buildPayload(msg)),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
@@ -136,17 +158,7 @@ export async function resendBatch(
   if (messages.length > 100) {
     throw new Error('resendBatch supports at most 100 messages per call.');
   }
-  const payload = messages.map((msg) => {
-    const m: Record<string, unknown> = {
-      from: REUNION_FROM,
-      to: [msg.to],
-      subject: msg.subject,
-      html: msg.html,
-      text: msg.text,
-    };
-    if (msg.replyTo) m.reply_to = msg.replyTo;
-    return m;
-  });
+  const payload = messages.map(buildPayload);
 
   const res = await fetch(`${RESEND_API}/emails/batch`, {
     method: 'POST',
@@ -161,4 +173,93 @@ export async function resendBatch(
     throw new Error(`Resend batch failed (${res.status}): ${body}`);
   }
   return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Audiences / Contacts — used to capture unsubscribe state from Resend.
+// Audience reference: https://resend.com/docs/api-reference/audiences/list-audiences
+// Contact  reference: https://resend.com/docs/api-reference/contacts/list-contacts
+// ---------------------------------------------------------------------------
+
+export async function resendListAudiences(apiKey: string): Promise<ResendAudience[]> {
+  const res = await fetch(`${RESEND_API}/audiences`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Resend list audiences failed (${res.status}): ${body}`);
+  }
+  const json = await res.json() as { data?: ResendAudience[] };
+  return json.data ?? [];
+}
+
+export async function resendCreateAudience(apiKey: string, name: string): Promise<ResendAudience> {
+  const res = await fetch(`${RESEND_API}/audiences`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Resend create audience failed (${res.status}): ${body}`);
+  }
+  return res.json() as Promise<ResendAudience>;
+}
+
+/**
+ * Ensure an audience exists with this name and return its id.
+ * Idempotent: looks up first, creates only on miss.
+ */
+export async function resendEnsureAudience(apiKey: string, name: string): Promise<string> {
+  const audiences = await resendListAudiences(apiKey);
+  const match = audiences.find((a) => a.name === name);
+  if (match) return match.id;
+  const created = await resendCreateAudience(apiKey, name);
+  return created.id;
+}
+
+/**
+ * Upsert a contact into an audience. Resend's POST is idempotent on email —
+ * 200 if it existed, 201 if newly created. We just swallow the response.
+ */
+export async function resendUpsertContact(
+  apiKey: string,
+  audienceId: string,
+  contact: { email: string; firstName?: string; lastName?: string; unsubscribed?: boolean },
+): Promise<void> {
+  const payload: Record<string, unknown> = {
+    email: contact.email.toLowerCase().trim(),
+  };
+  if (contact.firstName) payload.first_name = contact.firstName;
+  if (contact.lastName)  payload.last_name  = contact.lastName;
+  if (typeof contact.unsubscribed === 'boolean') payload.unsubscribed = contact.unsubscribed;
+
+  const res = await fetch(`${RESEND_API}/audiences/${audienceId}/contacts`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  // 409 / 422 mean the contact already exists in this audience; treat as success.
+  if (!res.ok && res.status !== 409 && res.status !== 422) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Resend upsert contact failed (${res.status}): ${body}`);
+  }
+}
+
+export async function resendListContacts(apiKey: string, audienceId: string): Promise<ResendContact[]> {
+  const res = await fetch(`${RESEND_API}/audiences/${audienceId}/contacts`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Resend list contacts failed (${res.status}): ${body}`);
+  }
+  const json = await res.json() as { data?: ResendContact[] };
+  return json.data ?? [];
 }

@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin } from '../../../lib/admin-auth';
-import { renderHtmlEmail, resendBatch, type ResendEmail } from '../../../lib/resend';
+import { renderHtmlEmail, resendBatch, resendUpsertContact, type ResendEmail } from '../../../lib/resend';
 import { personalize, resolveFirstNames } from '../../../lib/personalization';
+import { getAudienceId, listUnsubscribeHeaders } from '../../../lib/audience';
 
 const VALID_AUDIENCES = new Set([
   'rsvp-yes',
@@ -19,35 +20,47 @@ function jsonError(message: string, status: number): Response {
   return Response.json({ error: message }, { status });
 }
 
+async function unsubscribedSet(db: D1Database): Promise<Set<string>> {
+  const res = await db.prepare(`SELECT Email FROM Unsubscribes`).all<{ Email: string }>();
+  return new Set((res.results ?? []).map((r) => r.Email.toLowerCase().trim()));
+}
+
 async function recipientsFor(audience: string, db: D1Database, customEmails: string[] = []): Promise<string[]> {
+  let raw: string[];
   if (audience === 'custom') {
-    return Array.from(
+    raw = Array.from(
       new Set(
         customEmails
           .map((e) => e.trim().toLowerCase())
           .filter((e) => EMAIL_RE.test(e) && e.length <= 320),
       ),
     );
+  } else {
+    let sql: string;
+    switch (audience) {
+      case 'rsvp-yes':   sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'yes'`; break;
+      case 'rsvp-maybe': sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'maybe'`; break;
+      case 'rsvp-all':   sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps`; break;
+      case 'volunteers': sql = `SELECT DISTINCT LOWER(Email) AS email FROM Volunteers`; break;
+      case 'everyone':
+        sql = `SELECT email FROM (
+                 SELECT DISTINCT LOWER(Email) AS email FROM Rsvps
+                 UNION
+                 SELECT DISTINCT LOWER(Email) AS email FROM Volunteers
+               )`;
+        break;
+      default:
+        return [];
+    }
+    const res = await db.prepare(sql).all<{ email: string }>();
+    raw = (res.results ?? []).map((r) => r.email).filter((e) => e && EMAIL_RE.test(e));
   }
 
-  let sql: string;
-  switch (audience) {
-    case 'rsvp-yes':   sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'yes'`; break;
-    case 'rsvp-maybe': sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'maybe'`; break;
-    case 'rsvp-all':   sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps`; break;
-    case 'volunteers': sql = `SELECT DISTINCT LOWER(Email) AS email FROM Volunteers`; break;
-    case 'everyone':
-      sql = `SELECT email FROM (
-               SELECT DISTINCT LOWER(Email) AS email FROM Rsvps
-               UNION
-               SELECT DISTINCT LOWER(Email) AS email FROM Volunteers
-             )`;
-      break;
-    default:
-      return [];
-  }
-  const res = await db.prepare(sql).all<{ email: string }>();
-  return (res.results ?? []).map((r) => r.email).filter((e) => e && EMAIL_RE.test(e));
+  // Always exclude anyone on the local unsubscribe list. Resend will also
+  // suppress on its side via the audience, but filtering here keeps counts
+  // honest in the UI and avoids paying for ignored sends.
+  const blocked = await unsubscribedSet(db);
+  return raw.filter((e) => !blocked.has(e));
 }
 
 /** GET /api/admin/blast/recipients?audience=rsvp-yes → { count: N, emails?: […] } */
@@ -133,11 +146,36 @@ export const POST: APIRoute = async ({ request }) => {
   const subjectTpl = result.value.subject;
   const bodyTpl = result.value.body;
 
+  // Resolve/cache the Resend audience id so the unsubscribe link in the
+  // email footer routes back into a known audience.
+  let audienceId: string | undefined;
+  try {
+    audienceId = await getAudienceId(env.DB, env.RESEND_API_KEY!);
+  } catch (err) {
+    console.error('[blast] could not resolve Resend audience', err);
+    // Non-fatal: send still goes through, just without the audience hook.
+  }
+
+  // Upsert every recipient into the audience first so unsubscribes flow back.
+  // Best-effort; we don't want a single contact failure to block the blast.
+  if (audienceId) {
+    await Promise.all(recipients.map(async (email) => {
+      const firstName = byEmail.get(email.toLowerCase().trim());
+      try {
+        await resendUpsertContact(env.RESEND_API_KEY!, audienceId!, { email, firstName });
+      } catch (err) {
+        console.error('[blast] upsert contact failed', email, err);
+      }
+    }));
+  }
+
   // Send in batches of 100 (Resend's batch endpoint limit).
   const batches: string[][] = [];
   for (let i = 0; i < recipients.length; i += 100) {
     batches.push(recipients.slice(i, i + 100));
   }
+
+  const headers = audienceId ? listUnsubscribeHeaders() : undefined;
 
   let firstBatchId: string | undefined;
   for (const batch of batches) {
@@ -146,7 +184,7 @@ export const POST: APIRoute = async ({ request }) => {
       const subject = personalize(subjectTpl, firstName);
       const text = personalize(bodyTpl, firstName);
       const html = renderHtmlEmail({ subject, bodyText: text });
-      return { to, subject, html, text, replyTo: admin.email };
+      return { to, subject, html, text, replyTo: admin.email, audienceId, headers };
     });
     try {
       const res = await resendBatch(env.RESEND_API_KEY!, msgs);

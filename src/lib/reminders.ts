@@ -1,5 +1,6 @@
-import { renderHtmlEmail, resendBatch, type ResendEmail } from './resend';
-import { DEFAULT_FALLBACK, personalize, resolveFirstNames } from './personalization';
+import { renderHtmlEmail, resendBatch, resendUpsertContact, type ResendEmail } from './resend';
+import { personalize, resolveFirstNames } from './personalization';
+import { getAudienceId, listUnsubscribeHeaders } from './audience';
 
 export type ReminderKind = '30day' | '7day' | 'dayof';
 
@@ -121,7 +122,12 @@ async function recipientsFor(kind: ReminderKind, db: D1Database): Promise<string
     .all<{ Email: string }>();
   const alreadySet = new Set((already.results ?? []).map((r) => r.Email.toLowerCase()));
 
-  return rows.map((r) => r.email).filter((e) => e && !alreadySet.has(e));
+  const opted = await db.prepare(`SELECT Email FROM Unsubscribes`).all<{ Email: string }>();
+  const optedSet = new Set((opted.results ?? []).map((r) => r.Email.toLowerCase()));
+
+  return rows
+    .map((r) => r.email)
+    .filter((e) => e && !alreadySet.has(e) && !optedSet.has(e));
 }
 
 /**
@@ -161,6 +167,26 @@ export async function runReminder(args: {
 
   const { byEmail, fallback } = await resolveFirstNames(args.db, recipients);
 
+  let audienceId: string | undefined;
+  try {
+    audienceId = await getAudienceId(args.db, args.resendApiKey);
+  } catch (err) {
+    console.error('[reminders] audience resolve failed', err);
+  }
+
+  if (audienceId) {
+    await Promise.all(recipients.map(async (email) => {
+      const firstName = byEmail.get(email.toLowerCase().trim());
+      try {
+        await resendUpsertContact(args.resendApiKey, audienceId!, { email, firstName });
+      } catch (err) {
+        console.error('[reminders] upsert contact failed', email, err);
+      }
+    }));
+  }
+
+  const headers = audienceId ? listUnsubscribeHeaders() : undefined;
+
   for (let i = 0; i < recipients.length; i += 100) {
     const batch = recipients.slice(i, i + 100);
     const msgs: ResendEmail[] = batch.map((to) => {
@@ -168,7 +194,7 @@ export async function runReminder(args: {
       const subject = personalize(subjectTpl, firstName);
       const text = personalize(bodyTpl, firstName);
       const html = renderHtmlEmail({ subject, bodyText: text });
-      return { to, subject, html, text, replyTo: args.replyTo };
+      return { to, subject, html, text, replyTo: args.replyTo, audienceId, headers };
     });
     try {
       await resendBatch(args.resendApiKey, msgs);
