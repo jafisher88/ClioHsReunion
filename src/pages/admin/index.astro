@@ -1,5 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 
@@ -31,7 +31,7 @@ interface VolunteerRow {
 }
 
 const db = env.DB;
-const [rsvpResult, volunteerResult, rsvpStatsResult, volunteerStatsResult] = await Promise.all([
+const [rsvpResult, volunteerResult, rsvpStatsResult, volunteerStatsResult, ledgerNetResult] = await Promise.all([
   db.prepare('SELECT * FROM Rsvps ORDER BY CreatedAt DESC').all<RsvpRow>(),
   db.prepare('SELECT * FROM Volunteers ORDER BY CreatedAt DESC').all<VolunteerRow>(),
   db
@@ -50,6 +50,14 @@ const [rsvpResult, volunteerResult, rsvpStatsResult, volunteerStatsResult] = awa
        FROM Volunteers`
     )
     .first<{ Setup: number; Cleanup: number; Both: number; Total: number }>(),
+  db
+    .prepare(
+      `SELECT
+         COALESCE(SUM(CASE WHEN Direction='in'  THEN AmountCents ELSE 0 END), 0) AS InCents,
+         COALESCE(SUM(CASE WHEN Direction='out' THEN AmountCents ELSE 0 END), 0) AS OutCents
+       FROM LedgerEntries`
+    )
+    .first<{ InCents: number; OutCents: number }>(),
 ]);
 
 const rsvps = rsvpResult.results ?? [];
@@ -64,169 +72,248 @@ const yesGuests = rsvpStatsByAttending.get('yes')?.guests ?? 0;
 const maybeGuests = rsvpStatsByAttending.get('maybe')?.guests ?? 0;
 
 const vStats = volunteerStatsResult ?? { Setup: 0, Cleanup: 0, Both: 0, Total: 0 };
+const netCents = (ledgerNetResult?.InCents ?? 0) - (ledgerNetResult?.OutCents ?? 0);
+const netDollars = (netCents / 100).toLocaleString('en-US', {
+  style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0,
+});
 
 function fmtDate(iso: string): string {
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
   if (!m) return iso;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[Number(m[2]) - 1]} ${Number(m[3])}, ${m[4]}:${m[5]}`;
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${m[1].slice(2)} ${months[Number(m[2]) - 1]} ${m[3]} · ${m[4]}:${m[5]}`;
 }
 
-const thClass = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-cream-800';
-const tdClass = 'px-3 py-2 align-top';
-
-const attendingBadge: Record<'yes' | 'no' | 'maybe', string> = {
-  yes: 'bg-brand-100 text-brand-800',
-  maybe: 'bg-accent-100 text-accent-700',
-  no: 'bg-cream-200 text-cream-800',
-};
+const liveStatus = `${rsvps.length} rsvp · ${volunteers.length} vol · ${netDollars} net`;
 ---
 
-<Layout title="Admin">
-  <div class="space-y-12">
-    <header class="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p class="font-script text-2xl text-accent-600">Internal only</p>
-        <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Admin dashboard</h1>
-        <p class="mt-3 text-sm text-brand-700">
-          Live data from D1. Refresh to update.
-          <span class="ml-2 text-cream-700">Total RSVPs: {rsvps.length} · Total volunteers: {vStats.Total}</span>
-        </p>
-      </div>
-      <div class="flex flex-col items-end gap-1 text-sm">
-        <span class="text-cream-700">Signed in as <span class="font-semibold text-brand-800">{admin.email}</span></span>
-        <div class="flex gap-3">
-          <a href="/admin/ledger" class="text-brand-700 underline hover:text-brand-900">Ledger</a>
-          <a href="/admin/admins" class="text-brand-700 underline hover:text-brand-900">Manage admins</a>
-          <a href="/admin/logout" class="text-brand-700 underline hover:text-brand-900">Logout</a>
-        </div>
-      </div>
-    </header>
-
-    <section>
-      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800">RSVP summary</h2>
-      <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div class="rounded-xl border-2 border-brand-300 bg-brand-50 p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-brand-700">Yes</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{yesCount}</div>
-          <div class="mt-1 text-xs text-cream-700">{yesGuests} guests</div>
-        </div>
-        <div class="rounded-xl border-2 border-cream-300 bg-white p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-cream-700">Maybe</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{maybeCount}</div>
-          <div class="mt-1 text-xs text-cream-700">{maybeGuests} guests</div>
-        </div>
-        <div class="rounded-xl border-2 border-cream-300 bg-white p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-cream-700">No</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{noCount}</div>
-        </div>
-        <div class="rounded-xl border-2 border-cream-300 bg-white p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-cream-700">Expected headcount</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{yesGuests}</div>
-          <div class="mt-1 text-xs text-cream-700">+ {maybeGuests} if maybes show</div>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800">Volunteer summary</h2>
-      <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div class="rounded-xl border-2 border-brand-300 bg-brand-50 p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-brand-700">Setup signups</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{vStats.Setup}</div>
-          <div class="mt-1 text-xs text-cream-700">day before</div>
-        </div>
-        <div class="rounded-xl border-2 border-brand-300 bg-brand-50 p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-brand-700">Cleanup signups</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{vStats.Cleanup}</div>
-          <div class="mt-1 text-xs text-cream-700">day after</div>
-        </div>
-        <div class="rounded-xl border-2 border-cream-300 bg-white p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-cream-700">Doing both</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{vStats.Both}</div>
-          <div class="mt-1 text-xs text-cream-700">counted in each above</div>
-        </div>
-        <div class="rounded-xl border-2 border-cream-300 bg-white p-4">
-          <div class="text-xs font-semibold uppercase tracking-wider text-cream-700">Unique people</div>
-          <div class="mt-1 font-heading text-3xl text-brand-900">{vStats.Total}</div>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800">RSVPs</h2>
-      {rsvps.length === 0 ? (
-        <p class="mt-3 text-sm text-cream-700">No RSVPs yet.</p>
-      ) : (
-        <div class="mt-4 overflow-x-auto rounded-xl border border-cream-300 bg-white">
-          <table class="min-w-full divide-y divide-cream-200 text-sm">
-            <thead class="bg-cream-100">
-              <tr>
-                <th class={thClass}>Name</th>
-                <th class={thClass}>Email</th>
-                <th class={thClass}>Attending</th>
-                <th class={thClass}>Guests</th>
-                <th class={thClass}>Maiden</th>
-                <th class={thClass}>Notes</th>
-                <th class={thClass}>When</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-cream-200">
-              {rsvps.map(r => (
-                <tr>
-                  <td class={tdClass}>{r.FullName}</td>
-                  <td class={tdClass}><a href={`mailto:${r.Email}`} class="text-brand-700 underline">{r.Email}</a></td>
-                  <td class={tdClass}>
-                    <span class={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${attendingBadge[r.Attending]}`}>
-                      {r.Attending}
-                    </span>
-                  </td>
-                  <td class={`${tdClass} tabular-nums`}>{r.GuestCount}</td>
-                  <td class={`${tdClass} text-cream-700`}>{r.MaidenName ?? ''}</td>
-                  <td class={`${tdClass} max-w-xs whitespace-pre-wrap text-cream-800`}>{r.Notes ?? ''}</td>
-                  <td class={`${tdClass} whitespace-nowrap text-cream-700`}>{fmtDate(r.CreatedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-
-    <section>
-      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800">Volunteers</h2>
-      {volunteers.length === 0 ? (
-        <p class="mt-3 text-sm text-cream-700">No volunteers signed up yet.</p>
-      ) : (
-        <div class="mt-4 overflow-x-auto rounded-xl border border-cream-300 bg-white">
-          <table class="min-w-full divide-y divide-cream-200 text-sm">
-            <thead class="bg-cream-100">
-              <tr>
-                <th class={thClass}>Name</th>
-                <th class={thClass}>Email</th>
-                <th class={thClass}>Phone</th>
-                <th class={thClass}>Setup</th>
-                <th class={thClass}>Cleanup</th>
-                <th class={thClass}>Notes</th>
-                <th class={thClass}>When</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-cream-200">
-              {volunteers.map(v => (
-                <tr>
-                  <td class={tdClass}>{v.FullName}</td>
-                  <td class={tdClass}><a href={`mailto:${v.Email}`} class="text-brand-700 underline">{v.Email}</a></td>
-                  <td class={`${tdClass} whitespace-nowrap`}>{v.Phone ?? ''}</td>
-                  <td class={tdClass}>{v.RoleSetup ? '✓' : ''}</td>
-                  <td class={tdClass}>{v.RoleCleanup ? '✓' : ''}</td>
-                  <td class={`${tdClass} max-w-xs whitespace-pre-wrap text-cream-800`}>{v.Notes ?? ''}</td>
-                  <td class={`${tdClass} whitespace-nowrap text-cream-700`}>{fmtDate(v.CreatedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
+<AdminLayout
+  title="Dashboard"
+  pageId="DASH-0001"
+  pageLabel="Dashboard"
+  adminEmail={admin.email}
+  liveStatus={liveStatus}
+>
+  <div class="ops-id-strip">
+    <strong>DASH-0001</strong>
+    <span>·</span>
+    <span>RSVP &amp; VOLUNTEER OPERATIONS</span>
+    <span>·</span>
+    <span>CLASSIFIED — INTERNAL</span>
   </div>
-</Layout>
+
+  <header class="reveal">
+    <h1 class="ops-h1">Operations Dashboard.</h1>
+    <p class="ops-subtitle">
+      Live counts straight from D1. Refresh the page to update.
+      <span class="ops-dim">/ Last queried just now.</span>
+    </p>
+  </header>
+
+  <!-- RSVP TELEMETRY -->
+  <section class="reveal delay-1">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">01</span>
+      <span>RSVP Telemetry</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">{rsvps.length} entries</span>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-tile is-accent">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">FLD-Y</span>
+          <span class="stat-tile-tag">▸ YES</span>
+        </div>
+        <div class="stat-tile-value">{yesCount}</div>
+        <div class="stat-tile-meta">
+          <span class="em">{yesGuests}</span> guests projected
+        </div>
+      </div>
+
+      <div class="stat-tile is-gold">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">FLD-M</span>
+          <span class="stat-tile-tag">◇ MAYBE</span>
+        </div>
+        <div class="stat-tile-value">{maybeCount}</div>
+        <div class="stat-tile-meta">
+          <span class="em">{maybeGuests}</span> guests if shows
+        </div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">FLD-N</span>
+          <span class="stat-tile-tag">✕ NO</span>
+        </div>
+        <div class="stat-tile-value">{noCount}</div>
+        <div class="stat-tile-meta">declined</div>
+      </div>
+
+      <div class="stat-tile is-accent">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">FLD-H</span>
+          <span class="stat-tile-tag">▣ HEAD COUNT</span>
+        </div>
+        <div class="stat-tile-value">{yesGuests}</div>
+        <div class="stat-tile-meta">
+          + <span class="em">{maybeGuests}</span> if maybes show
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VOLUNTEER ROSTER -->
+  <section class="reveal delay-2">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">02</span>
+      <span>Volunteer Roster</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">{vStats.Total} signups</span>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-tile is-accent">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">VOL-S</span>
+          <span class="stat-tile-tag">▸ SETUP</span>
+        </div>
+        <div class="stat-tile-value">{vStats.Setup}</div>
+        <div class="stat-tile-meta">day before — decorate &amp; prep</div>
+      </div>
+
+      <div class="stat-tile is-accent">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">VOL-C</span>
+          <span class="stat-tile-tag">▸ CLEANUP</span>
+        </div>
+        <div class="stat-tile-value">{vStats.Cleanup}</div>
+        <div class="stat-tile-meta">day after — teardown</div>
+      </div>
+
+      <div class="stat-tile is-gold">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">VOL-B</span>
+          <span class="stat-tile-tag">★ BOTH</span>
+        </div>
+        <div class="stat-tile-value">{vStats.Both}</div>
+        <div class="stat-tile-meta">counted in each above</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">VOL-U</span>
+          <span class="stat-tile-tag">⌬ UNIQUE</span>
+        </div>
+        <div class="stat-tile-value">{vStats.Total}</div>
+        <div class="stat-tile-meta">distinct people</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RSVP TABLE -->
+  <section class="reveal delay-3">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">03</span>
+      <span>RSVP Manifest</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">sorted newest first</span>
+    </div>
+
+    <div class="ops-table-wrap">
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th class="right">Guests</th>
+            <th>Maiden</th>
+            <th>Notes</th>
+            <th>Logged</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rsvps.length === 0 && (
+            <tr class="empty-row">
+              <td colspan="7">— no rsvps logged yet —</td>
+            </tr>
+          )}
+          {rsvps.map(r => (
+            <tr>
+              <td>{r.FullName}</td>
+              <td class="mono dim">
+                <a href={`mailto:${r.Email}`} class="ops-link">{r.Email}</a>
+              </td>
+              <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
+              <td class="nums right">{r.GuestCount}</td>
+              <td class="dim">{r.MaidenName ?? '—'}</td>
+              <td class="dim" style="max-width: 24ch; white-space: pre-wrap;">{r.Notes ?? '—'}</td>
+              <td class="mono dim" style="white-space: nowrap;">{fmtDate(r.CreatedAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- VOLUNTEER TABLE -->
+  <section class="reveal delay-4">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">04</span>
+      <span>Volunteer Manifest</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">sorted newest first</span>
+    </div>
+
+    <div class="ops-table-wrap">
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Setup</th>
+            <th>Cleanup</th>
+            <th>Notes</th>
+            <th>Logged</th>
+          </tr>
+        </thead>
+        <tbody>
+          {volunteers.length === 0 && (
+            <tr class="empty-row">
+              <td colspan="7">— no volunteers signed up yet —</td>
+            </tr>
+          )}
+          {volunteers.map(v => (
+            <tr>
+              <td>{v.FullName}</td>
+              <td class="mono dim">
+                <a href={`mailto:${v.Email}`} class="ops-link">{v.Email}</a>
+              </td>
+              <td class="mono dim" style="white-space: nowrap;">{v.Phone ?? '—'}</td>
+              <td>{v.RoleSetup ? <span class="check-mark">✓</span> : <span class="dash-mark">—</span>}</td>
+              <td>{v.RoleCleanup ? <span class="check-mark">✓</span> : <span class="dash-mark">—</span>}</td>
+              <td class="dim" style="max-width: 24ch; white-space: pre-wrap;">{v.Notes ?? '—'}</td>
+              <td class="mono dim" style="white-space: nowrap;">{fmtDate(v.CreatedAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</AdminLayout>
+
+<style is:global>
+  .ops-subtitle {
+    font-family: var(--ops-font-mono);
+    font-size: 0.85rem;
+    color: var(--ops-text-dim);
+    margin: 0.6rem 0 0;
+    letter-spacing: 0.02em;
+  }
+  .ops-dim { color: var(--ops-text-ghost); }
+  .ops-link { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ops-text-ghost); }
+  .ops-link:hover { color: var(--ops-signal); border-bottom-color: var(--ops-signal); }
+</style>

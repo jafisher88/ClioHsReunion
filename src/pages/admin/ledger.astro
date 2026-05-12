@@ -1,5 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 
@@ -36,31 +36,31 @@ const [entriesResult, totalsResult] = await Promise.all([
       `SELECT
          COALESCE(SUM(CASE WHEN Direction = 'in'  THEN AmountCents ELSE 0 END), 0) AS InCents,
          COALESCE(SUM(CASE WHEN Direction = 'out' THEN AmountCents ELSE 0 END), 0) AS OutCents,
-         COUNT(*) AS Total
+         COUNT(*) AS Total,
+         COALESCE(SUM(CASE WHEN Direction = 'in'  THEN 1 ELSE 0 END), 0) AS InCount,
+         COALESCE(SUM(CASE WHEN Direction = 'out' THEN 1 ELSE 0 END), 0) AS OutCount
        FROM LedgerEntries`
     )
-    .first<{ InCents: number; OutCents: number; Total: number }>(),
+    .first<{ InCents: number; OutCents: number; Total: number; InCount: number; OutCount: number }>(),
 ]);
 
 const entries = entriesResult.results ?? [];
-const totals = totalsResult ?? { InCents: 0, OutCents: 0, Total: 0 };
+const totals = totalsResult ?? { InCents: 0, OutCents: 0, Total: 0, InCount: 0, OutCount: 0 };
 const netCents = totals.InCents - totals.OutCents;
 
-function fmtMoney(cents: number): string {
+function fmtMoney(cents: number): { whole: string; cents: string; sign: '' | '-'; abs: number } {
   const sign = cents < 0 ? '-' : '';
   const abs = Math.abs(cents);
-  const whole = Math.floor(abs / 100);
+  const whole = Math.floor(abs / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const frac = (abs % 100).toString().padStart(2, '0');
-  // Insert thousands separators in the whole part
-  const wholeWithSep = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${sign}$${wholeWithSep}.${frac}`;
+  return { whole, cents: frac, sign, abs };
 }
 
 function fmtDate(iso: string): string {
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (!m) return iso;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}`;
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${m[1].slice(2)} ${months[Number(m[2]) - 1]} ${m[3]}`;
 }
 
 const today = new Date().toISOString().slice(0, 10);
@@ -69,99 +69,161 @@ const inCategories = ['Contribution', 'Ticket', 'Reimbursement received', 'Other
 const outCategories = ['Venue', 'Food', 'Drinks', 'DJ', 'Photo booth', 'Decorations', 'Supplies', 'Refund issued', 'Other expense'];
 const methods = ['Venmo', 'PayPal', 'Zelle', 'Cash', 'Check', 'Card', 'Other'];
 
-const thClass = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-cream-800';
-const tdClass = 'px-3 py-2 align-top';
+const inDisplay = fmtMoney(totals.InCents);
+const outDisplay = fmtMoney(totals.OutCents);
+const netDisplay = fmtMoney(netCents);
+
+const liveStatus = `$${inDisplay.whole}.${inDisplay.cents} in · $${outDisplay.whole}.${outDisplay.cents} out · ${netDisplay.sign}$${netDisplay.whole}.${netDisplay.cents} net`;
 ---
 
-<Layout title="Ledger">
-  <div class="space-y-10">
-    <header class="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p class="font-script text-2xl text-accent-600">Money in &amp; out</p>
-        <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Ledger</h1>
-        <p class="mt-3 text-sm text-brand-700">{totals.Total} entries · running balance updates live as you add rows.</p>
-      </div>
-      <div class="flex flex-col items-end gap-1 text-sm">
-        <span class="text-cream-700">Signed in as <span class="font-semibold text-brand-800">{admin.email}</span></span>
-        <div class="flex gap-3">
-          <a href="/admin/" class="text-brand-700 underline hover:text-brand-900">← Dashboard</a>
-          <a href="/admin/admins" class="text-brand-700 underline hover:text-brand-900">Admins</a>
-          <a href="/admin/logout" class="text-brand-700 underline hover:text-brand-900">Logout</a>
+<AdminLayout
+  title="Ledger"
+  pageId="LDG-0001"
+  pageLabel="Ledger"
+  adminEmail={admin.email}
+  liveStatus={liveStatus}
+>
+  <div class="ops-id-strip">
+    <strong>LDG-0001</strong>
+    <span>·</span>
+    <span>FINANCIAL LEDGER · DOUBLE-ENTRY</span>
+    <span>·</span>
+    <span>{totals.Total} ENTRIES</span>
+  </div>
+
+  <header class="reveal">
+    <h1 class="ops-h1">Treasury Ledger.</h1>
+    <p class="ops-subtitle">
+      Every dollar in and out, signed and timestamped.
+      <span class="ops-dim">/ Entries are immutable once logged — delete to amend.</span>
+    </p>
+  </header>
+
+  <!-- LEDGER SUMMARY -->
+  <section class="reveal delay-1">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">01</span>
+      <span>Position</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">live · usd</span>
+    </div>
+
+    <div class="ledger-summary-grid">
+      <div class="stat-tile is-in">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">SUM-IN</span>
+          <span class="stat-tile-tag">▲ MONEY IN</span>
+        </div>
+        <div class="money-display">
+          <span class="money-sigil">$</span>
+          <span class="money-whole">{inDisplay.whole}</span>
+          <span class="money-cents">.{inDisplay.cents}</span>
+        </div>
+        <div class="stat-tile-meta">
+          <span class="em">{totals.InCount}</span> deposit{totals.InCount === 1 ? '' : 's'}
         </div>
       </div>
-    </header>
 
-    <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-5">
-        <div class="text-xs font-semibold uppercase tracking-wider text-emerald-800">Money in</div>
-        <div class="mt-1 font-heading text-3xl text-emerald-900 tabular-nums">{fmtMoney(totals.InCents)}</div>
+      <div class="stat-tile is-out">
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">SUM-OUT</span>
+          <span class="stat-tile-tag">▼ MONEY OUT</span>
+        </div>
+        <div class="money-display">
+          <span class="money-sigil">$</span>
+          <span class="money-whole">{outDisplay.whole}</span>
+          <span class="money-cents">.{outDisplay.cents}</span>
+        </div>
+        <div class="stat-tile-meta">
+          <span class="em">{totals.OutCount}</span> expense{totals.OutCount === 1 ? '' : 's'}
+        </div>
       </div>
-      <div class="rounded-xl border-2 border-rose-200 bg-rose-50 p-5">
-        <div class="text-xs font-semibold uppercase tracking-wider text-rose-800">Money out</div>
-        <div class="mt-1 font-heading text-3xl text-rose-900 tabular-nums">{fmtMoney(totals.OutCents)}</div>
-      </div>
-      <div class={`rounded-xl border-2 p-5 ${netCents >= 0 ? 'border-brand-300 bg-brand-50' : 'border-rose-300 bg-rose-50'}`}>
-        <div class={`text-xs font-semibold uppercase tracking-wider ${netCents >= 0 ? 'text-brand-700' : 'text-rose-800'}`}>Net balance</div>
-        <div class={`mt-1 font-heading text-3xl tabular-nums ${netCents >= 0 ? 'text-brand-900' : 'text-rose-900'}`}>{fmtMoney(netCents)}</div>
-        <div class="mt-1 text-xs text-cream-700">{netCents >= 0 ? 'In the black' : 'Need to cover this gap'}</div>
-      </div>
-    </section>
 
-    <section class="rounded-2xl border-2 border-cream-300 bg-white p-6 shadow-sm">
-      <h2 class="font-heading text-xl uppercase tracking-wider text-brand-800">Add an entry</h2>
-      <form id="add-form" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-        <div class="sm:col-span-2">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Direction</label>
-          <div class="mt-1 grid grid-cols-2 gap-2">
-            <label class="cursor-pointer">
-              <input type="radio" name="direction" value="in" required class="peer sr-only" checked />
-              <span class="block rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-center text-sm font-medium text-brand-700 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-800">
-                Money in
-              </span>
+      <div class:list={['stat-tile', netCents >= 0 ? 'is-net-pos' : 'is-net-neg']}>
+        <div class="stat-tile-head">
+          <span class="stat-tile-id">NET</span>
+          <span class="stat-tile-tag">⌬ BALANCE</span>
+        </div>
+        <div class="money-display">
+          <span class="money-sigil">{netDisplay.sign}$</span>
+          <span class="money-whole">{netDisplay.whole}</span>
+          <span class="money-cents">.{netDisplay.cents}</span>
+        </div>
+        <div class="stat-tile-meta">
+          {netCents >= 0
+            ? <span><span class="em">▸ in the black</span> · running surplus</span>
+            : <span><span class="em">▸ in the red</span> · need to cover this gap</span>}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENTRY FORM -->
+  <section class="reveal delay-2">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">02</span>
+      <span>Log Entry</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">stamps with {admin.email.split('@')[0]}</span>
+    </div>
+
+    <div class="ops-panel">
+      <form id="add-form" class="ledger-form">
+        <div class="ops-field ledger-field-direction">
+          <span class="ops-label">Direction<span class="req">*</span></span>
+          <div class="ops-segmented">
+            <input type="radio" id="dir-in" name="direction" value="in" required checked />
+            <label for="dir-in" class="in-label">
+              <span aria-hidden="true">▲</span><span>Money in</span>
             </label>
-            <label class="cursor-pointer">
-              <input type="radio" name="direction" value="out" class="peer sr-only" />
-              <span class="block rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-center text-sm font-medium text-brand-700 peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-800">
-                Money out
-              </span>
+            <input type="radio" id="dir-out" name="direction" value="out" />
+            <label for="dir-out" class="out-label">
+              <span aria-hidden="true">▼</span><span>Money out</span>
             </label>
           </div>
         </div>
 
-        <div class="sm:col-span-2">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Date</label>
+        <div class="ops-field ledger-field-date">
+          <label class="ops-label" for="ledger-date">Date<span class="req">*</span></label>
           <input
+            id="ledger-date"
+            class="ops-input"
             type="date"
             name="entryDate"
             required
             value={today}
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 focus:border-brand-500 focus:outline-none"
           />
         </div>
 
-        <div class="sm:col-span-2">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Amount ($)</label>
-          <input
-            type="number"
-            name="amount"
-            step="0.01"
-            min="0.01"
-            required
-            placeholder="50.00"
-            inputmode="decimal"
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none tabular-nums"
-          />
+        <div class="ops-field ledger-field-amount">
+          <label class="ops-label" for="ledger-amount">Amount (USD)<span class="req">*</span></label>
+          <div class="amount-input-wrap">
+            <span class="amount-sigil">$</span>
+            <input
+              id="ledger-amount"
+              class="ops-input amount-input"
+              type="number"
+              name="amount"
+              step="0.01"
+              min="0.01"
+              required
+              placeholder="0.00"
+              inputmode="decimal"
+            />
+          </div>
         </div>
 
-        <div class="sm:col-span-3">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Category</label>
+        <div class="ops-field ledger-field-category">
+          <label class="ops-label" for="ledger-category">Category<span class="req">*</span></label>
           <input
+            id="ledger-category"
+            class="ops-input"
             type="text"
             name="category"
-            required
             list="category-list"
-            placeholder="Pick or type one"
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+            required
+            placeholder="select or type"
+            autocomplete="off"
           />
           <datalist id="category-list">
             {inCategories.map(c => <option value={c} />)}
@@ -169,122 +231,245 @@ const tdClass = 'px-3 py-2 align-top';
           </datalist>
         </div>
 
-        <div class="sm:col-span-3">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">From / To</label>
+        <div class="ops-field ledger-field-counterparty">
+          <label class="ops-label" for="ledger-counterparty">From / To</label>
           <input
+            id="ledger-counterparty"
+            class="ops-input"
             type="text"
             name="counterparty"
-            placeholder="Name of payer or vendor"
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+            placeholder="payer / vendor name"
+            autocomplete="off"
           />
         </div>
 
-        <div class="sm:col-span-4">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Description</label>
+        <div class="ops-field ledger-field-method">
+          <label class="ops-label" for="ledger-method">Method</label>
           <input
-            type="text"
-            name="description"
-            placeholder="What was this for?"
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
-          />
-        </div>
-
-        <div class="sm:col-span-2">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Method</label>
-          <input
+            id="ledger-method"
+            class="ops-input"
             type="text"
             name="method"
             list="method-list"
-            placeholder="Venmo, cash, …"
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+            placeholder="venmo, cash, …"
+            autocomplete="off"
           />
           <datalist id="method-list">
             {methods.map(m => <option value={m} />)}
           </datalist>
         </div>
 
-        <div class="sm:col-span-6">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Notes (optional)</label>
+        <div class="ops-field ledger-field-description">
+          <label class="ops-label" for="ledger-description">Description</label>
+          <input
+            id="ledger-description"
+            class="ops-input"
+            type="text"
+            name="description"
+            placeholder="what was this for"
+          />
+        </div>
+
+        <div class="ops-field ledger-field-notes">
+          <label class="ops-label" for="ledger-notes">Notes</label>
           <textarea
+            id="ledger-notes"
+            class="ops-textarea"
             name="notes"
             rows="2"
-            placeholder="Anything else worth remembering"
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+            placeholder="optional context"
           ></textarea>
         </div>
 
-        <div class="sm:col-span-6 flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            class="rounded-full bg-brand-500 px-6 py-2.5 text-sm font-semibold text-cream-50 hover:bg-brand-600 disabled:opacity-60"
-          >
-            Add entry
+        <div class="ledger-form-actions">
+          <button type="submit" class="ops-btn">
+            <span aria-hidden="true">▸</span>
+            <span>Commit Entry</span>
           </button>
-          <p id="add-message" class="hidden text-sm"></p>
+          <p id="add-message" class="ops-msg" hidden></p>
         </div>
       </form>
-    </section>
+    </div>
+  </section>
 
-    <section>
-      <h2 class="font-heading text-xl uppercase tracking-wider text-brand-800">All entries</h2>
-      {entries.length === 0 ? (
-        <p class="mt-3 text-sm text-cream-700">No entries yet. Add your first above.</p>
-      ) : (
-        <div class="mt-4 overflow-x-auto rounded-xl border border-cream-300 bg-white">
-          <table class="min-w-full divide-y divide-cream-200 text-sm">
-            <thead class="bg-cream-100">
+  <!-- LEDGER TABLE -->
+  <section class="reveal delay-3">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">03</span>
+      <span>Entries</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">newest first · {entries.length} rows</span>
+    </div>
+
+    <div class="ops-table-wrap">
+      <table class="ops-table ledger-table">
+        <thead>
+          <tr>
+            <th style="width: 1%;">#</th>
+            <th>Date</th>
+            <th>Dir</th>
+            <th>Category</th>
+            <th>From / To</th>
+            <th>Description</th>
+            <th class="right">Amount</th>
+            <th>Method</th>
+            <th>By</th>
+            <th class="right">&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.length === 0 && (
+            <tr class="empty-row">
+              <td colspan="10">— no entries yet · log the first deposit above —</td>
+            </tr>
+          )}
+          {entries.map(e => {
+            const m = fmtMoney(e.AmountCents);
+            return (
               <tr>
-                <th class={thClass}>Date</th>
-                <th class={thClass}>Dir</th>
-                <th class={thClass}>Category</th>
-                <th class={thClass}>From / To</th>
-                <th class={thClass}>Description</th>
-                <th class={`${thClass} text-right`}>Amount</th>
-                <th class={thClass}>Method</th>
-                <th class={thClass}>By</th>
-                <th class={thClass}></th>
+                <td class="mono dim">#{e.Id}</td>
+                <td class="mono dim" style="white-space: nowrap;">{fmtDate(e.EntryDate)}</td>
+                <td>
+                  {e.Direction === 'in'
+                    ? <span class="pill in">▲ IN</span>
+                    : <span class="pill out">▼ OUT</span>}
+                </td>
+                <td style="font-weight: 600;">{e.Category}</td>
+                <td class="dim">{e.Counterparty ?? '—'}</td>
+                <td class="dim" style="max-width: 28ch; white-space: pre-wrap;">
+                  {e.Description ?? '—'}
+                  {e.Notes && <div class="entry-notes">↳ {e.Notes}</div>}
+                </td>
+                <td class:list={['nums', 'right', e.Direction === 'in' ? 'amount-in' : 'amount-out']} style="white-space: nowrap;">
+                  {e.Direction === 'in' ? '+ ' : '− '}${m.whole}<span class="amount-cents">.{m.cents}</span>
+                </td>
+                <td class="mono dim">{e.Method ?? '—'}</td>
+                <td class="mono dim">{e.CreatedBy.split('@')[0]}</td>
+                <td class="right">
+                  <button
+                    type="button"
+                    class="delete-btn ops-btn ops-btn-danger"
+                    data-id={e.Id}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody class="divide-y divide-cream-200">
-              {entries.map(e => (
-                <tr>
-                  <td class={`${tdClass} whitespace-nowrap text-cream-800`}>{fmtDate(e.EntryDate)}</td>
-                  <td class={tdClass}>
-                    {e.Direction === 'in' ? (
-                      <span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">IN</span>
-                    ) : (
-                      <span class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">OUT</span>
-                    )}
-                  </td>
-                  <td class={`${tdClass} font-semibold text-brand-800`}>{e.Category}</td>
-                  <td class={`${tdClass} text-cream-800`}>{e.Counterparty ?? ''}</td>
-                  <td class={`${tdClass} max-w-xs whitespace-pre-wrap text-cream-800`}>
-                    {e.Description ?? ''}
-                    {e.Notes && <div class="mt-1 text-xs text-cream-700">{e.Notes}</div>}
-                  </td>
-                  <td class={`${tdClass} whitespace-nowrap text-right tabular-nums font-semibold ${e.Direction === 'in' ? 'text-emerald-800' : 'text-rose-800'}`}>
-                    {e.Direction === 'in' ? '+' : '−'}{fmtMoney(e.AmountCents)}
-                  </td>
-                  <td class={`${tdClass} text-cream-700`}>{e.Method ?? ''}</td>
-                  <td class={`${tdClass} whitespace-nowrap text-xs text-cream-700`}>{e.CreatedBy.split('@')[0]}</td>
-                  <td class={`${tdClass} text-right`}>
-                    <button
-                      type="button"
-                      class="delete-btn rounded-full border border-rose-300 px-3 py-1 text-xs font-semibold text-rose-700 hover:border-rose-500 hover:bg-rose-50"
-                      data-id={e.Id}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  </div>
-</Layout>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</AdminLayout>
+
+<style is:global>
+  .ops-subtitle {
+    font-family: var(--ops-font-mono);
+    font-size: 0.85rem;
+    color: var(--ops-text-dim);
+    margin: 0.6rem 0 0;
+    letter-spacing: 0.02em;
+  }
+  .ops-dim { color: var(--ops-text-ghost); }
+
+  .ledger-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  @media (max-width: 720px) {
+    .ledger-summary-grid { grid-template-columns: 1fr; }
+  }
+
+  .money-display {
+    display: flex;
+    align-items: baseline;
+    line-height: 1;
+    margin: 0.25rem 0 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .money-sigil {
+    font-family: var(--ops-font-mono);
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: currentColor;
+    opacity: 0.6;
+    margin-right: 0.15rem;
+  }
+  .money-whole {
+    font-family: var(--ops-font-display);
+    font-variation-settings: 'opsz' 96, 'wght' 700;
+    font-size: clamp(2.5rem, 5.5vw, 3.75rem);
+    letter-spacing: -0.04em;
+  }
+  .money-cents {
+    font-family: var(--ops-font-mono);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: currentColor;
+    opacity: 0.6;
+    margin-left: 0.15rem;
+  }
+  .stat-tile.is-in   .money-whole { color: var(--ops-in); }
+  .stat-tile.is-out  .money-whole { color: var(--ops-out); }
+  .stat-tile.is-net-pos .money-whole { color: var(--ops-signal); }
+  .stat-tile.is-net-neg .money-whole { color: var(--ops-out); }
+
+  /* Form layout */
+  .ledger-form {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.25rem 1.5rem;
+  }
+  .ledger-field-direction   { grid-column: span 2; }
+  .ledger-field-date        { grid-column: span 2; }
+  .ledger-field-amount      { grid-column: span 2; }
+  .ledger-field-category    { grid-column: span 3; }
+  .ledger-field-counterparty{ grid-column: span 3; }
+  .ledger-field-method      { grid-column: span 2; }
+  .ledger-field-description { grid-column: span 4; }
+  .ledger-field-notes       { grid-column: span 6; }
+  .ledger-form-actions {
+    grid-column: span 6;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  @media (max-width: 720px) {
+    .ledger-form { grid-template-columns: 1fr 1fr; }
+    .ledger-field-direction,
+    .ledger-field-date,
+    .ledger-field-amount,
+    .ledger-field-category,
+    .ledger-field-counterparty,
+    .ledger-field-method,
+    .ledger-field-description,
+    .ledger-field-notes,
+    .ledger-form-actions { grid-column: span 2; }
+  }
+
+  .amount-input-wrap { display: flex; align-items: baseline; gap: 0.3rem; }
+  .amount-sigil {
+    font-family: var(--ops-font-mono);
+    color: var(--ops-text-faint);
+    font-size: 1rem;
+  }
+  .amount-input { font-size: 1rem; }
+
+  /* Table money cells */
+  .amount-in  { color: var(--ops-in); font-weight: 600; }
+  .amount-out { color: var(--ops-out); font-weight: 600; }
+  .amount-cents { opacity: 0.6; font-weight: 500; }
+  .entry-notes {
+    margin-top: 0.3rem;
+    font-family: var(--ops-font-mono);
+    font-size: 0.7rem;
+    color: var(--ops-text-ghost);
+    letter-spacing: 0.02em;
+  }
+</style>
 
 <script is:inline>
   const form = document.getElementById('add-form');
@@ -292,10 +477,9 @@ const tdClass = 'px-3 py-2 align-top';
 
   function setMessage(text, tone) {
     message.textContent = text;
-    message.classList.remove('hidden', 'text-brand-700', 'text-rose-700', 'text-emerald-700');
-    message.classList.add(
-      tone === 'error' ? 'text-rose-700' : tone === 'ok' ? 'text-emerald-700' : 'text-brand-700',
-    );
+    message.hidden = false;
+    message.classList.remove('info', 'ok', 'err');
+    message.classList.add(tone || 'info');
   }
 
   form.addEventListener('submit', async (e) => {
@@ -311,7 +495,7 @@ const tdClass = 'px-3 py-2 align-top';
       method: fd.get('method'),
       notes: fd.get('notes'),
     };
-    setMessage('Saving…', 'info');
+    setMessage('Committing…', 'info');
     try {
       const res = await fetch('/api/admin/ledger', {
         method: 'POST',
@@ -320,13 +504,13 @@ const tdClass = 'px-3 py-2 align-top';
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setMessage(body && body.error ? body.error : `Failed (${res.status})`, 'error');
+        setMessage(body && body.error ? body.error : `Failed (${res.status})`, 'err');
         return;
       }
-      setMessage('Added. Reloading…', 'ok');
+      setMessage('Entry committed · reloading', 'ok');
       setTimeout(() => location.reload(), 500);
     } catch {
-      setMessage('Network error.', 'error');
+      setMessage('Network error.', 'err');
     }
   });
 
@@ -334,7 +518,7 @@ const tdClass = 'px-3 py-2 align-top';
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
       if (!id) return;
-      if (!confirm('Delete this entry? This cannot be undone.')) return;
+      if (!confirm(`Delete entry #${id}? This cannot be undone.`)) return;
       const res = await fetch(`/api/admin/ledger?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (res.ok) {
         location.reload();

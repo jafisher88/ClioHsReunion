@@ -1,5 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 
@@ -25,104 +25,153 @@ function fmtDate(iso: string | null): string {
   if (!iso) return '—';
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
   if (!m) return iso;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[Number(m[2]) - 1]} ${Number(m[3])}, ${m[4]}:${m[5]}`;
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${m[1].slice(2)} ${months[Number(m[2]) - 1]} ${m[3]} · ${m[4]}:${m[5]}`;
 }
 
-const thClass = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-cream-800';
-const tdClass = 'px-3 py-2 align-top';
+const liveStatus = `${admins.length} authorized · 1 session active`;
 ---
 
-<Layout title="Admins">
-  <div class="space-y-10">
-    <header class="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p class="font-script text-2xl text-accent-600">Admin access</p>
-        <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Manage admins</h1>
-        <p class="mt-3 text-sm text-brand-700">
-          Only Google accounts on this list can sign into the admin dashboard.
-        </p>
-      </div>
-      <div class="flex flex-col items-end gap-1 text-sm">
-        <span class="text-cream-700">Signed in as <span class="font-semibold text-brand-800">{admin.email}</span></span>
-        <div class="flex gap-3">
-          <a href="/admin/" class="text-brand-700 underline hover:text-brand-900">← Dashboard</a>
-          <a href="/admin/ledger" class="text-brand-700 underline hover:text-brand-900">Ledger</a>
-          <a href="/admin/logout" class="text-brand-700 underline hover:text-brand-900">Logout</a>
-        </div>
-      </div>
-    </header>
+<AdminLayout
+  title="Admins"
+  pageId="USR-0001"
+  pageLabel="Admins"
+  adminEmail={admin.email}
+  liveStatus={liveStatus}
+>
+  <div class="ops-id-strip">
+    <strong>USR-0001</strong>
+    <span>·</span>
+    <span>ACCESS CONTROL · GOOGLE OIDC</span>
+    <span>·</span>
+    <span>{admins.length} ON ROSTER</span>
+  </div>
 
-    <section class="rounded-2xl border-2 border-cream-300 bg-white p-6 shadow-sm">
-      <h2 class="font-heading text-xl uppercase tracking-wider text-brand-800">Add an admin</h2>
-      <p class="mt-2 text-sm text-brand-700">Enter the Google email of the new admin. They'll be able to sign in immediately.</p>
-      <form id="add-form" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label class="flex-1">
-          <span class="block text-xs font-semibold uppercase tracking-wider text-cream-800">Google email</span>
+  <header class="reveal">
+    <h1 class="ops-h1">Access Control.</h1>
+    <p class="ops-subtitle">
+      Allowlisted Google accounts may sign into operations.
+      <span class="ops-dim">/ Removed accounts lose access on next request.</span>
+    </p>
+  </header>
+
+  <!-- ADD ADMIN -->
+  <section class="reveal delay-1" style="margin-top: 2rem;">
+    <div class="ops-panel">
+      <div class="ops-panel-title">
+        <span class="ops-panel-title-num">01 / GRANT</span>
+        <span class="ops-panel-title-text">Add operator</span>
+        <span class="ops-panel-title-meta">requires google sign-in</span>
+      </div>
+
+      <form id="add-form" class="add-admin-form">
+        <div class="ops-field" style="flex: 1; min-width: 220px;">
+          <label class="ops-label" for="new-admin-email">
+            Google email<span class="req">*</span>
+          </label>
           <input
+            id="new-admin-email"
+            class="ops-input"
             type="email"
             name="email"
             required
             placeholder="classmate@gmail.com"
-            class="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+            autocomplete="off"
+            spellcheck="false"
           />
-        </label>
-        <button
-          type="submit"
-          class="rounded-full bg-brand-500 px-6 py-2.5 text-sm font-semibold text-cream-50 hover:bg-brand-600 disabled:opacity-60"
-        >
-          Add admin
-        </button>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="ops-btn">
+            <span aria-hidden="true">▸</span>
+            <span>Authorize</span>
+          </button>
+          <p id="add-message" class="ops-msg" hidden></p>
+        </div>
       </form>
-      <p id="add-message" class="mt-3 hidden text-sm"></p>
-    </section>
+    </div>
+  </section>
 
-    <section>
-      <h2 class="font-heading text-xl uppercase tracking-wider text-brand-800">Current admins ({admins.length})</h2>
-      <div class="mt-4 overflow-x-auto rounded-xl border border-cream-300 bg-white">
-        <table class="min-w-full divide-y divide-cream-200 text-sm">
-          <thead class="bg-cream-100">
-            <tr>
-              <th class={thClass}>Email</th>
-              <th class={thClass}>Added by</th>
-              <th class={thClass}>Added</th>
-              <th class={thClass}>Last login</th>
-              <th class={thClass}></th>
+  <!-- ROSTER -->
+  <section class="reveal delay-2">
+    <div class="ops-section-rule">
+      <span class="ops-section-rule-num">02</span>
+      <span>Active Operators</span>
+      <span class="ops-section-rule-line"></span>
+      <span class="ops-section-rule-meta">{admins.length} on roster</span>
+    </div>
+
+    <div class="ops-table-wrap">
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th style="width: 0.5%;">#</th>
+            <th>Email</th>
+            <th>Added By</th>
+            <th>Granted</th>
+            <th>Last Sign-in</th>
+            <th class="right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {admins.length === 0 && (
+            <tr class="empty-row">
+              <td colspan="6">— roster is empty — seed via D1 to bootstrap —</td>
             </tr>
-          </thead>
-          <tbody class="divide-y divide-cream-200">
-            {admins.map(a => (
-              <tr data-email={a.Email}>
-                <td class={tdClass}>
-                  <span class="font-semibold text-brand-800">{a.Email}</span>
-                  {a.Email === admin.email && (
-                    <span class="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">you</span>
-                  )}
-                </td>
-                <td class={`${tdClass} text-cream-700`}>{a.AddedBy ?? '—'}</td>
-                <td class={`${tdClass} whitespace-nowrap text-cream-700`}>{fmtDate(a.AddedAt)}</td>
-                <td class={`${tdClass} whitespace-nowrap text-cream-700`}>{fmtDate(a.LastLoginAt)}</td>
-                <td class={`${tdClass} text-right`}>
-                  {a.Email === admin.email ? (
-                    <span class="text-xs text-cream-700">can't remove self</span>
-                  ) : (
-                    <button
-                      type="button"
-                      class="remove-btn rounded-full border border-brand-300 px-3 py-1 text-xs font-semibold text-brand-700 hover:border-brand-500 hover:bg-brand-50"
-                      data-email={a.Email}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </div>
-</Layout>
+          )}
+          {admins.map((a, idx) => (
+            <tr data-email={a.Email}>
+              <td class="mono dim">{String(idx + 1).padStart(2, '0')}</td>
+              <td>
+                <span style="font-weight: 600;">{a.Email}</span>
+                {a.Email === admin.email && <span class="pill self" style="margin-left: 0.6rem;">YOU</span>}
+              </td>
+              <td class="mono dim">{a.AddedBy ?? '—'}</td>
+              <td class="mono dim" style="white-space: nowrap;">{fmtDate(a.AddedAt)}</td>
+              <td class="mono dim" style="white-space: nowrap;">{fmtDate(a.LastLoginAt)}</td>
+              <td class="right">
+                {a.Email === admin.email ? (
+                  <span class="mono dim" style="font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase;">
+                    self · locked
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    class="remove-btn ops-btn ops-btn-danger"
+                    data-email={a.Email}
+                  >
+                    Revoke
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</AdminLayout>
+
+<style is:global>
+  .ops-subtitle {
+    font-family: var(--ops-font-mono);
+    font-size: 0.85rem;
+    color: var(--ops-text-dim);
+    margin: 0.6rem 0 0;
+    letter-spacing: 0.02em;
+  }
+  .ops-dim { color: var(--ops-text-ghost); }
+  .add-admin-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1.5rem;
+  }
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+</style>
 
 <script is:inline>
   const form = document.getElementById('add-form');
@@ -130,8 +179,9 @@ const tdClass = 'px-3 py-2 align-top';
 
   function setMessage(text, tone) {
     message.textContent = text;
-    message.classList.remove('hidden', 'text-brand-700', 'text-red-700');
-    message.classList.add(tone === 'error' ? 'text-red-700' : 'text-brand-700');
+    message.hidden = false;
+    message.classList.remove('info', 'ok', 'err');
+    message.classList.add(tone || 'info');
   }
 
   form.addEventListener('submit', async (e) => {
@@ -139,6 +189,7 @@ const tdClass = 'px-3 py-2 align-top';
     const fd = new FormData(form);
     const email = String(fd.get('email') || '').trim();
     if (!email) return;
+    setMessage('Authorizing…', 'info');
     try {
       const res = await fetch('/api/admin/admins', {
         method: 'POST',
@@ -147,13 +198,13 @@ const tdClass = 'px-3 py-2 align-top';
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setMessage(body && body.error ? body.error : `Failed (${res.status})`, 'error');
+        setMessage(body && body.error ? body.error : `Failed (${res.status})`, 'err');
         return;
       }
-      setMessage('Added. Reloading…', 'ok');
-      setTimeout(() => location.reload(), 600);
+      setMessage('Authorized · reloading', 'ok');
+      setTimeout(() => location.reload(), 500);
     } catch {
-      setMessage('Network error.', 'error');
+      setMessage('Network error.', 'err');
     }
   });
 
@@ -161,7 +212,7 @@ const tdClass = 'px-3 py-2 align-top';
     btn.addEventListener('click', async () => {
       const email = btn.getAttribute('data-email');
       if (!email) return;
-      if (!confirm(`Remove ${email} from admins?`)) return;
+      if (!confirm(`Revoke access for ${email}?`)) return;
       const res = await fetch('/api/admin/admins', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
