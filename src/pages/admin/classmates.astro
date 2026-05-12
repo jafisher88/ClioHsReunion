@@ -270,6 +270,7 @@ const unmatched = unmatchedResult.results ?? [];
             <tr>
               <th class="num">#</th>
               <th>Name</th>
+              <th>Preferred</th>
               <th>Maiden</th>
               <th>RSVP</th>
               <th>Email</th>
@@ -297,14 +298,16 @@ const unmatched = unmatchedResult.results ?? [];
                   <td class="num mono dim">{String(idx + 1).padStart(3, '0')}</td>
                   <td>
                     <span class="font-semibold">{r.FullName}</span>
-                    {r.PreferredFirstName && (
-                      <span class="ml-2 inline-flex items-center rounded-full bg-accent-100 px-2 py-0.5 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent-700">
-                        {r.PreferredFirstName}
-                      </span>
-                    )}
                     {r.IsDeceased === 1 && (
                       <span class="ml-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">remembered</span>
                     )}
+                  </td>
+                  <td>
+                    {r.PreferredFirstName ? (
+                      <span class="inline-flex items-center rounded-full bg-accent-100 px-2 py-0.5 font-mono text-[0.65rem] font-semibold text-accent-700">
+                        {r.PreferredFirstName}
+                      </span>
+                    ) : <span class="dim">—</span>}
                   </td>
                   <td class="dim">{r.MaidenName ?? '—'}</td>
                   <td>
