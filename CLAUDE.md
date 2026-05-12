@@ -6,8 +6,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 Marketing + RSVP site for the **Clio High School Class of 2006 20-year reunion**.
 Currently scheduled for **November 2026 at Round Em Up Ranch in Clio, MI** (exact
-date is being voted on in the class Facebook group). Hosted by classmate Amber,
-the ranch's owner.
+date is being voted on in the class Facebook group).
 Astro 6 SSR on Cloudflare Workers. Serves cliohsreunion.com.
 
 Mirrors the [ThePressDenWebsite](../ThePressDenWebsite/CLAUDE.md) stack but
