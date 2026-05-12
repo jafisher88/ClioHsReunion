@@ -4,88 +4,201 @@ import Card from '../components/Card.astro';
 import Step from '../components/Step.astro';
 ---
 
-<Layout title="Event">
-  <header class="animate-fade-in">
-    <p class="font-script text-2xl text-accent-600">The reunion</p>
-    <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Event Details</h1>
-    <p class="mt-4 max-w-2xl text-lg text-brand-700">
-      We're putting the final touches on the schedule. Here's what we know so far — check back
-      as details firm up, and follow the Facebook group for live updates.
+<Layout title="Event" folio="02" section="THE PROGRAM">
+  <div class="page-opener reveal">
+    <div class="page-opener-section">
+      <span class="page-opener-kicker">Issue 02 · The Program</span>
+      <span class="page-opener-label">Event details.</span>
+    </div>
+    <div class="page-opener-meta">
+      A program of the evening<br />
+      &amp; the particulars
+    </div>
+  </div>
+
+  <header class="event-intro reveal delay-1">
+    <p class="pull-quote">
+      We're putting the final touches on the schedule. Here's what we know so
+      far — check back as details firm up, and follow the Facebook group for
+      live updates.
     </p>
   </header>
 
-  <section class="mt-12 grid gap-6 animate-fade-up sm:grid-cols-2">
-    <Card icon="📅" title="Date">
-      <p class="text-lg">November 2026</p>
-      <p class="mt-1 text-sm text-cream-700">
-        The exact date is being voted on in the
-        <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="text-brand-700 underline hover:text-brand-900">Class of 2006 Facebook group</a>.
-      </p>
-    </Card>
-    <a
-      href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="block no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 rounded-2xl"
-    >
-      <Card icon="📍" title="Venue">
-        <p class="text-lg">Round Em Up Ranch</p>
-        <p class="mt-1 text-sm text-cream-700">Clio, Michigan.</p>
-        <p class="mt-3 text-sm font-medium text-accent-700">Open in Google Maps →</p>
-      </Card>
-    </a>
-    <Card icon="🍽️" title="Food & Drink">
-      <p>Still being decided. We'll share the plan once it's locked in.</p>
-    </Card>
-    <Card icon="🎟️" title="Cost">
-      <p>
-        We're still nailing down the per-head cost. In the meantime, donations of any
-        size are welcome to help cover the costs.
-      </p>
-      <p class="mt-2 text-sm text-cream-700">
-        Donate via Venmo to
-        <a href="https://venmo.com/u/Jafisher88" target="_blank" rel="noopener noreferrer" class="font-semibold text-brand-700 underline">@Jafisher88</a>
-        (friends &amp; family, please).
-      </p>
-    </Card>
+  <!-- PARTICULARS -->
+  <section>
+    <div class="editorial-rule reveal delay-2">
+      <span class="num">01</span>
+      <span class="label">The particulars</span>
+      <span class="line"></span>
+      <span class="meta">date · venue · food · cost</span>
+    </div>
+
+    <div class="catalog-grid reveal delay-2">
+      <div class="catalog-entry">
+        <header class="catalog-entry-num"><span>i</span><span>Date</span></header>
+        <h3 class="catalog-entry-label">November 2026.</h3>
+        <p class="catalog-entry-value">
+          The exact date is being voted on in the
+          <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="event-link">Class of 2006 Facebook group</a>.
+        </p>
+        <p class="catalog-entry-meta">TBA · forthcoming</p>
+      </div>
+
+      <a
+        href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="catalog-entry catalog-entry-link"
+      >
+        <header class="catalog-entry-num"><span>ii</span><span>Venue</span></header>
+        <h3 class="catalog-entry-label">Round Em Up Ranch.</h3>
+        <p class="catalog-entry-value">Clio, Michigan.</p>
+        <p class="catalog-entry-meta">Open in Google Maps ↗</p>
+      </a>
+
+      <div class="catalog-entry">
+        <header class="catalog-entry-num"><span>iii</span><span>Food &amp; drink</span></header>
+        <h3 class="catalog-entry-label">Still being decided.</h3>
+        <p class="catalog-entry-value">We'll share the plan once it's locked in.</p>
+        <p class="catalog-entry-meta">Forthcoming</p>
+      </div>
+
+      <div class="catalog-entry">
+        <header class="catalog-entry-num"><span>iv</span><span>Cost</span></header>
+        <h3 class="catalog-entry-label">Open donation, for now.</h3>
+        <p class="catalog-entry-value">
+          We're still nailing down the per-head cost. In the meantime, donations
+          of any size are welcome to help cover the costs.
+        </p>
+        <p class="catalog-entry-meta">
+          Donate via Venmo to
+          <a href="https://venmo.com/u/Jafisher88" target="_blank" rel="noopener noreferrer" class="event-link">@Jafisher88</a>
+          (friends &amp; family).
+        </p>
+      </div>
+    </div>
   </section>
 
-  <section class="mt-16 animate-fade-up">
-    <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Tentative schedule</h2>
-    <ol class="mt-6 space-y-4 border-l-2 border-accent-300 pl-6">
+  <!-- PROGRAM OF EVENTS -->
+  <section class="reveal delay-3">
+    <div class="editorial-rule">
+      <span class="num">02</span>
+      <span class="label">Tentative program</span>
+      <span class="line"></span>
+      <span class="meta">subject to change</span>
+    </div>
+
+    <ol class="program-list">
       <Step time="6:00 PM" title="Doors open">
-        Sign in, grab a name tag (yes, you'll need one — 20 years is 20 years), say hi.
+        Sign in, grab a name tag (yes, you'll need one &mdash; 20 years is 20 years), say hi.
       </Step>
       <Step time="7:00 PM" title="Welcome">
         Quick welcome from the planning crew, then mingle.
       </Step>
-      <Step time="7:30 PM" title="Toast & memories">
+      <Step time="7:30 PM" title="Toast &amp; memories">
         A toast to classmates we've lost, and a few yearbook throwbacks on the big screen.
       </Step>
-      <Step time="8:00 PM" title="Music & dancing">
-        DJ takes over with a 2002–2006 playlist. Requests welcome.
+      <Step time="8:00 PM" title="Music &amp; dancing">
+        DJ takes over with a 2002&ndash;2006 playlist. Requests welcome.
       </Step>
       <Step time="All night" title="Photo booth">
-        A photo booth runs the whole evening — every shot gets uploaded so you can
-        grab the digital copies after.
+        A photo booth runs the whole evening &mdash; every shot gets uploaded so you can grab the digital copies after.
       </Step>
       <Step time="11:00 PM" title="Last call">
-        Hugs, photos, and "let's not wait ten years next time."
+        Hugs, photos, and &ldquo;let's not wait ten years next time.&rdquo;
       </Step>
     </ol>
   </section>
 
-  <section class="mt-16 animate-fade-up">
-    <div class="rounded-3xl bg-gradient-to-br from-accent-100 via-accent-200/60 to-cream-100 p-8 shadow-sm sm:p-12">
-      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Ready to RSVP?</h2>
-      <p class="mt-3 max-w-2xl text-brand-700">
-        Even a tentative "maybe" helps us plan headcount with the venue. Takes about a minute.
-      </p>
-      <a href="/rsvp" class="mt-6 inline-flex rounded-full bg-brand-500 px-8 py-3.5 text-base font-semibold text-cream-50 hover:bg-brand-600">
-        RSVP →
+  <!-- READY TO RSVP -->
+  <section class="reveal delay-4">
+    <div class="rsvp-call">
+      <div class="rsvp-call-body">
+        <span class="rsvp-call-kicker">Ready when you are.</span>
+        <h2 class="rsvp-call-h">RSVP &mdash; even a <em>maybe</em> helps us plan.</h2>
+        <p class="rsvp-call-p">
+          Even a tentative &ldquo;maybe&rdquo; helps us plan headcount with the venue.
+          Takes about a minute.
+        </p>
+      </div>
+      <a href="/rsvp" class="ticket-cta">
+        <span class="ticket-cta-body">R.S.V.P.</span>
+        <span class="ticket-cta-stub">→</span>
       </a>
     </div>
   </section>
 </Layout>
 
-<style></style>
+<style is:global>
+  .event-intro { max-width: 50rem; margin: 1rem 0 2rem; }
+  .event-link {
+    color: var(--color-brand-700);
+    border-bottom: 1px solid var(--color-brand-500);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .event-link:hover { color: var(--color-brand-500); }
+
+  .program-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .rsvp-call {
+    margin-top: 3rem;
+    padding: 2rem 2rem 2.25rem;
+    background: var(--color-brand-900);
+    color: var(--color-cream-50);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2rem;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .rsvp-call::before {
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 60%;
+    height: 180%;
+    background: radial-gradient(circle, rgba(242, 105, 1, 0.18), transparent 60%);
+    pointer-events: none;
+  }
+  @media (max-width: 720px) { .rsvp-call { grid-template-columns: 1fr; } }
+  .rsvp-call-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    color: var(--color-brand-400);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+  .rsvp-call-h {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 96, "wght" 600, "WONK" 1;
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    line-height: 1.05;
+    margin: 0;
+    color: var(--color-cream-50);
+    letter-spacing: -0.02em;
+  }
+  .rsvp-call-h em {
+    font-style: italic;
+    color: var(--color-brand-400);
+    font-variation-settings: "opsz" 96, "wght" 600, "WONK" 1, "SOFT" 100;
+  }
+  .rsvp-call-p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: rgba(253, 251, 246, 0.75);
+    line-height: 1.5;
+    margin: 1rem 0 0;
+    max-width: 36rem;
+  }
+  .rsvp-call .ticket-cta { z-index: 1; }
+</style>

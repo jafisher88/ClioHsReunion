@@ -3,23 +3,145 @@ import Layout from '../layouts/Layout.astro';
 import RsvpForm from '../components/RsvpForm.tsx';
 ---
 
-<Layout title="RSVP">
-  <div class="mx-auto max-w-2xl">
-    <header class="animate-fade-in text-center">
-      <p class="font-script text-2xl text-accent-600">Save your spot</p>
-      <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">RSVP</h1>
-      <p class="mt-4 text-brand-700">
-        A quick yes / no / maybe helps us plan headcount. You can update your response later
-        by submitting again with the same email.
-      </p>
-    </header>
-
-    <div class="mt-10 rounded-2xl border-2 border-cream-300 bg-white/80 p-6 shadow-sm sm:p-10 animate-fade-up">
-      <RsvpForm client:load />
+<Layout title="RSVP" folio="03" section="RSVP CARD">
+  <div class="page-opener reveal">
+    <div class="page-opener-section">
+      <span class="page-opener-kicker">Issue 03 · The Reply Card</span>
+      <span class="page-opener-label">R.S.V.P.</span>
     </div>
-
-    <p class="mt-8 text-center text-sm text-brand-600">
-      Trouble with the form? Email the planning crew via <a href="/contact" class="underline hover:text-brand-800">the contact page</a>.
-    </p>
+    <div class="page-opener-meta">
+      Please respond<br />
+      by · the · date
+    </div>
   </div>
+
+  <section class="rsvp-page reveal delay-1">
+    <aside class="rsvp-side">
+      <span class="stamp">Reply requested</span>
+      <h1 class="rsvp-h">
+        <em>Save</em><br />your seat.
+      </h1>
+      <p class="rsvp-side-p">
+        A quick yes / no / maybe helps us plan headcount. You can update your
+        response later by submitting again with the same email.
+      </p>
+      <p class="rsvp-side-help">
+        Trouble with the form? Email the planning crew via
+        <a href="/contact">the contact page</a>.
+      </p>
+      <div class="rsvp-side-foot">
+        <span>Form 03</span>
+        <span>·</span>
+        <span>Class of '06</span>
+        <span>·</span>
+        <span>MMXXVI</span>
+      </div>
+    </aside>
+
+    <article class="rsvp-card">
+      <header class="rsvp-card-head">
+        <span class="rsvp-card-num">No. 03</span>
+        <span class="rsvp-card-tag">R · S · V · P</span>
+      </header>
+      <div class="rsvp-card-body">
+        <RsvpForm client:load />
+      </div>
+      <footer class="rsvp-card-foot">
+        <span>FORM · RSVP · 2026</span>
+        <span>·</span>
+        <span>SUBMIT &amp; SHIP</span>
+      </footer>
+    </article>
+  </section>
 </Layout>
+
+<style is:global>
+  .rsvp-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 2.5rem;
+    align-items: start;
+    margin-top: 1.5rem;
+  }
+  @media (max-width: 900px) { .rsvp-page { grid-template-columns: 1fr; } }
+
+  .rsvp-side { padding-top: 0.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .rsvp-h {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 144, "wght" 700, "WONK" 1;
+    font-size: clamp(2.8rem, 5.5vw, 4.5rem);
+    line-height: 0.9;
+    margin: 0.5rem 0 0;
+    color: var(--color-brand-900);
+    letter-spacing: -0.03em;
+  }
+  .rsvp-h em {
+    font-style: italic;
+    color: var(--color-brand-500);
+    font-variation-settings: "opsz" 144, "wght" 600, "WONK" 1, "SOFT" 100;
+  }
+  .rsvp-side-p {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 20, "wght" 400, "WONK" 1;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--color-brand-800);
+    margin: 0.5rem 0;
+  }
+  .rsvp-side-help {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: var(--color-brand-700);
+    margin: 0;
+  }
+  .rsvp-side-help a {
+    color: var(--color-brand-500);
+    border-bottom: 1px solid var(--color-brand-500);
+    text-decoration: none;
+  }
+  .rsvp-side-foot {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    color: var(--color-cream-700);
+  }
+
+  .rsvp-card {
+    background: var(--color-cream-50);
+    border: 2px solid var(--color-brand-900);
+    box-shadow: 8px 8px 0 var(--color-brand-900);
+    position: relative;
+  }
+  .rsvp-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.4rem;
+    background: var(--color-brand-900);
+    color: var(--color-cream-50);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+  }
+  .rsvp-card-num { color: var(--color-brand-400); font-weight: 600; }
+  .rsvp-card-tag { color: var(--color-cream-100); font-weight: 600; }
+  .rsvp-card-body { padding: 1.75rem 1.75rem 1.25rem; }
+  .rsvp-card-foot {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.4rem;
+    border-top: 1.5px dashed var(--color-brand-900);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    color: var(--color-cream-700);
+  }
+</style>

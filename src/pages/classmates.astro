@@ -1,51 +1,228 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Card from '../components/Card.astro';
 ---
 
-<Layout title="Classmates">
-  <header class="animate-fade-in">
-    <p class="font-script text-2xl text-accent-600">Mustangs of '06</p>
-    <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Classmates</h1>
-    <p class="mt-4 max-w-2xl text-brand-700">
-      We don't try to duplicate what already exists — the Facebook group and the official
-      alumni site are still the best places to find old classmates and keep up.
+<Layout title="Classmates" folio="06" section="THE DIRECTORY">
+  <div class="page-opener reveal">
+    <div class="page-opener-section">
+      <span class="page-opener-kicker">Issue 06 · The Directory</span>
+      <span class="page-opener-label">Classmates.</span>
+    </div>
+    <div class="page-opener-meta">
+      Mustangs<br />
+      of · twenty · oh-six
+    </div>
+  </div>
+
+  <header class="cm-intro reveal delay-1">
+    <p class="pull-quote">
+      We don't try to duplicate what already exists &mdash; the Facebook group
+      and the official alumni site are still the best places to find old
+      classmates and keep up.
     </p>
   </header>
 
-  <section class="mt-10 grid gap-6 animate-fade-up sm:grid-cols-2">
-    <Card icon="👥" title="Class Facebook Group">
-      <p>The most active place to reconnect, share photos, and see who's coming.</p>
-      <a
-        href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="mt-4 inline-flex rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-cream-50 hover:bg-brand-600"
-      >
-        Open Facebook group →
-      </a>
-    </Card>
-    <Card icon="🎓" title="Official Clio High School alumni site">
-      <p>Class roster, class history, and links to other reunion years.</p>
-      <a
-        href="https://cliohighschool.net/class-of-2006.html"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="mt-4 inline-flex rounded-full border-2 border-brand-300 bg-white px-5 py-2 text-sm font-medium text-brand-700 hover:border-brand-500"
-      >
-        cliohighschool.net →
-      </a>
-    </Card>
-  </section>
+  <section class="reveal delay-2">
+    <div class="editorial-rule">
+      <span class="num">01</span>
+      <span class="label">Where to find each other</span>
+      <span class="line"></span>
+      <span class="meta">external · two channels</span>
+    </div>
 
-  <section class="mt-16 animate-fade-up">
-    <div class="rounded-3xl border-2 border-cream-300 bg-white/70 p-8 shadow-sm sm:p-12">
-      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Help us find everyone</h2>
-      <p class="mt-3 max-w-2xl text-brand-700">
-        Lost touch with a classmate? Know somebody who isn't in the Facebook group?
-        <a href="/contact" class="font-semibold text-brand-800 underline">Send us their name</a>
-        and we'll do our best to track them down before the reunion.
-      </p>
+    <div class="cm-channels">
+      <a class="index-card index-card-l" href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">
+        <header class="index-card-head">
+          <span class="index-card-cat">A · Facebook</span>
+          <span class="index-card-num">01</span>
+        </header>
+        <h3 class="index-card-h">Class Facebook group.</h3>
+        <p class="index-card-p">
+          The most active place to reconnect, share photos, and see who's coming.
+        </p>
+        <footer class="index-card-foot">
+          <span>Open in a new tab ↗</span>
+        </footer>
+      </a>
+
+      <a class="index-card index-card-r" href="https://cliohighschool.net/class-of-2006.html" target="_blank" rel="noopener noreferrer">
+        <header class="index-card-head">
+          <span class="index-card-cat">B · Alumni site</span>
+          <span class="index-card-num">02</span>
+        </header>
+        <h3 class="index-card-h">cliohighschool.net</h3>
+        <p class="index-card-p">
+          Class roster, class history, and links to other reunion years.
+        </p>
+        <footer class="index-card-foot">
+          <span>Open in a new tab ↗</span>
+        </footer>
+      </a>
     </div>
   </section>
+
+  <section class="reveal delay-3">
+    <div class="editorial-rule">
+      <span class="num">02</span>
+      <span class="label">Missing classmates</span>
+      <span class="line"></span>
+      <span class="meta">help us round 'em up</span>
+    </div>
+
+    <aside class="cm-missing">
+      <div class="cm-missing-stamp">
+        <span class="cm-missing-stamp-line-1">HAVE YOU</span>
+        <span class="cm-missing-stamp-line-2">SEEN</span>
+        <span class="cm-missing-stamp-line-3">THIS</span>
+        <span class="cm-missing-stamp-line-4">MUSTANG?</span>
+      </div>
+      <div class="cm-missing-body">
+        <h3 class="cm-missing-h">Help us find everyone.</h3>
+        <p class="cm-missing-p">
+          Lost touch with a classmate? Know somebody who isn't in the Facebook
+          group? <a href="/contact" class="cm-link">Send us their name</a>
+          and we'll do our best to track them down before the reunion.
+        </p>
+      </div>
+    </aside>
+  </section>
 </Layout>
+
+<style is:global>
+  .cm-intro { margin: 1rem 0 2rem; max-width: 50rem; }
+  .cm-link {
+    color: var(--color-brand-700);
+    border-bottom: 1px solid var(--color-brand-500);
+    text-decoration: none;
+  }
+  .cm-link:hover { color: var(--color-brand-500); }
+
+  .cm-channels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+  @media (max-width: 720px) { .cm-channels { grid-template-columns: 1fr; } }
+
+  .index-card {
+    position: relative;
+    display: block;
+    background: var(--color-cream-50);
+    border: 1.5px solid var(--color-brand-900);
+    padding: 1.25rem 1.4rem 1.1rem;
+    text-decoration: none;
+    color: var(--color-brand-900);
+    box-shadow: 5px 5px 0 var(--color-brand-900);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(13, 11, 10, 0.05) 27px, rgba(13, 11, 10, 0.05) 28px);
+  }
+  .index-card-l { transform: rotate(-0.8deg); }
+  .index-card-r { transform: rotate(0.6deg); }
+  .index-card:hover { transform: rotate(0) translate(-2px, -2px); box-shadow: 7px 7px 0 var(--color-brand-900); }
+  .index-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 0.5rem;
+    border-bottom: 1.5px solid var(--color-brand-900);
+    margin-bottom: 0.9rem;
+  }
+  .index-card-cat {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    color: var(--color-cream-700);
+    font-weight: 600;
+  }
+  .index-card-num {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-variation-settings: "opsz" 32, "wght" 600, "WONK" 1;
+    font-size: 1rem;
+    color: var(--color-brand-500);
+  }
+  .index-card-h {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 64, "wght" 600, "WONK" 1;
+    font-size: 1.7rem;
+    line-height: 1.05;
+    color: var(--color-brand-900);
+    margin: 0 0 0.6rem;
+    letter-spacing: -0.02em;
+  }
+  .index-card-p {
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    color: var(--color-brand-800);
+    line-height: 1.45;
+    margin: 0 0 1rem;
+  }
+  .index-card-foot {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--color-brand-500);
+    font-weight: 600;
+  }
+
+  .cm-missing {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2rem;
+    align-items: center;
+    padding: 2rem 2rem;
+    background: var(--color-cream-100);
+    border: 1.5px dashed var(--color-brand-900);
+    max-width: 56rem;
+  }
+  @media (max-width: 680px) { .cm-missing { grid-template-columns: 1fr; gap: 1.5rem; } }
+
+  .cm-missing-stamp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.05;
+    padding: 1.5rem 1rem;
+    border: 4px double var(--color-redpen-500);
+    color: var(--color-redpen-500);
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 64, "wght" 700, "WONK" 1;
+    font-style: italic;
+    transform: rotate(-4deg);
+    background: rgba(193, 39, 45, 0.04);
+    min-width: 11rem;
+    text-align: center;
+  }
+  .cm-missing-stamp-line-1 {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    font-style: normal;
+    margin-bottom: 0.4rem;
+  }
+  .cm-missing-stamp-line-2 { font-size: 1.6rem; }
+  .cm-missing-stamp-line-3 { font-size: 1.4rem; }
+  .cm-missing-stamp-line-4 { font-size: 1.6rem; }
+
+  .cm-missing-h {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 64, "wght" 600, "WONK" 1;
+    font-size: 1.7rem;
+    line-height: 1.05;
+    margin: 0 0 0.6rem;
+    color: var(--color-brand-900);
+    letter-spacing: -0.02em;
+  }
+  .cm-missing-p {
+    font-family: var(--font-body);
+    color: var(--color-brand-800);
+    line-height: 1.55;
+    margin: 0;
+  }
+</style>

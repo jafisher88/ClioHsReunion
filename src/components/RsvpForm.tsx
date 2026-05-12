@@ -32,22 +32,79 @@ export default function RsvpForm() {
       }
       setStatus({ kind: 'success' });
       form.reset();
-    } catch (err) {
+    } catch {
       setStatus({ kind: 'error', message: 'Network error — please try again.' });
     }
   }
 
   if (status.kind === 'success') {
     return (
-      <div className="rounded-2xl border border-accent-300 bg-accent-50 p-8 text-center shadow-sm">
-        <h2 className="font-heading text-2xl uppercase tracking-wider text-brand-800">You're in!</h2>
-        <p className="mt-3 text-brand-700">Thanks for your RSVP. We'll be in touch with more details as the reunion gets closer.</p>
-        <button
-          onClick={() => setStatus({ kind: 'idle' })}
-          className="mt-6 rounded-full border-2 border-brand-300 bg-white px-6 py-2 text-sm font-medium text-brand-700 hover:border-brand-500"
-        >
-          Submit another RSVP
+      <div className="rsvp-success">
+        <div className="rsvp-success-stamp">RECEIVED</div>
+        <h2 className="rsvp-success-h">You're in.</h2>
+        <p className="rsvp-success-p">
+          Thanks for your RSVP. We'll be in touch with more details as the reunion
+          gets closer.
+        </p>
+        <button onClick={() => setStatus({ kind: 'idle' })} className="rsvp-success-btn">
+          Submit another →
         </button>
+        <style>{`
+          .rsvp-success {
+            position: relative;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            background: var(--color-brand-50);
+            border: 1.5px solid var(--color-brand-500);
+          }
+          .rsvp-success-stamp {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.32em;
+            color: var(--color-redpen-500);
+            border: 2.5px solid var(--color-redpen-500);
+            padding: 0.4rem 0.9rem;
+            transform: rotate(-5deg);
+            margin-bottom: 1rem;
+            font-weight: 700;
+            background: rgba(193, 39, 45, 0.04);
+          }
+          .rsvp-success-h {
+            font-family: var(--font-display);
+            font-variation-settings: "opsz" 96, "wght" 600, "WONK" 1;
+            font-style: italic;
+            font-size: 2.4rem;
+            line-height: 1;
+            margin: 0.5rem 0 0.75rem;
+            color: var(--color-brand-900);
+          }
+          .rsvp-success-p {
+            font-family: var(--font-body);
+            color: var(--color-brand-800);
+            max-width: 30rem;
+            margin: 0 auto;
+            line-height: 1.5;
+          }
+          .rsvp-success-btn {
+            margin-top: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: transparent;
+            border: 1.5px solid var(--color-brand-900);
+            color: var(--color-brand-900);
+            padding: 0.65rem 1.1rem;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+          }
+          .rsvp-success-btn:hover { background: var(--color-brand-900); color: var(--color-cream-50); }
+        `}</style>
       </div>
     );
   }
@@ -55,86 +112,118 @@ export default function RsvpForm() {
   const submitting = status.kind === 'submitting';
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5">
-      <Field label="Full name" name="fullName" required placeholder="Jane Mustang" />
-      <Field label="Maiden name (optional)" name="maidenName" placeholder="If different from above" />
-      <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
+    <form onSubmit={onSubmit} className="rsvp-form">
+      <div className="rsvp-form-grid">
+        <div className="field-block" style={{ gridColumn: 'span 2' }}>
+          <label className="field-label" htmlFor="rsvp-name">
+            Full name<span className="req">*</span>
+          </label>
+          <input id="rsvp-name" className="field-input" type="text" name="fullName" required placeholder="Jane Mustang" />
+        </div>
 
-      <fieldset>
-        <legend className="block text-sm font-semibold text-brand-800">Will you be attending?</legend>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {(['yes', 'maybe', 'no'] as const).map(v => (
-            <label key={v} className="cursor-pointer">
-              <input type="radio" name="attending" value={v} required className="peer sr-only" defaultChecked={v === 'yes'} />
-              <span className="block rounded-lg border-2 border-cream-300 bg-white px-4 py-3 text-center text-sm font-medium capitalize text-brand-700 peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-800">
-                {v}
+        <div className="field-block" style={{ gridColumn: 'span 1' }}>
+          <label className="field-label" htmlFor="rsvp-maiden">Maiden name</label>
+          <input id="rsvp-maiden" className="field-input" type="text" name="maidenName" placeholder="(if applicable)" />
+        </div>
+
+        <div className="field-block" style={{ gridColumn: 'span 2' }}>
+          <label className="field-label" htmlFor="rsvp-email">
+            Email<span className="req">*</span>
+          </label>
+          <input id="rsvp-email" className="field-input" type="email" name="email" required placeholder="you@example.com" />
+        </div>
+
+        <div className="field-block" style={{ gridColumn: 'span 1' }}>
+          <label className="field-label" htmlFor="rsvp-guests">
+            Party size<span className="req">*</span>
+          </label>
+          <input id="rsvp-guests" className="field-input" type="number" name="guestCount" defaultValue="1" min={0} max={10} required />
+        </div>
+      </div>
+
+      <fieldset className="rsvp-attending">
+        <legend className="field-label">
+          Will you attend?<span className="req">*</span>
+        </legend>
+        <div className="ballot-grid ballot-grid-3">
+          {(['yes', 'maybe', 'no'] as const).map((v, i) => (
+            <label key={v} className="ballot">
+              <input type="radio" name="attending" value={v} required defaultChecked={v === 'yes'} />
+              <span className="dot" aria-hidden="true" />
+              <span className="ballot-label">
+                <span className="ballot-num">{['i', 'ii', 'iii'][i]}</span>
+                <span className="ballot-text">{v === 'yes' ? 'Yes, with bells on.' : v === 'maybe' ? 'Maybe — hold a seat.' : 'Sadly, no.'}</span>
               </span>
             </label>
           ))}
         </div>
       </fieldset>
 
-      <Field label="How many in your party? (including you)" name="guestCount" type="number" defaultValue="1" min={0} max={10} required />
-
-      <label className="block">
-        <span className="block text-sm font-semibold text-brand-800">Anything else? (dietary needs, song requests, hellos)</span>
-        <textarea
-          name="notes"
-          rows={4}
-          className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 focus:border-brand-500 focus:outline-none"
-        />
-      </label>
+      <div className="field-block">
+        <label className="field-label" htmlFor="rsvp-notes">
+          Anything else? <span className="field-label-soft">(dietary needs, song requests, hellos)</span>
+        </label>
+        <textarea id="rsvp-notes" className="field-textarea" name="notes" rows={3} />
+      </div>
 
       {status.kind === 'error' && (
-        <p className="rounded-lg border border-brand-300 bg-brand-50 px-4 py-3 text-sm text-brand-800">{status.message}</p>
+        <p className="rsvp-error">{status.message}</p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-lg shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-60"
-      >
-        {submitting ? 'Sending…' : 'Send RSVP'}
-      </button>
-    </form>
-  );
-}
+      <div className="rsvp-actions">
+        <button type="submit" disabled={submitting} className="submit-stamp">
+          <span aria-hidden="true">▸</span>
+          <span>{submitting ? 'Sending…' : 'Mail it in'}</span>
+        </button>
+      </div>
 
-function Field({
-  label,
-  name,
-  type = 'text',
-  required = false,
-  placeholder,
-  defaultValue,
-  min,
-  max,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  required?: boolean;
-  placeholder?: string;
-  defaultValue?: string;
-  min?: number;
-  max?: number;
-}) {
-  return (
-    <label className="block">
-      <span className="block text-sm font-semibold text-brand-800">
-        {label}
-        {required && <span className="text-brand-600"> *</span>}
-      </span>
-      <input
-        name={name}
-        type={type}
-        required={required}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        min={min}
-        max={max}
-        className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
-      />
-    </label>
+      <style>{`
+        .rsvp-form { display: flex; flex-direction: column; gap: 1.75rem; }
+        .rsvp-form-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1.5rem;
+        }
+        @media (max-width: 640px) {
+          .rsvp-form-grid { grid-template-columns: 1fr; }
+          .rsvp-form-grid .field-block { grid-column: span 1 !important; }
+        }
+        .rsvp-attending { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+        .ballot-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        @media (max-width: 640px) { .ballot-grid-3 { grid-template-columns: 1fr; } }
+        .ballot-label { display: inline-flex; flex-direction: column; line-height: 1.05; }
+        .ballot-num {
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          text-transform: uppercase;
+          letter-spacing: 0.24em;
+          color: var(--color-cream-700);
+        }
+        .ballot-text {
+          font-family: var(--font-display);
+          font-variation-settings: "opsz" 20, "wght" 500;
+          font-size: 1rem;
+          margin-top: 0.2rem;
+        }
+        .field-label-soft {
+          font-family: var(--font-mono);
+          color: var(--color-cream-700);
+          text-transform: none;
+          letter-spacing: 0.08em;
+          font-size: 0.65rem;
+          font-style: italic;
+        }
+        .rsvp-error {
+          margin: 0;
+          padding: 0.7rem 0.9rem;
+          background: rgba(193, 39, 45, 0.06);
+          border: 1.5px solid var(--color-redpen-500);
+          color: var(--color-redpen-600);
+          font-family: var(--font-mono);
+          font-size: 0.78rem;
+        }
+        .rsvp-actions { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+      `}</style>
+    </form>
   );
 }

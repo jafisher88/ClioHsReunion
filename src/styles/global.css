@@ -2,43 +2,40 @@
 
 @theme {
   /*
-   * Clio High School Class of 2006 — Mustang Orange on Cream/Charcoal
+   * THE MUSTANG ANNUAL — editorial yearbook publication
    *
-   * Matches the official Clio Area Schools branding: vivid orange + near-black.
-   * The brand scale doubles duty:
-   *   - brand-50…brand-600 are the orange family (CTAs, accents, school spirit).
-   *   - brand-700…brand-900 are deep warm charcoals (body text, footer, hero
-   *     gradient base) — they read as "school black" without being a pure flat
-   *     #000, so the orange has something warm to sit against.
+   * The marketing site is treated like a real small-press magazine. Same
+   * Clio-orange brand palette as the admin "ops terminal," but inverted in
+   * use: cream paper background, deep ink type, vivid orange masthead
+   * blocks and rules, gold/red-pen accents for editorial markings.
    */
 
-  /* Paper backdrop — kept from the prior design for warmth */
-  --color-cream-50:  #fdfbf6;
-  --color-cream-100: #f8f2e6;
-  --color-cream-200: #efe5cf;
-  --color-cream-300: #e2d4b5;
-  --color-cream-400: #cdb98e;
-  --color-cream-500: #b29969;
-  --color-cream-600: #8d7849;
-  --color-cream-700: #6b5b37;
-  --color-cream-800: #4a3f26;
-  --color-cream-900: #2c2616;
+  /* Paper backdrop */
+  --color-cream-50:  #fbf6ea;   /* warmer paper than before */
+  --color-cream-100: #f5ecd6;
+  --color-cream-200: #ecdfbf;
+  --color-cream-300: #ddc99e;
+  --color-cream-400: #c5ac7a;
+  --color-cream-500: #a48a55;
+  --color-cream-600: #806a3b;
+  --color-cream-700: #5b4b29;
+  --color-cream-800: #3c321c;
+  --color-cream-900: #211c10;
 
-  /* Brand: Clio Mustang orange (top) → near-black (bottom).
-     Sampled brand-500 (#f26901) directly from the official logo. */
+  /* Brand: Mustang orange (top) → near-black ink (bottom).
+     brand-500 is sampled from the official school logo. */
   --color-brand-50:  #fff4e6;
   --color-brand-100: #ffe2bf;
   --color-brand-200: #ffc683;
   --color-brand-300: #ffa84a;
   --color-brand-400: #fb8b1d;
-  --color-brand-500: #f26901;  /* CLIO ORANGE */
+  --color-brand-500: #f26901;   /* CLIO ORANGE */
   --color-brand-600: #c75603;
-  --color-brand-700: #2b2520;  /* warm charcoal — body text / dark CTAs */
-  --color-brand-800: #1a1714;  /* deeper charcoal — nav, panels */
-  --color-brand-900: #0d0b0a;  /* near-black — footer, hero base */
+  --color-brand-700: #2b2520;
+  --color-brand-800: #1a1714;
+  --color-brand-900: #0d0b0a;   /* INK */
 
-  /* Accent: aged gold — used sparingly for handwritten/script flourishes
-     and small highlights. Keeps the design from being purely two-color. */
+  /* Accent: aged-yearbook gold (used sparingly) */
   --color-accent-50:  #fbf5e3;
   --color-accent-100: #f5e9bf;
   --color-accent-200: #ecd47f;
@@ -48,34 +45,584 @@
   --color-accent-600: #806413;
   --color-accent-700: #5e480e;
 
+  /* Teacher's-red-pen — for stamps, marginalia, errata */
+  --color-redpen-500: #c1272d;
+  --color-redpen-600: #9b1f25;
+
   /* Typography */
-  --font-body: 'Outfit', system-ui, sans-serif;
-  --font-heading: 'Oswald', system-ui, sans-serif;
-  --font-display: 'Libre Baskerville', Georgia, serif;
-  --font-script: 'Dancing Script', cursive;
+  --font-body: 'DM Sans', 'Outfit', system-ui, sans-serif;
+  --font-display: 'Fraunces', 'Libre Baskerville', Georgia, serif;
+  --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-script: 'Caveat', 'Dancing Script', cursive;
 }
 
-/* Subtle paper grain — kept */
-.grain {
-  position: relative;
+/* -----------------------------------------------------------------
+   Base typographic settings — newsprint-strong contrast
+   ----------------------------------------------------------------- */
+
+body {
+  font-family: var(--font-body);
+  font-feature-settings: "ss01", "kern", "liga";
+  color: var(--color-brand-900);
+  background: var(--color-cream-50);
 }
+
+::selection {
+  background: var(--color-brand-500);
+  color: var(--color-cream-50);
+}
+
+/* -----------------------------------------------------------------
+   Paper grain — kept, refined
+   ----------------------------------------------------------------- */
+
+.grain { position: relative; }
 .grain::before {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.04;
+  opacity: 0.05;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+/* -----------------------------------------------------------------
+   EDITORIAL UTILITIES — the design language of the site
+   ----------------------------------------------------------------- */
+
+/* Display headings — Fraunces with opsz + WONK character */
+.display {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 0;
+  letter-spacing: -0.02em;
+  line-height: 0.92;
 }
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+.display-italic {
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
 }
+
+/* Mono micro-text — DM Mono uppercase tracked */
+.micro {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.micro-xs {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+/* Section rule — number + label + hairline + meta */
+.editorial-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 3rem 0 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--color-cream-700);
+}
+.editorial-rule .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.3rem;
+  background: var(--color-brand-900);
+  color: var(--color-cream-50);
+  font-weight: 600;
+  font-size: 0.65rem;
+}
+.editorial-rule .label { color: var(--color-brand-900); font-weight: 600; }
+.editorial-rule .line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-brand-900);
+  opacity: 0.18;
+}
+.editorial-rule .meta { color: var(--color-cream-700); font-style: italic; }
+
+/* Folio — oversize page number in the corner */
+.folio {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-display);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+.folio-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--color-cream-700);
+  margin-bottom: 0.3rem;
+}
+.folio-num {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  font-variation-settings: "opsz" 144, "wght" 700, "WONK" 1;
+  color: var(--color-brand-900);
+  font-style: italic;
+}
+
+/* Pull quote — italic display, tight leading */
+.pull-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: "opsz" 96, "wght" 400, "SOFT" 100;
+  font-size: clamp(1.25rem, 2.2vw, 1.65rem);
+  line-height: 1.2;
+  color: var(--color-brand-900);
+}
+
+/* Stamp — for marks like "MAILED" or "ADMIT ONE" */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border: 2px solid var(--color-redpen-500);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-weight: 600;
+  color: var(--color-redpen-500);
+  background: rgba(193, 39, 45, 0.04);
+  transform: rotate(-3deg);
+}
+.stamp-tilted { transform: rotate(-5deg); }
+.stamp-straight { transform: none; }
+
+/* Ticket-stub CTA */
+.ticket-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--color-brand-500);
+  color: var(--color-cream-50);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  font-size: 0.8rem;
+  isolation: isolate;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 4px 4px 0 var(--color-brand-900);
+}
+.ticket-cta:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--color-brand-900);
+}
+.ticket-cta:active { transform: translate(2px, 2px); box-shadow: none; }
+.ticket-cta-body {
+  padding: 0.95rem 1.4rem;
+}
+.ticket-cta-stub {
+  padding: 0.95rem 1rem;
+  border-left: 2px dashed rgba(253, 251, 246, 0.5);
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  opacity: 0.92;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Secondary CTA — ink outline */
+.outline-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1.3rem;
+  border: 2px solid var(--color-brand-900);
+  background: var(--color-cream-50);
+  color: var(--color-brand-900);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.outline-cta:hover {
+  background: var(--color-brand-900);
+  color: var(--color-cream-50);
+}
+
+/* Catalog grid wrapper */
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.catalog-grid > .catalog-entry {
+  margin-right: -1px;
+  margin-bottom: -1px;
+  transition: background 0.2s ease;
+}
+.catalog-grid > .catalog-entry:hover { background: var(--color-cream-200); }
+.catalog-entry-link { text-decoration: none; color: inherit; }
+@media (max-width: 800px) {
+  .catalog-grid { grid-template-columns: 1fr; }
+}
+
+/* Catalog entry / "card" successor */
+.catalog-entry {
+  position: relative;
+  background: var(--color-cream-100);
+  border: 1px solid var(--color-brand-900);
+  padding: 1.5rem 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.catalog-entry-num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--color-cream-700);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.catalog-entry-num::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-brand-900);
+  opacity: 0.2;
+}
+.catalog-entry-label {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 64, "wght" 600;
+  font-size: 1.5rem;
+  color: var(--color-brand-900);
+  line-height: 1;
+  margin-top: 0.1rem;
+}
+.catalog-entry-value {
+  font-family: var(--font-body);
+  color: var(--color-brand-800);
+  margin-top: 0.4rem;
+  line-height: 1.5;
+}
+.catalog-entry-meta {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--color-cream-700);
+}
+
+/* Polaroid — for the YouTube embed and any photo */
+.polaroid {
+  position: relative;
+  display: inline-block;
+  padding: 14px 14px 56px;
+  background: var(--color-cream-50);
+  box-shadow:
+    0 1px 0 rgba(13, 11, 10, 0.06),
+    0 2px 8px rgba(13, 11, 10, 0.12),
+    0 16px 36px rgba(13, 11, 10, 0.12);
+}
+.polaroid-caption {
+  position: absolute;
+  bottom: 18px;
+  left: 14px;
+  right: 14px;
+  font-family: var(--font-script);
+  font-size: 1.1rem;
+  color: var(--color-brand-800);
+  text-align: center;
+  line-height: 1;
+}
+
+/* Masking tape (CSS-only) */
+.tape {
+  position: absolute;
+  width: 84px;
+  height: 22px;
+  background: linear-gradient(180deg, rgba(220, 185, 70, 0.55), rgba(220, 185, 70, 0.35));
+  border-left: 1px dashed rgba(13, 11, 10, 0.12);
+  border-right: 1px dashed rgba(13, 11, 10, 0.12);
+  box-shadow: 0 1px 3px rgba(13, 11, 10, 0.12);
+  z-index: 2;
+}
+.tape-tl { top: -10px; left: -8px; transform: rotate(-7deg); }
+.tape-tr { top: -10px; right: -8px; transform: rotate(6deg); }
+.tape-bl { bottom: -10px; left: -8px; transform: rotate(4deg); }
+.tape-br { bottom: -10px; right: -8px; transform: rotate(-5deg); }
+
+/* Paper sheet — for forms, check cards, sign-up sheets */
+.paper-sheet {
+  position: relative;
+  background: var(--color-cream-50);
+  border: 1px solid var(--color-brand-900);
+  box-shadow:
+    4px 4px 0 var(--color-cream-200),
+    8px 8px 0 var(--color-brand-900);
+}
+.paper-sheet.lined {
+  background-image:
+    linear-gradient(to bottom, transparent calc(2rem - 1px), rgba(13, 11, 10, 0.07) calc(2rem - 1px), rgba(13, 11, 10, 0.07) 2rem, transparent 2rem);
+  background-size: 100% 2rem;
+}
+.paper-sheet.perforated::before,
+.paper-sheet.perforated::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background-image: radial-gradient(circle at 4px center, var(--color-cream-50) 2px, transparent 2.5px);
+  background-size: 12px 6px;
+  background-repeat: repeat-x;
+}
+.paper-sheet.perforated::before { top: -3px; }
+.paper-sheet.perforated::after { bottom: -3px; }
+
+/* Sign-up sheet line — dotted with mono numbering */
+.signup-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  border-bottom: 1px dotted var(--color-brand-900);
+  padding: 0.3rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--color-cream-700);
+}
+.signup-line .no {
+  width: 1.5rem;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* Form inputs — editorial form fields */
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--color-cream-700);
+  font-weight: 500;
+}
+.field-label .req { color: var(--color-redpen-500); }
+.field-input,
+.field-textarea {
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--color-brand-900);
+  padding: 0.5rem 0;
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 14, "wght" 500;
+  font-size: 1.05rem;
+  color: var(--color-brand-900);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.field-input:focus,
+.field-textarea:focus {
+  outline: none;
+  border-bottom-color: var(--color-brand-500);
+  background: linear-gradient(180deg, transparent 80%, rgba(242, 105, 1, 0.06));
+}
+.field-input::placeholder,
+.field-textarea::placeholder {
+  font-style: italic;
+  color: var(--color-cream-500);
+}
+.field-textarea {
+  resize: vertical;
+  min-height: 4rem;
+}
+
+/* Radio "ballot" — like a wedding reply card */
+.ballot-grid {
+  display: grid;
+  gap: 0.6rem;
+}
+.ballot {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid var(--color-brand-900);
+  background: var(--color-cream-50);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 20, "wght" 500;
+  font-size: 1.05rem;
+  color: var(--color-brand-900);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.ballot:hover { background: var(--color-cream-100); }
+.ballot input { position: absolute; opacity: 0; pointer-events: none; }
+.ballot .dot {
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--color-brand-900);
+  border-radius: 9999px;
+  position: relative;
+  flex-shrink: 0;
+}
+.ballot .dot::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 9999px;
+  background: var(--color-brand-500);
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.ballot input:checked ~ .dot::after { opacity: 1; transform: scale(1); }
+.ballot input:checked + * + * { /* placeholder */ }
+.ballot:has(input:checked) {
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-500);
+}
+
+/* Checkbox style block — for volunteer role selection */
+.role-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border: 1.5px solid var(--color-brand-900);
+  background: var(--color-cream-50);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.role-check:hover { background: var(--color-cream-100); }
+.role-check input { position: absolute; opacity: 0; pointer-events: none; }
+.role-check .box {
+  margin-top: 0.18rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1.5px solid var(--color-brand-900);
+  background: var(--color-cream-50);
+  flex-shrink: 0;
+  position: relative;
+}
+.role-check .box::after {
+  content: "✕";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--color-brand-500);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.role-check input:checked + .box::after { opacity: 1; }
+.role-check:has(input:checked) {
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-500);
+}
+.role-check-title {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 20, "wght" 600;
+  font-size: 1.1rem;
+  color: var(--color-brand-900);
+  line-height: 1.1;
+}
+.role-check-body {
+  margin-top: 0.2rem;
+  font-size: 0.88rem;
+  color: var(--color-brand-800);
+  line-height: 1.45;
+}
+
+/* Submit button — ink-block CTA with stamp affixed */
+.submit-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.95rem 1.5rem;
+  background: var(--color-brand-900);
+  color: var(--color-cream-50);
+  border: none;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--color-brand-500);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.submit-stamp:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--color-brand-500);
+}
+.submit-stamp:active { transform: translate(2px, 2px); box-shadow: none; }
+.submit-stamp:disabled { opacity: 0.6; cursor: progress; }
+
+/* -----------------------------------------------------------------
+   Page-load reveal
+   ----------------------------------------------------------------- */
+
+@keyframes editorial-fade {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes stamp-drop {
+  0%   { opacity: 0; transform: scale(1.4) rotate(-3deg); }
+  60%  { opacity: 1; transform: scale(0.96) rotate(-3deg); }
+  100% { transform: scale(1) rotate(-3deg); }
+}
+@keyframes ink-stroke {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.reveal { opacity: 0; transform: translateY(10px); animation: editorial-fade 0.7s ease-out forwards; }
+.delay-1 { animation-delay: 60ms; }
+.delay-2 { animation-delay: 120ms; }
+.delay-3 { animation-delay: 200ms; }
+.delay-4 { animation-delay: 280ms; }
+.delay-5 { animation-delay: 360ms; }
+.delay-6 { animation-delay: 440ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; animation: none; }
+  .stamp { transform: rotate(-3deg); }
+}
+
+/* -----------------------------------------------------------------
+   Legacy animation aliases (kept for any existing references)
+   ----------------------------------------------------------------- */
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .animate-fade-in { animation: fade-in 0.6s ease-out both; }
 .animate-fade-up { animation: fade-up 0.7s ease-out both; }

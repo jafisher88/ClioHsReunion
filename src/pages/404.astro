@@ -2,18 +2,176 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Not Found">
-  <div class="mx-auto max-w-xl py-16 text-center animate-fade-in">
-    <p class="font-script text-3xl text-accent-600">Lost in the hallway</p>
-    <h1 class="mt-2 font-heading text-6xl font-bold uppercase tracking-wider text-brand-800">404</h1>
-    <p class="mt-4 text-brand-700">
-      We couldn't find that page. Maybe try the front office?
-    </p>
-    <a
-      href="/"
-      class="mt-8 inline-flex rounded-full bg-brand-500 px-6 py-3 text-base font-semibold text-cream-50 hover:bg-brand-600"
-    >
-      Back to home →
-    </a>
+<Layout title="Not Found" folio="??" section="ERRATA">
+  <div class="page-opener reveal">
+    <div class="page-opener-section">
+      <span class="page-opener-kicker">Errata · 404</span>
+      <span class="page-opener-label">Page not in archive.</span>
+    </div>
+    <div class="page-opener-meta">
+      Lost in<br />
+      the · filing · cabinet
+    </div>
   </div>
+
+  <section class="missing reveal delay-1">
+    <div class="missing-block">
+      <div class="missing-stamp">
+        <span class="missing-stamp-line">FILE NOT</span>
+        <span class="missing-stamp-big">FOUND</span>
+        <span class="missing-stamp-meta">REF · 404</span>
+      </div>
+
+      <div class="missing-body">
+        <h1 class="missing-h">
+          <span class="missing-h-num">404.</span>
+          <span class="missing-h-rest"><em>Lost</em> in the hallway.</span>
+        </h1>
+        <p class="missing-p">
+          We couldn't find that page. Maybe try the front office? The classroom
+          may have been moved. Check the
+          <a href="/" class="missing-link">homepage</a> or wander the
+          <em>departments</em> below.
+        </p>
+
+        <ul class="missing-links">
+          <li><a href="/"><span class="missing-link-num">01</span> Homepage</a></li>
+          <li><a href="/event"><span class="missing-link-num">02</span> Event details</a></li>
+          <li><a href="/rsvp"><span class="missing-link-num">03</span> R.S.V.P.</a></li>
+          <li><a href="/volunteer"><span class="missing-link-num">04</span> Volunteer</a></li>
+          <li><a href="/gallery"><span class="missing-link-num">05</span> Gallery</a></li>
+          <li><a href="/classmates"><span class="missing-link-num">06</span> Classmates</a></li>
+          <li><a href="/contact"><span class="missing-link-num">07</span> Contact</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
 </Layout>
+
+<style is:global>
+  .missing {
+    max-width: 60rem;
+    margin: 2rem auto 0;
+  }
+  .missing-block {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3rem;
+    align-items: center;
+    padding: 2.5rem;
+    background: var(--color-cream-50);
+    border: 2px solid var(--color-brand-900);
+    box-shadow: 10px 10px 0 var(--color-brand-900);
+  }
+  @media (max-width: 720px) { .missing-block { grid-template-columns: 1fr; gap: 1.5rem; padding: 1.75rem; } }
+
+  .missing-stamp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.75rem 1.5rem;
+    border: 5px double var(--color-redpen-500);
+    color: var(--color-redpen-500);
+    transform: rotate(-7deg);
+    background: rgba(193, 39, 45, 0.05);
+    min-width: 14rem;
+    text-align: center;
+  }
+  .missing-stamp-line {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.34em;
+    font-weight: 600;
+  }
+  .missing-stamp-big {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 144, "wght" 700, "WONK" 1;
+    font-style: italic;
+    font-size: 2.8rem;
+    line-height: 1;
+    margin: 0.4rem 0;
+    letter-spacing: -0.02em;
+  }
+  .missing-stamp-meta {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--color-redpen-600);
+    margin-top: 0.4rem;
+  }
+
+  .missing-h {
+    font-family: var(--font-display);
+    margin: 0 0 0.75rem;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    color: var(--color-brand-900);
+  }
+  .missing-h-num {
+    font-variation-settings: "opsz" 144, "wght" 700, "WONK" 1;
+    font-style: italic;
+    font-size: clamp(3rem, 7vw, 5rem);
+    color: var(--color-brand-500);
+    display: block;
+  }
+  .missing-h-rest {
+    font-variation-settings: "opsz" 96, "wght" 600, "WONK" 1;
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    display: block;
+  }
+  .missing-h-rest em {
+    font-style: italic;
+    color: var(--color-brand-500);
+  }
+  .missing-p {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 20, "wght" 400, "WONK" 1;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    color: var(--color-brand-800);
+    max-width: 30rem;
+  }
+  .missing-p em {
+    font-style: italic;
+    color: var(--color-brand-700);
+  }
+  .missing-link {
+    color: var(--color-brand-700);
+    border-bottom: 1px solid var(--color-brand-500);
+    text-decoration: none;
+  }
+  .missing-link:hover { color: var(--color-brand-500); }
+
+  .missing-links {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    max-width: 30rem;
+  }
+  @media (max-width: 480px) { .missing-links { grid-template-columns: 1fr; } }
+  .missing-links li { border-bottom: 1px dotted rgba(13, 11, 10, 0.25); }
+  .missing-links a {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    text-decoration: none;
+    color: var(--color-brand-900);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: color 0.15s ease;
+  }
+  .missing-links a:hover { color: var(--color-brand-500); }
+  .missing-link-num {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--color-cream-700);
+    width: 1.5rem;
+  }
+</style>

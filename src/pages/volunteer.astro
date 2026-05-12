@@ -3,24 +3,153 @@ import Layout from '../layouts/Layout.astro';
 import VolunteerForm from '../components/VolunteerForm.tsx';
 ---
 
-<Layout title="Volunteer">
-  <div class="mx-auto max-w-2xl">
-    <header class="animate-fade-in text-center">
-      <p class="font-script text-2xl text-accent-600">Lend a hand</p>
-      <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Volunteer</h1>
-      <p class="mt-4 text-brand-700">
-        A reunion this good doesn't run itself. We need a few hands to set things up
-        the day before and a few more to clean up the day after. Either one earns you
-        bragging rights and the eternal thanks of the planning crew.
-      </p>
-    </header>
-
-    <div class="mt-10 rounded-2xl border-2 border-cream-300 bg-white/80 p-6 shadow-sm sm:p-10 animate-fade-up">
-      <VolunteerForm client:load />
+<Layout title="Volunteer" folio="04" section="SIGN-UP SHEET">
+  <div class="page-opener reveal">
+    <div class="page-opener-section">
+      <span class="page-opener-kicker">Issue 04 · The Sign-up Sheet</span>
+      <span class="page-opener-label">Volunteer.</span>
     </div>
-
-    <p class="mt-8 text-center text-sm text-brand-600">
-      Already RSVP'd? Cool — you can still sign up to help, separate from your attendance.
-    </p>
+    <div class="page-opener-meta">
+      Lend · a · hand<br />
+      day before · day after
+    </div>
   </div>
+
+  <section class="vol-page reveal delay-1">
+    <aside class="vol-side">
+      <span class="stamp">All hands</span>
+      <h1 class="vol-h">
+        Be the<br /><em>backbone</em><br />of the night.
+      </h1>
+      <p class="vol-side-p">
+        A reunion this good doesn't run itself. We need a few hands to set
+        things up the day before and a few more to clean up the day after.
+      </p>
+      <p class="vol-side-p">
+        Either one earns you bragging rights and the eternal thanks of the
+        planning crew.
+      </p>
+      <p class="vol-side-help">
+        Already RSVP'd? Cool &mdash; volunteering is separate from attendance.
+      </p>
+      <div class="vol-side-foot">
+        <span>Form 04</span>
+        <span>·</span>
+        <span>Class of '06</span>
+        <span>·</span>
+        <span>MMXXVI</span>
+      </div>
+    </aside>
+
+    <article class="vol-card">
+      <header class="vol-card-head">
+        <span class="vol-card-num">Sheet No. 04</span>
+        <span class="vol-card-tag">Volunteer Roster</span>
+      </header>
+      <div class="vol-card-roster" aria-hidden="true">
+        <div class="signup-line"><span class="no">01.</span><span>name</span></div>
+        <div class="signup-line"><span class="no">02.</span><span>name</span></div>
+        <div class="signup-line"><span class="no">03.</span><span>name</span></div>
+      </div>
+      <div class="vol-card-body">
+        <VolunteerForm client:load />
+      </div>
+      <footer class="vol-card-foot">
+        <span>SHEET · 04</span>
+        <span>·</span>
+        <span>FILL · IN · INK</span>
+      </footer>
+    </article>
+  </section>
 </Layout>
+
+<style is:global>
+  .vol-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 2.5rem;
+    align-items: start;
+    margin-top: 1.5rem;
+  }
+  @media (max-width: 900px) { .vol-page { grid-template-columns: 1fr; } }
+
+  .vol-side { padding-top: 0.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .vol-h {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 144, "wght" 700, "WONK" 1;
+    font-size: clamp(2.6rem, 5.2vw, 4.2rem);
+    line-height: 0.9;
+    margin: 0.5rem 0 0;
+    color: var(--color-brand-900);
+    letter-spacing: -0.03em;
+  }
+  .vol-h em {
+    font-style: italic;
+    color: var(--color-brand-500);
+    font-variation-settings: "opsz" 144, "wght" 700, "WONK" 1, "SOFT" 100;
+  }
+  .vol-side-p {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 20, "wght" 400, "WONK" 1;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--color-brand-800);
+    margin: 0;
+  }
+  .vol-side-help {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--color-cream-700);
+    margin: 0.5rem 0 0;
+  }
+  .vol-side-foot {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    color: var(--color-cream-700);
+  }
+
+  .vol-card {
+    background: var(--color-cream-50);
+    border: 2px solid var(--color-brand-900);
+    box-shadow: 8px 8px 0 var(--color-brand-900);
+  }
+  .vol-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.4rem;
+    background: var(--color-brand-900);
+    color: var(--color-cream-50);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+  }
+  .vol-card-num { color: var(--color-brand-400); font-weight: 600; }
+  .vol-card-tag { color: var(--color-cream-100); font-weight: 600; }
+  .vol-card-roster {
+    padding: 0.5rem 1.4rem 0.25rem;
+    border-bottom: 1px dashed rgba(13, 11, 10, 0.3);
+  }
+  .vol-card-body { padding: 1.5rem 1.5rem 1.25rem; }
+  .vol-card-foot {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.4rem;
+    border-top: 1.5px dashed var(--color-brand-900);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    color: var(--color-cream-700);
+  }
+</style>
