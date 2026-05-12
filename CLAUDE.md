@@ -68,16 +68,19 @@ Sheet is currently set to "anyone with link can view." Columns:
 `First Name, Last Name, Name at time of graduation if different, Email Address,
 Physical Address, Phone Number`.
 
-**Privacy note:** the sheet contains phone numbers and physical addresses.
-Do NOT embed the sheet or surface its URL on public pages without explicit OK
-from the organizer — broadening the audience from "people who know the link"
-to "anyone who visits cliohsreunion.com" is a meaningful change in exposure.
+**Decisions (confirmed by Jason, 2026-05-12):**
 
-Future work (not yet implemented): merge sheet + D1 `Rsvps` into a deduped
-recipient list, then send bulk emails via Resend. Reasonable approach:
-- Fetch sheet via the CSV export URL (`/export?format=csv`) at send time.
+1. **Don't link the sheet from the public site.** It contains phone numbers and
+   physical addresses. The on-site RSVP form is the public way to opt in; the
+   sheet stays internal/organizer-only.
+2. **Email-sending tooling is deferred.** When ready, the user will manually
+   export the sheet to CSV and send via their own client / Gmail mail-merge.
+   No `/admin` page, no Resend integration, no scheduled jobs to build right now.
+
+If those decisions change later, the reasonable build path is:
+- Fetch sheet via CSV export URL (`/export?format=csv`) at send time.
 - Dedupe with `Rsvps.Email`.
 - POST to Resend (`RESEND_API_KEY`, `ORGANIZER_EMAIL` are already stubbed in
   `.dev.vars.example`).
-- Gate behind an admin-only page (auth not yet built — easiest path: a single
-  shared password in `wrangler secret` + a constant-time compare).
+- Gate behind a password-protected `/admin` page (single shared password in
+  `wrangler secret`, constant-time compare).
