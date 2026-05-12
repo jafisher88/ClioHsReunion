@@ -33,7 +33,7 @@ interface VolunteerRow {
 }
 
 const db = env.DB;
-const [rsvpResult, volunteerResult, rsvpStatsResult, volunteerStatsResult, ledgerNetResult] = await Promise.all([
+const [rsvpResult, volunteerResult, rsvpStatsResult, volunteerStatsResult, ledgerNetResult, submissionStatsResult] = await Promise.all([
   db.prepare('SELECT * FROM Rsvps ORDER BY CreatedAt DESC').all<RsvpRow>(),
   db.prepare('SELECT * FROM Volunteers ORDER BY CreatedAt DESC').all<VolunteerRow>(),
   db
@@ -60,6 +60,15 @@ const [rsvpResult, volunteerResult, rsvpStatsResult, volunteerStatsResult, ledge
        FROM LedgerEntries`
     )
     .first<{ InCents: number; OutCents: number }>(),
+  db
+    .prepare(
+      `SELECT
+         COALESCE(SUM(CASE WHEN Status='new'         THEN 1 ELSE 0 END), 0) AS NewCt,
+         COALESCE(SUM(CASE WHEN Status='in_progress' THEN 1 ELSE 0 END), 0) AS InProgressCt,
+         COUNT(*) AS Total
+       FROM Submissions`
+    )
+    .first<{ NewCt: number; InProgressCt: number; Total: number }>(),
 ]);
 
 const rsvps = rsvpResult.results ?? [];
@@ -74,6 +83,7 @@ const yesGuests = rsvpStatsByAttending.get('yes')?.guests ?? 0;
 const maybeGuests = rsvpStatsByAttending.get('maybe')?.guests ?? 0;
 
 const vStats = volunteerStatsResult ?? { Setup: 0, Cleanup: 0, Both: 0, Total: 0 };
+const subStats = submissionStatsResult ?? { NewCt: 0, InProgressCt: 0, Total: 0 };
 const netCents = (ledgerNetResult?.InCents ?? 0) - (ledgerNetResult?.OutCents ?? 0);
 const netDollars = (netCents / 100).toLocaleString('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0,
@@ -157,6 +167,31 @@ function fmtDate(iso: string): string {
         <div class="admin-tile-value">{vStats.Total}</div>
         <div class="admin-tile-sub">distinct</div>
       </div>
+    </div>
+  </section>
+
+  <!-- SUBMISSIONS SUMMARY -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Submissions inbox</h2>
+      <a href="/admin/submissions" class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-brand-700 underline-offset-2 hover:underline">Open inbox →</a>
+    </header>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <a href="/admin/submissions?status=open" class:list={['admin-tile block hover:-translate-y-0.5', subStats.NewCt > 0 && 'is-rose']}>
+        <div class="admin-tile-label">New</div>
+        <div class="admin-tile-value">{subStats.NewCt}</div>
+        <div class="admin-tile-sub">{subStats.NewCt === 0 ? 'all clear' : 'need triage'}</div>
+      </a>
+      <a href="/admin/submissions?status=open" class="admin-tile block hover:-translate-y-0.5">
+        <div class="admin-tile-label">In progress</div>
+        <div class="admin-tile-value">{subStats.InProgressCt}</div>
+        <div class="admin-tile-sub">being handled</div>
+      </a>
+      <a href="/admin/submissions?status=all" class="admin-tile block hover:-translate-y-0.5">
+        <div class="admin-tile-label">Total received</div>
+        <div class="admin-tile-value">{subStats.Total}</div>
+        <div class="admin-tile-sub">all time</div>
+      </a>
     </div>
   </section>
 

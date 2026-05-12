@@ -1,0 +1,266 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { env } from 'cloudflare:workers';
+import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return Astro.redirect(loginUrlFor(Astro.request));
+}
+
+interface SubmissionRow {
+  Id: number;
+  Category: string;
+  SubmitterName: string | null;
+  SubmitterEmail: string | null;
+  Subject: string | null;
+  Message: string;
+  Status: 'new' | 'in_progress' | 'resolved' | 'archived';
+  AdminNotes: string | null;
+  CreatedAt: string;
+  ResolvedAt: string | null;
+}
+
+const filter = (Astro.url.searchParams.get('status') ?? 'open').toLowerCase();
+
+let query: string;
+if (filter === 'all') {
+  query = `SELECT * FROM Submissions ORDER BY CreatedAt DESC`;
+} else if (filter === 'resolved') {
+  query = `SELECT * FROM Submissions WHERE Status = 'resolved' ORDER BY CreatedAt DESC`;
+} else if (filter === 'archived') {
+  query = `SELECT * FROM Submissions WHERE Status = 'archived' ORDER BY CreatedAt DESC`;
+} else {
+  // 'open' (default) — anything still needing attention
+  query = `SELECT * FROM Submissions WHERE Status IN ('new', 'in_progress') ORDER BY CreatedAt DESC`;
+}
+
+const [listResult, statsResult] = await Promise.all([
+  env.DB.prepare(query).all<SubmissionRow>(),
+  env.DB
+    .prepare(
+      `SELECT
+         COALESCE(SUM(CASE WHEN Status='new'         THEN 1 ELSE 0 END), 0) AS NewCt,
+         COALESCE(SUM(CASE WHEN Status='in_progress' THEN 1 ELSE 0 END), 0) AS InProgressCt,
+         COALESCE(SUM(CASE WHEN Status='resolved'    THEN 1 ELSE 0 END), 0) AS ResolvedCt,
+         COALESCE(SUM(CASE WHEN Status='archived'    THEN 1 ELSE 0 END), 0) AS ArchivedCt,
+         COUNT(*) AS Total
+       FROM Submissions`
+    )
+    .first<{ NewCt: number; InProgressCt: number; ResolvedCt: number; ArchivedCt: number; Total: number }>(),
+]);
+
+const subs = listResult.results ?? [];
+const stats = statsResult ?? { NewCt: 0, InProgressCt: 0, ResolvedCt: 0, ArchivedCt: 0, Total: 0 };
+
+const CATEGORY_LABELS: Record<string, string> = {
+  general: 'General',
+  'classmate-info': 'Classmate info',
+  correction: 'Correction',
+  memoriam: 'In memoriam',
+  'photos-stories': 'Photos / stories',
+  'volunteer-help': 'Offer to help',
+  other: 'Other',
+};
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
+}
+
+const tabs = [
+  { value: 'open',     label: 'Open',     count: stats.NewCt + stats.InProgressCt },
+  { value: 'resolved', label: 'Resolved', count: stats.ResolvedCt },
+  { value: 'archived', label: 'Archived', count: stats.ArchivedCt },
+  { value: 'all',      label: 'All',      count: stats.Total },
+];
+---
+
+<AdminLayout title="Submissions" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">From the class</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Submissions inbox</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        Messages sent through <a href="/contact" class="font-mono text-brand-700 underline hover:text-brand-900">/contact</a>.
+        Triage, mark resolved, or archive when handled.
+      </p>
+    </div>
+    <div class="text-right">
+      <div class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cream-700">
+        {stats.NewCt} new · {stats.InProgressCt} in progress · {stats.Total} total
+      </div>
+    </div>
+  </header>
+
+  <!-- TAB FILTERS -->
+  <nav class="mb-6 flex flex-wrap items-center gap-2" aria-label="Submission filters">
+    {tabs.map(t => (
+      <a
+        href={`/admin/submissions?status=${t.value}`}
+        class:list={[
+          'inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all',
+          filter === t.value
+            ? 'border-brand-500 bg-brand-500 text-cream-50 shadow-soft'
+            : 'border-cream-300 bg-white text-brand-700 hover:border-brand-300 hover:bg-brand-50',
+        ]}
+      >
+        {t.label}
+        <span class:list={[
+          'inline-flex items-center justify-center rounded-full px-2 py-0.5 font-mono text-[0.62rem] font-bold',
+          filter === t.value ? 'bg-cream-50/20 text-cream-50' : 'bg-cream-100 text-cream-700',
+        ]}>{t.count}</span>
+      </a>
+    ))}
+  </nav>
+
+  {subs.length === 0 ? (
+    <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-12 text-center">
+      <p class="font-script text-2xl text-cream-700">
+        {filter === 'open' ? 'No open submissions.' : 'Nothing here.'}
+      </p>
+      <p class="mt-2 text-sm text-cream-700">
+        {filter === 'open'
+          ? 'When classmates send a message via /contact, it shows up here.'
+          : 'Switch tabs to see submissions in other states.'}
+      </p>
+    </div>
+  ) : (
+    <div class="space-y-4">
+      {subs.map(s => (
+        <article
+          class:list={[
+            'rounded-2xl border bg-white p-5 shadow-soft transition-all hover:shadow-soft-hover sm:p-6',
+            s.Status === 'new' ? 'border-brand-300' : 'border-cream-300',
+          ]}
+          data-sub-id={s.Id}
+        >
+          <header class="flex flex-wrap items-baseline justify-between gap-3">
+            <div class="flex flex-wrap items-baseline gap-2">
+              <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">#{s.Id}</span>
+              <span class="inline-flex items-center rounded-full bg-accent-100 px-2.5 py-0.5 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent-700">
+                {CATEGORY_LABELS[s.Category] ?? s.Category}
+              </span>
+              <span class:list={[
+                'inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em]',
+                s.Status === 'new'         && 'bg-brand-100 text-brand-700 ring-1 ring-brand-300',
+                s.Status === 'in_progress' && 'bg-amber-100 text-amber-800 ring-1 ring-amber-300',
+                s.Status === 'resolved'    && 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300',
+                s.Status === 'archived'    && 'bg-cream-100 text-cream-700 ring-1 ring-cream-300',
+              ]}>{s.Status.replace('_', ' ')}</span>
+            </div>
+            <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">{fmtDate(s.CreatedAt)}</span>
+          </header>
+
+          <div class="mt-4 space-y-2">
+            {s.Subject && (
+              <h2 class="font-heading text-lg font-semibold text-brand-900">{s.Subject}</h2>
+            )}
+            <p class="whitespace-pre-wrap text-sm leading-relaxed text-brand-800">{s.Message}</p>
+          </div>
+
+          <footer class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-cream-200 pt-3">
+            <div class="text-sm text-cream-700">
+              {s.SubmitterName || s.SubmitterEmail ? (
+                <>
+                  From{' '}
+                  {s.SubmitterName && <span class="text-brand-800 font-semibold">{s.SubmitterName}</span>}
+                  {s.SubmitterEmail && (
+                    <>
+                      {s.SubmitterName ? ' · ' : ''}
+                      <a href={`mailto:${s.SubmitterEmail}?subject=Re:%20${encodeURIComponent(s.Subject ?? 'your reunion message')}`} class="text-brand-700 underline hover:text-brand-900">{s.SubmitterEmail}</a>
+                    </>
+                  )}
+                </>
+              ) : (
+                <span class="italic">Anonymous</span>
+              )}
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              {s.Status !== 'in_progress' && s.Status !== 'resolved' && (
+                <button
+                  type="button"
+                  class="sub-action rounded-full border border-amber-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-amber-700 transition-colors hover:border-amber-500 hover:bg-amber-50"
+                  data-id={s.Id}
+                  data-action="in_progress"
+                >Working</button>
+              )}
+              {s.Status !== 'resolved' && (
+                <button
+                  type="button"
+                  class="sub-action rounded-full border border-emerald-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-emerald-700 transition-colors hover:border-emerald-500 hover:bg-emerald-50"
+                  data-id={s.Id}
+                  data-action="resolved"
+                >Mark resolved</button>
+              )}
+              {s.Status !== 'archived' && (
+                <button
+                  type="button"
+                  class="sub-action rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+                  data-id={s.Id}
+                  data-action="archived"
+                >Archive</button>
+              )}
+              {(s.Status === 'resolved' || s.Status === 'archived') && (
+                <button
+                  type="button"
+                  class="sub-action rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+                  data-id={s.Id}
+                  data-action="new"
+                >Reopen</button>
+              )}
+              <button
+                type="button"
+                class="sub-delete rounded-full border border-rose-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-rose-700 transition-colors hover:border-rose-500 hover:bg-rose-50"
+                data-id={s.Id}
+              >Delete</button>
+            </div>
+          </footer>
+        </article>
+      ))}
+    </div>
+  )}
+</AdminLayout>
+
+<script is:inline>
+  document.querySelectorAll('.sub-action').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      const status = btn.getAttribute('data-action');
+      if (!id || !status) return;
+      btn.disabled = true;
+      const res = await fetch(`/api/admin/submissions?id=${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        location.reload();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(body && body.error ? body.error : `Failed (${res.status})`);
+        btn.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('.sub-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      if (!confirm(`Permanently delete submission #${id}? This cannot be undone.`)) return;
+      const res = await fetch(`/api/admin/submissions?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (res.ok) {
+        const card = document.querySelector(`article[data-sub-id="${id}"]`);
+        if (card) card.remove();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(body && body.error ? body.error : `Failed (${res.status})`);
+      }
+    });
+  });
+</script>
