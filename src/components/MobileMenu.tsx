@@ -46,6 +46,24 @@ export default function MobileMenu() {
                 </a>
               </li>
             ))}
+            <li className="mt-2 border-t border-cream-300/60 pt-2">
+              <a
+                href="/admin/"
+                className="flex items-center justify-between rounded-md px-3 py-3 text-sm font-medium text-brand-700 hover:bg-cream-200/70"
+                onClick={() => setOpen(false)}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-brand-500"
+                  >
+                    Internal
+                  </span>
+                  <span>Admin dashboard</span>
+                </span>
+                <span aria-hidden="true" className="text-cream-700">→</span>
+              </a>
+            </li>
           </ul>
         </div>
       )}
