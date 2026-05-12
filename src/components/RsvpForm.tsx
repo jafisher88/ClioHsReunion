@@ -14,7 +14,16 @@ export default function RsvpForm() {
     setStatus({ kind: 'submitting' });
 
     const form = e.currentTarget;
-    const data = Object.fromEntries(new FormData(form).entries());
+    const fd = new FormData(form);
+    const data = {
+      fullName: String(fd.get('fullName') ?? ''),
+      maidenName: String(fd.get('maidenName') ?? ''),
+      email: String(fd.get('email') ?? ''),
+      attending: String(fd.get('attending') ?? ''),
+      // No party-size field — a checked "+1" means 2 guests, otherwise just 1.
+      guestCount: fd.get('plusOne') === 'on' ? 2 : 1,
+      notes: String(fd.get('notes') ?? ''),
+    };
 
     try {
       const res = await fetch('/api/rsvp', {
@@ -77,7 +86,16 @@ export default function RsvpForm() {
         </div>
       </fieldset>
 
-      <Field label="How many in your party? (including you)" name="guestCount" type="number" defaultValue="1" min={0} max={10} required />
+      <label className="group/p flex cursor-pointer items-start gap-3 rounded-xl border-2 border-cream-300 bg-white p-4 transition-all duration-150 hover:border-brand-300 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:shadow-[inset_0_0_0_1px_var(--color-brand-500)]">
+        <input type="checkbox" name="plusOne" className="peer mt-0.5 h-5 w-5 accent-brand-500" />
+        <span>
+          <span className="block font-semibold text-brand-900">Bringing a +1?</span>
+          <span className="mt-0.5 block text-sm leading-relaxed text-brand-700">
+            Check this if you're bringing a guest — partner, spouse, plus-one. We'll set
+            a seat for them.
+          </span>
+        </span>
+      </label>
 
       <label className="block">
         <span className="block text-sm font-semibold text-brand-900">Anything else? <span className="font-normal text-cream-700">(dietary needs, song requests, hellos)</span></span>
