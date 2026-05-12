@@ -58,3 +58,26 @@ the developer is wiring things up.
   and `wrangler secret put` in production.
 - Match existing CSS variable names in `global.css` instead of inventing new ones.
 - React islands stay small; keep most rendering server-side in `.astro`.
+
+## Contact list / mailing
+
+The canonical contact list for the Class of 2006 lives in a Google Sheet that
+classmates have been adding themselves to:
+
+Sheet is currently set to "anyone with link can view." Columns:
+`First Name, Last Name, Name at time of graduation if different, Email Address,
+Physical Address, Phone Number`.
+
+**Privacy note:** the sheet contains phone numbers and physical addresses.
+Do NOT embed the sheet or surface its URL on public pages without explicit OK
+from the organizer — broadening the audience from "people who know the link"
+to "anyone who visits cliohsreunion.com" is a meaningful change in exposure.
+
+Future work (not yet implemented): merge sheet + D1 `Rsvps` into a deduped
+recipient list, then send bulk emails via Resend. Reasonable approach:
+- Fetch sheet via the CSV export URL (`/export?format=csv`) at send time.
+- Dedupe with `Rsvps.Email`.
+- POST to Resend (`RESEND_API_KEY`, `ORGANIZER_EMAIL` are already stubbed in
+  `.dev.vars.example`).
+- Gate behind an admin-only page (auth not yet built — easiest path: a single
+  shared password in `wrangler secret` + a constant-time compare).
