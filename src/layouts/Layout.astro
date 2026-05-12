@@ -14,7 +14,7 @@ const {
   image,
 } = Astro.props;
 
-const pageTitle = title === 'Home' ? "Clio HS Class of 2006 — 20-Year Reunion" : `${title} | Clio HS Class of 2006`;
+const pageTitle = title === 'Home' ? "Clio High School Class of 2006 — 20-Year Reunion" : `${title} | Clio High School Class of 2006`;
 const ogImage = image || 'https://cliohsreunion.com/og.png';
 const canonicalUrl = new URL(Astro.url.pathname, 'https://cliohsreunion.com').href;
 
@@ -49,7 +49,7 @@ const navLinks = [
     <meta property="og:description" content={description} />
     <meta property="og:image" content={ogImage} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:site_name" content="Clio HS Class of 2006 Reunion" />
+    <meta property="og:site_name" content="Clio High School Class of 2006 Reunion" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
@@ -122,7 +122,7 @@ const navLinks = [
             <h3 class="font-heading text-sm font-bold uppercase tracking-wider text-cream-200">Stay Connected</h3>
             <ul class="mt-3 space-y-2 text-sm text-cream-300">
               <li>
-                <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" class="hover:text-accent-300">
+                <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="hover:text-accent-300">
                   Class Facebook group →
                 </a>
               </li>
@@ -137,8 +137,12 @@ const navLinks = [
             </ul>
           </div>
         </div>
-        <div class="mt-10 border-t border-cream-800/40 pt-6 text-center text-xs text-cream-400">
-          &copy; {new Date().getFullYear()} Clio HS Class of 2006 Reunion. Made with love by classmates.
+        <div class="mt-10 border-t border-cream-800/40 pt-6 text-center text-xs text-cream-400 space-y-1">
+          <p>&copy; {new Date().getFullYear()} Clio High School Class of 2006 Reunion. Made with love by classmates.</p>
+          <p class="text-cream-500">
+            Site designed &amp; built by
+            <span class="text-cream-300">Fisher Computer Solutions L.L.C.</span>
+          </p>
         </div>
       </div>
     </footer>

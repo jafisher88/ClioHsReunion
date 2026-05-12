@@ -17,3 +17,4 @@ migrations_dir = "migrations"
 
 [vars]
 EVENT_NAME = "Clio High School Class of 2006 — 20 Year Reunion"
+VENUE = "Round Em Up Ranch, Clio, Michigan"

@@ -6,6 +6,7 @@ declare namespace Cloudflare {
   interface Env {
     DB: D1Database;
     EVENT_NAME: string;
+    VENUE: string;
     RESEND_API_KEY?: string;
     ORGANIZER_EMAIL?: string;
   }
