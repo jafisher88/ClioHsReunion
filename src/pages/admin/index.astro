@@ -1,11 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
-import { requireAdmin } from '../../lib/admin-auth';
+import { getAdmin, redirectToLogin } from '../../lib/admin-auth';
 
-const authResponse = requireAdmin(Astro.request, env);
-if (authResponse) {
-  return authResponse;
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return redirectToLogin(Astro.request);
 }
 
 interface RsvpRow {
@@ -84,13 +84,22 @@ const attendingBadge: Record<'yes' | 'no' | 'maybe', string> = {
 
 <Layout title="Admin">
   <div class="space-y-12">
-    <header>
-      <p class="font-script text-2xl text-accent-600">Internal only</p>
-      <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Admin dashboard</h1>
-      <p class="mt-3 text-sm text-brand-700">
-        Live data from D1. Refresh to update.
-        <span class="ml-2 text-cream-700">Total RSVPs: {rsvps.length} · Total volunteers: {vStats.Total}</span>
-      </p>
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="font-script text-2xl text-accent-600">Internal only</p>
+        <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Admin dashboard</h1>
+        <p class="mt-3 text-sm text-brand-700">
+          Live data from D1. Refresh to update.
+          <span class="ml-2 text-cream-700">Total RSVPs: {rsvps.length} · Total volunteers: {vStats.Total}</span>
+        </p>
+      </div>
+      <div class="flex flex-col items-end gap-1 text-sm">
+        <span class="text-cream-700">Signed in as <span class="font-semibold text-brand-800">{admin.email}</span></span>
+        <div class="flex gap-3">
+          <a href="/admin/admins" class="text-brand-700 underline hover:text-brand-900">Manage admins</a>
+          <a href="/admin/logout" class="text-brand-700 underline hover:text-brand-900">Logout</a>
+        </div>
+      </div>
     </header>
 
     <section>

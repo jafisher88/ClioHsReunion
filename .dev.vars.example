@@ -2,9 +2,15 @@
 # Copy this file to .dev.vars and fill in your values
 # NEVER commit .dev.vars — it contains credentials
 
-# Shared password for the /admin page. Required for /admin to be reachable.
-# In production, set with: npx wrangler secret put ADMIN_PASSWORD
-ADMIN_PASSWORD=
+# Google OAuth for /admin sign-in. Create credentials at
+# https://console.cloud.google.com/apis/credentials (Web application).
+# Authorized redirect URI: https://cliohsreunion.com/admin/auth/callback
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Used to HMAC-sign the admin session cookie. Generate with:
+#   openssl rand -base64 48
+SESSION_SECRET=
 
 # Optional: Resend API key for emailing RSVP confirmations to the organizer.
 # Leave blank to skip email and only persist RSVPs to D1.

@@ -1,59 +1,63 @@
-type AdminEnv = { ADMIN_PASSWORD?: string };
+import { readSessionToken } from './session';
 
-const REALM = 'Class of 2006 Admin';
-
-function constantTimeEquals(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
+export interface AdminContext {
+  email: string;
 }
 
-function challenge(status = 401): Response {
-  return new Response('Authentication required.', {
-    status,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"`,
-    },
-  });
-}
+type AdminEnv = {
+  DB?: D1Database;
+  SESSION_SECRET?: string;
+};
 
-/**
- * Return null when the request carries valid admin credentials; otherwise
- * return a Response (401 challenge or 503 if the secret isn't configured)
- * the page should `return` immediately.
- *
- * Accepts any username — only the password is compared, in constant time.
- */
-export function requireAdmin(request: Request, env: AdminEnv): Response | null {
-  const expected = env.ADMIN_PASSWORD;
-  if (!expected) {
-    return new Response(
-      'Admin password not configured. Set the ADMIN_PASSWORD secret on the Worker.',
-      { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
-    );
-  }
+const SESSION_COOKIE = 'admin_session';
 
-  const header = request.headers.get('authorization') ?? '';
-  if (!/^basic\s+/i.test(header)) {
-    return challenge();
-  }
-
-  let decoded = '';
-  try {
-    decoded = atob(header.replace(/^basic\s+/i, '').trim());
-  } catch {
-    return challenge();
-  }
-
-  const sep = decoded.indexOf(':');
-  const supplied = sep >= 0 ? decoded.slice(sep + 1) : decoded;
-
-  if (!constantTimeEquals(supplied, expected)) {
-    return challenge();
+function parseCookie(header: string | null, name: string): string | null {
+  if (!header) return null;
+  const parts = header.split(';');
+  for (const part of parts) {
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    const k = part.slice(0, eq).trim();
+    if (k === name) {
+      return decodeURIComponent(part.slice(eq + 1).trim());
+    }
   }
   return null;
 }
+
+/**
+ * Return the logged-in admin (email) or null.
+ *
+ * Reads the signed session cookie, verifies HMAC + expiration, then confirms
+ * the email is still in the Admins table (so revocation is immediate even
+ * with a long-lived cookie).
+ */
+export async function getAdmin(request: Request, env: AdminEnv): Promise<AdminContext | null> {
+  if (!env.SESSION_SECRET || !env.DB) return null;
+  const token = parseCookie(request.headers.get('cookie'), SESSION_COOKIE);
+  if (!token) return null;
+  const session = await readSessionToken(token, env.SESSION_SECRET);
+  if (!session) return null;
+
+  const row = await env.DB
+    .prepare('SELECT Id FROM Admins WHERE Email = ?1')
+    .bind(session.email)
+    .first();
+  if (!row) return null;
+  return { email: session.email };
+}
+
+/**
+ * Build a 302 redirect response that sends the visitor to /admin/login,
+ * preserving the original path as `?next=…` so they land back where they
+ * were after authenticating.
+ */
+export function redirectToLogin(request: Request): Response {
+  const url = new URL(request.url);
+  const next = url.pathname + url.search;
+  const loginUrl = new URL('/admin/login', url);
+  loginUrl.searchParams.set('next', next);
+  return Response.redirect(loginUrl.href, 302);
+}
+
+export const SESSION_COOKIE_NAME = SESSION_COOKIE;

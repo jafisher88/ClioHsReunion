@@ -7,7 +7,11 @@ declare namespace Cloudflare {
     DB: D1Database;
     EVENT_NAME: string;
     VENUE: string;
-    ADMIN_PASSWORD?: string;
+    // Admin auth (Google OAuth)
+    GOOGLE_CLIENT_ID?: string;
+    GOOGLE_CLIENT_SECRET?: string;
+    SESSION_SECRET?: string;
+    // Optional comms
     RESEND_API_KEY?: string;
     ORGANIZER_EMAIL?: string;
   }
