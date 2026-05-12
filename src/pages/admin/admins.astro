@@ -25,118 +25,99 @@ function fmtDate(iso: string | null): string {
   if (!iso) return '—';
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
   if (!m) return iso;
-  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  return `${m[1].slice(2)} ${months[Number(m[2]) - 1]} ${m[3]} · ${m[4]}:${m[5]}`;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
 }
-
-const liveStatus = `${admins.length} authorized · 1 session active`;
 ---
 
-<AdminLayout
-  title="Admins"
-  pageId="USR-0001"
-  pageLabel="Admins"
-  adminEmail={admin.email}
-  liveStatus={liveStatus}
->
-  <div class="ops-id-strip">
-    <strong>USR-0001</strong>
-    <span>·</span>
-    <span>ACCESS CONTROL · GOOGLE OIDC</span>
-    <span>·</span>
-    <span>{admins.length} ON ROSTER</span>
-  </div>
-
-  <header class="reveal">
-    <h1 class="ops-h1">Access Control.</h1>
-    <p class="ops-subtitle">
-      Allowlisted Google accounts may sign into operations.
-      <span class="ops-dim">/ Removed accounts lose access on next request.</span>
-    </p>
+<AdminLayout title="Admins" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">Access control</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Manage admins</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        Only Google accounts on this list can sign into the admin dashboard.
+        Removed accounts lose access on their next request.
+      </p>
+    </div>
   </header>
 
   <!-- ADD ADMIN -->
-  <section class="reveal delay-1" style="margin-top: 2rem;">
-    <div class="ops-panel">
-      <div class="ops-panel-title">
-        <span class="ops-panel-title-num">01 / GRANT</span>
-        <span class="ops-panel-title-text">Add operator</span>
-        <span class="ops-panel-title-meta">requires google sign-in</span>
-      </div>
-
-      <form id="add-form" class="add-admin-form">
-        <div class="ops-field" style="flex: 1; min-width: 220px;">
-          <label class="ops-label" for="new-admin-email">
-            Google email<span class="req">*</span>
-          </label>
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Add an admin</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">requires Google sign-in</span>
+    </header>
+    <div class="rounded-2xl border border-cream-300 bg-white/80 p-6 shadow-soft sm:p-8">
+      <form id="add-form" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label class="flex-1 block">
+          <span class="block text-sm font-semibold text-brand-900">Google email</span>
           <input
             id="new-admin-email"
-            class="ops-input"
             type="email"
             name="email"
             required
             placeholder="classmate@gmail.com"
             autocomplete="off"
             spellcheck="false"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
           />
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="ops-btn">
-            <span aria-hidden="true">▸</span>
-            <span>Authorize</span>
-          </button>
-          <p id="add-message" class="ops-msg" hidden></p>
-        </div>
+        </label>
+        <button
+          type="submit"
+          class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5 sm:self-end"
+        >
+          Authorize
+          <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+        </button>
       </form>
+      <p id="add-message" class="mt-3 hidden text-sm"></p>
+      <p class="mt-3 text-xs italic text-cream-700">
+        New admin emails must also be added to the Google OAuth Consent Screen's Test Users list,
+        or they'll be blocked by Google before reaching this app.
+      </p>
     </div>
   </section>
 
   <!-- ROSTER -->
-  <section class="reveal delay-2">
-    <div class="ops-section-rule">
-      <span class="ops-section-rule-num">02</span>
-      <span>Active Operators</span>
-      <span class="ops-section-rule-line"></span>
-      <span class="ops-section-rule-meta">{admins.length} on roster</span>
-    </div>
-
-    <div class="ops-table-wrap">
-      <table class="ops-table">
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Active operators</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">{admins.length} on roster</span>
+    </header>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
         <thead>
           <tr>
-            <th style="width: 0.5%;">#</th>
+            <th style="width:3rem;" class="num">#</th>
             <th>Email</th>
-            <th>Added By</th>
+            <th>Added by</th>
             <th>Granted</th>
-            <th>Last Sign-in</th>
-            <th class="right">Action</th>
+            <th>Last sign-in</th>
+            <th class="num">Action</th>
           </tr>
         </thead>
         <tbody>
           {admins.length === 0 && (
-            <tr class="empty-row">
-              <td colspan="6">— roster is empty — seed via D1 to bootstrap —</td>
-            </tr>
+            <tr class="empty-row"><td colspan="6">— roster is empty — seed via D1 to bootstrap —</td></tr>
           )}
           {admins.map((a, idx) => (
             <tr data-email={a.Email}>
-              <td class="mono dim">{String(idx + 1).padStart(2, '0')}</td>
+              <td class="num mono dim">{String(idx + 1).padStart(2, '0')}</td>
               <td>
-                <span style="font-weight: 600;">{a.Email}</span>
-                {a.Email === admin.email && <span class="pill self" style="margin-left: 0.6rem;">YOU</span>}
+                <span class="font-semibold">{a.Email}</span>
+                {a.Email === admin.email && <span class="ml-2 pill self">YOU</span>}
               </td>
               <td class="mono dim">{a.AddedBy ?? '—'}</td>
-              <td class="mono dim" style="white-space: nowrap;">{fmtDate(a.AddedAt)}</td>
-              <td class="mono dim" style="white-space: nowrap;">{fmtDate(a.LastLoginAt)}</td>
-              <td class="right">
+              <td class="mono dim whitespace-nowrap">{fmtDate(a.AddedAt)}</td>
+              <td class="mono dim whitespace-nowrap">{fmtDate(a.LastLoginAt)}</td>
+              <td class="num">
                 {a.Email === admin.email ? (
-                  <span class="mono dim" style="font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase;">
-                    self · locked
-                  </span>
+                  <span class="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-cream-700">self · locked</span>
                 ) : (
                   <button
                     type="button"
-                    class="remove-btn ops-btn ops-btn-danger"
+                    class="remove-btn rounded-full border border-rose-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-rose-700 transition-colors hover:border-rose-500 hover:bg-rose-50"
                     data-email={a.Email}
                   >
                     Revoke
@@ -151,28 +132,6 @@ const liveStatus = `${admins.length} authorized · 1 session active`;
   </section>
 </AdminLayout>
 
-<style is:global>
-  .ops-subtitle {
-    font-family: var(--ops-font-mono);
-    font-size: 0.85rem;
-    color: var(--ops-text-dim);
-    margin: 0.6rem 0 0;
-    letter-spacing: 0.02em;
-  }
-  .ops-dim { color: var(--ops-text-ghost); }
-  .add-admin-form {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 1.5rem;
-  }
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-</style>
-
 <script is:inline>
   const form = document.getElementById('add-form');
   const message = document.getElementById('add-message');
@@ -180,8 +139,11 @@ const liveStatus = `${admins.length} authorized · 1 session active`;
   function setMessage(text, tone) {
     message.textContent = text;
     message.hidden = false;
-    message.classList.remove('info', 'ok', 'err');
-    message.classList.add(tone || 'info');
+    message.classList.remove('hidden');
+    message.classList.remove('text-brand-700', 'text-rose-700', 'text-emerald-700');
+    message.classList.add(
+      tone === 'error' ? 'text-rose-700' : tone === 'ok' ? 'text-emerald-700' : 'text-brand-700',
+    );
   }
 
   form.addEventListener('submit', async (e) => {
@@ -198,13 +160,13 @@ const liveStatus = `${admins.length} authorized · 1 session active`;
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setMessage(body && body.error ? body.error : `Failed (${res.status})`, 'err');
+        setMessage(body && body.error ? body.error : `Failed (${res.status})`, 'error');
         return;
       }
       setMessage('Authorized · reloading', 'ok');
       setTimeout(() => location.reload(), 500);
     } catch {
-      setMessage('Network error.', 'err');
+      setMessage('Network error.', 'error');
     }
   });
 

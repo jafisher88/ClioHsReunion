@@ -80,155 +80,98 @@ const netDollars = (netCents / 100).toLocaleString('en-US', {
 function fmtDate(iso: string): string {
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
   if (!m) return iso;
-  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  return `${m[1].slice(2)} ${months[Number(m[2]) - 1]} ${m[3]} · ${m[4]}:${m[5]}`;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
 }
-
-const liveStatus = `${rsvps.length} rsvp · ${volunteers.length} vol · ${netDollars} net`;
 ---
 
-<AdminLayout
-  title="Dashboard"
-  pageId="DASH-0001"
-  pageLabel="Dashboard"
-  adminEmail={admin.email}
-  liveStatus={liveStatus}
->
-  <div class="ops-id-strip">
-    <strong>DASH-0001</strong>
-    <span>·</span>
-    <span>RSVP &amp; VOLUNTEER OPERATIONS</span>
-    <span>·</span>
-    <span>CLASSIFIED — INTERNAL</span>
-  </div>
-
-  <header class="reveal">
-    <h1 class="ops-h1">Operations Dashboard.</h1>
-    <p class="ops-subtitle">
-      Live counts straight from D1. Refresh the page to update.
-      <span class="ops-dim">/ Last queried just now.</span>
-    </p>
+<AdminLayout title="Dashboard" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">Live data</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">
+        Dashboard
+      </h1>
+      <p class="mt-2 text-sm text-cream-700">
+        Refresh to update · {rsvps.length} RSVPs · {volunteers.length} volunteers · net balance <span class="font-semibold text-brand-700">{netDollars}</span>
+      </p>
+    </div>
   </header>
 
-  <!-- RSVP TELEMETRY -->
-  <section class="reveal delay-1">
-    <div class="ops-section-rule">
-      <span class="ops-section-rule-num">01</span>
-      <span>RSVP Telemetry</span>
-      <span class="ops-section-rule-line"></span>
-      <span class="ops-section-rule-meta">{rsvps.length} entries</span>
-    </div>
-
-    <div class="stat-grid">
-      <div class="stat-tile is-accent">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">FLD-Y</span>
-          <span class="stat-tile-tag">▸ YES</span>
-        </div>
-        <div class="stat-tile-value">{yesCount}</div>
-        <div class="stat-tile-meta">
-          <span class="em">{yesGuests}</span> guests projected
-        </div>
+  <!-- RSVP SUMMARY -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">RSVP summary</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">{rsvps.length} entries</span>
+    </header>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="admin-tile is-emerald">
+        <div class="admin-tile-label">Yes</div>
+        <div class="admin-tile-value">{yesCount}</div>
+        <div class="admin-tile-sub">{yesGuests} guests projected</div>
       </div>
-
-      <div class="stat-tile is-gold">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">FLD-M</span>
-          <span class="stat-tile-tag">◇ MAYBE</span>
-        </div>
-        <div class="stat-tile-value">{maybeCount}</div>
-        <div class="stat-tile-meta">
-          <span class="em">{maybeGuests}</span> guests if shows
-        </div>
+      <div class="admin-tile">
+        <div class="admin-tile-label">Maybe</div>
+        <div class="admin-tile-value">{maybeCount}</div>
+        <div class="admin-tile-sub">{maybeGuests} if shows</div>
       </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">FLD-N</span>
-          <span class="stat-tile-tag">✕ NO</span>
-        </div>
-        <div class="stat-tile-value">{noCount}</div>
-        <div class="stat-tile-meta">declined</div>
+      <div class="admin-tile">
+        <div class="admin-tile-label">No</div>
+        <div class="admin-tile-value">{noCount}</div>
+        <div class="admin-tile-sub">declined</div>
       </div>
-
-      <div class="stat-tile is-accent">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">FLD-H</span>
-          <span class="stat-tile-tag">▣ HEAD COUNT</span>
-        </div>
-        <div class="stat-tile-value">{yesGuests}</div>
-        <div class="stat-tile-meta">
-          + <span class="em">{maybeGuests}</span> if maybes show
-        </div>
+      <div class="admin-tile is-brand">
+        <div class="admin-tile-label">Expected head count</div>
+        <div class="admin-tile-value">{yesGuests}</div>
+        <div class="admin-tile-sub">+ {maybeGuests} if maybes show</div>
       </div>
     </div>
   </section>
 
-  <!-- VOLUNTEER ROSTER -->
-  <section class="reveal delay-2">
-    <div class="ops-section-rule">
-      <span class="ops-section-rule-num">02</span>
-      <span>Volunteer Roster</span>
-      <span class="ops-section-rule-line"></span>
-      <span class="ops-section-rule-meta">{vStats.Total} signups</span>
-    </div>
-
-    <div class="stat-grid">
-      <div class="stat-tile is-accent">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">VOL-S</span>
-          <span class="stat-tile-tag">▸ SETUP</span>
-        </div>
-        <div class="stat-tile-value">{vStats.Setup}</div>
-        <div class="stat-tile-meta">day before — decorate &amp; prep</div>
+  <!-- VOLUNTEER SUMMARY -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Volunteer summary</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">{vStats.Total} signups</span>
+    </header>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="admin-tile is-brand">
+        <div class="admin-tile-label">Setup signups</div>
+        <div class="admin-tile-value">{vStats.Setup}</div>
+        <div class="admin-tile-sub">day before</div>
       </div>
-
-      <div class="stat-tile is-accent">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">VOL-C</span>
-          <span class="stat-tile-tag">▸ CLEANUP</span>
-        </div>
-        <div class="stat-tile-value">{vStats.Cleanup}</div>
-        <div class="stat-tile-meta">day after — teardown</div>
+      <div class="admin-tile is-brand">
+        <div class="admin-tile-label">Cleanup signups</div>
+        <div class="admin-tile-value">{vStats.Cleanup}</div>
+        <div class="admin-tile-sub">day after</div>
       </div>
-
-      <div class="stat-tile is-gold">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">VOL-B</span>
-          <span class="stat-tile-tag">★ BOTH</span>
-        </div>
-        <div class="stat-tile-value">{vStats.Both}</div>
-        <div class="stat-tile-meta">counted in each above</div>
+      <div class="admin-tile">
+        <div class="admin-tile-label">Doing both</div>
+        <div class="admin-tile-value">{vStats.Both}</div>
+        <div class="admin-tile-sub">counted in each above</div>
       </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <span class="stat-tile-id">VOL-U</span>
-          <span class="stat-tile-tag">⌬ UNIQUE</span>
-        </div>
-        <div class="stat-tile-value">{vStats.Total}</div>
-        <div class="stat-tile-meta">distinct people</div>
+      <div class="admin-tile">
+        <div class="admin-tile-label">Unique people</div>
+        <div class="admin-tile-value">{vStats.Total}</div>
+        <div class="admin-tile-sub">distinct</div>
       </div>
     </div>
   </section>
 
   <!-- RSVP TABLE -->
-  <section class="reveal delay-3">
-    <div class="ops-section-rule">
-      <span class="ops-section-rule-num">03</span>
-      <span>RSVP Manifest</span>
-      <span class="ops-section-rule-line"></span>
-      <span class="ops-section-rule-meta">sorted newest first</span>
-    </div>
-
-    <div class="ops-table-wrap">
-      <table class="ops-table">
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">RSVPs</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">newest first</span>
+    </header>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
         <thead>
           <tr>
             <th>Name</th>
             <th>Email</th>
             <th>Status</th>
-            <th class="right">Guests</th>
+            <th class="num">Guests</th>
             <th>Maiden</th>
             <th>Notes</th>
             <th>Logged</th>
@@ -236,21 +179,17 @@ const liveStatus = `${rsvps.length} rsvp · ${volunteers.length} vol · ${netDol
         </thead>
         <tbody>
           {rsvps.length === 0 && (
-            <tr class="empty-row">
-              <td colspan="7">— no rsvps logged yet —</td>
-            </tr>
+            <tr class="empty-row"><td colspan="7">— no RSVPs logged yet —</td></tr>
           )}
           {rsvps.map(r => (
             <tr>
-              <td>{r.FullName}</td>
-              <td class="mono dim">
-                <a href={`mailto:${r.Email}`} class="ops-link">{r.Email}</a>
-              </td>
+              <td><span class="font-semibold">{r.FullName}</span></td>
+              <td class="mono dim"><a href={`mailto:${r.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.Email}</a></td>
               <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
-              <td class="nums right">{r.GuestCount}</td>
+              <td class="num">{r.GuestCount}</td>
               <td class="dim">{r.MaidenName ?? '—'}</td>
-              <td class="dim" style="max-width: 24ch; white-space: pre-wrap;">{r.Notes ?? '—'}</td>
-              <td class="mono dim" style="white-space: nowrap;">{fmtDate(r.CreatedAt)}</td>
+              <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
+              <td class="mono dim whitespace-nowrap">{fmtDate(r.CreatedAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -259,16 +198,13 @@ const liveStatus = `${rsvps.length} rsvp · ${volunteers.length} vol · ${netDol
   </section>
 
   <!-- VOLUNTEER TABLE -->
-  <section class="reveal delay-4">
-    <div class="ops-section-rule">
-      <span class="ops-section-rule-num">04</span>
-      <span>Volunteer Manifest</span>
-      <span class="ops-section-rule-line"></span>
-      <span class="ops-section-rule-meta">sorted newest first</span>
-    </div>
-
-    <div class="ops-table-wrap">
-      <table class="ops-table">
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Volunteers</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">newest first</span>
+    </header>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
         <thead>
           <tr>
             <th>Name</th>
@@ -282,21 +218,17 @@ const liveStatus = `${rsvps.length} rsvp · ${volunteers.length} vol · ${netDol
         </thead>
         <tbody>
           {volunteers.length === 0 && (
-            <tr class="empty-row">
-              <td colspan="7">— no volunteers signed up yet —</td>
-            </tr>
+            <tr class="empty-row"><td colspan="7">— no volunteers signed up yet —</td></tr>
           )}
           {volunteers.map(v => (
             <tr>
-              <td>{v.FullName}</td>
-              <td class="mono dim">
-                <a href={`mailto:${v.Email}`} class="ops-link">{v.Email}</a>
-              </td>
-              <td class="mono dim" style="white-space: nowrap;">{v.Phone ?? '—'}</td>
+              <td><span class="font-semibold">{v.FullName}</span></td>
+              <td class="mono dim"><a href={`mailto:${v.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{v.Email}</a></td>
+              <td class="mono dim whitespace-nowrap">{v.Phone ?? '—'}</td>
               <td>{v.RoleSetup ? <span class="check-mark">✓</span> : <span class="dash-mark">—</span>}</td>
               <td>{v.RoleCleanup ? <span class="check-mark">✓</span> : <span class="dash-mark">—</span>}</td>
-              <td class="dim" style="max-width: 24ch; white-space: pre-wrap;">{v.Notes ?? '—'}</td>
-              <td class="mono dim" style="white-space: nowrap;">{fmtDate(v.CreatedAt)}</td>
+              <td class="dim max-w-xs whitespace-pre-wrap">{v.Notes ?? '—'}</td>
+              <td class="mono dim whitespace-nowrap">{fmtDate(v.CreatedAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -304,16 +236,3 @@ const liveStatus = `${rsvps.length} rsvp · ${volunteers.length} vol · ${netDol
     </div>
   </section>
 </AdminLayout>
-
-<style is:global>
-  .ops-subtitle {
-    font-family: var(--ops-font-mono);
-    font-size: 0.85rem;
-    color: var(--ops-text-dim);
-    margin: 0.6rem 0 0;
-    letter-spacing: 0.02em;
-  }
-  .ops-dim { color: var(--ops-text-ghost); }
-  .ops-link { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ops-text-ghost); }
-  .ops-link:hover { color: var(--ops-signal); border-bottom-color: var(--ops-signal); }
-</style>
