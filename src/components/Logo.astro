@@ -1,72 +1,16 @@
 ---
 interface Props {
   size?: 'sm' | 'md' | 'lg';
+  variant?: 'light' | 'dark';
 }
-const { size = 'md' } = Astro.props;
-const sizes: Record<string, { school: string; reunion: string }> = {
-  sm: { school: 'text-[0.62rem]', reunion: 'text-base' },
-  md: { school: 'text-[0.7rem]', reunion: 'text-xl' },
-  lg: { school: 'text-[0.8rem]', reunion: 'text-3xl' },
-};
-const s = sizes[size];
+const { size = 'md', variant = 'light' } = Astro.props;
+const sizes = { sm: 'text-base', md: 'text-xl', lg: 'text-3xl' } as const;
+const yearSizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' } as const;
+const primary = variant === 'dark' ? 'text-cream-100' : 'text-brand-700';
+const secondary = variant === 'dark' ? 'text-accent-300' : 'text-accent-600';
 ---
 
-<span class="logo-mark inline-flex items-center gap-2.5">
-  <span class="logo-seal" aria-hidden="true">
-    <span class="logo-seal-num">06</span>
-  </span>
-  <span class="inline-flex flex-col leading-none">
-    <span class={`logo-school ${s.school}`}>CLIO HIGH SCHOOL</span>
-    <span class={`logo-reunion ${s.reunion}`}>
-      <em>Class of</em> <span class="logo-year">'06</span>
-    </span>
-  </span>
+<span class={`inline-flex items-baseline gap-2 leading-none ${sizes[size]} font-heading uppercase tracking-wider`}>
+  <span class={primary}>Clio High School</span>
+  <span class={`${secondary} ${yearSizes[size]} font-display italic normal-case tracking-normal`}>· Class of '06</span>
 </span>
-
-<style>
-  .logo-mark { color: var(--color-brand-900); }
-  .logo-seal {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.4rem;
-    height: 2.4rem;
-    border: 1.5px solid var(--color-brand-900);
-    background: var(--color-brand-500);
-    color: var(--color-cream-50);
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 96, "wght" 700, "WONK" 1;
-    font-style: italic;
-    flex-shrink: 0;
-    transform: rotate(-4deg);
-    transition: transform 0.2s ease;
-    box-shadow: 2px 2px 0 var(--color-brand-900);
-  }
-  .logo-mark:hover .logo-seal { transform: rotate(0deg); }
-  .logo-seal-num { font-size: 1rem; letter-spacing: -0.04em; line-height: 1; }
-  .logo-school {
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.28em;
-    color: var(--color-cream-700);
-    font-weight: 500;
-  }
-  .logo-reunion {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 64, "wght" 600, "WONK" 1;
-    color: var(--color-brand-900);
-    letter-spacing: -0.02em;
-    line-height: 1;
-    margin-top: 2px;
-  }
-  .logo-reunion em {
-    font-style: italic;
-    font-variation-settings: "opsz" 64, "wght" 400, "WONK" 1;
-    color: var(--color-brand-700);
-  }
-  .logo-year {
-    color: var(--color-brand-500);
-    font-style: italic;
-    font-variation-settings: "opsz" 96, "wght" 700, "WONK" 1;
-  }
-</style>

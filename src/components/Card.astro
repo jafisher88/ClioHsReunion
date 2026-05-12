@@ -2,35 +2,14 @@
 interface Props {
   icon?: string;
   title: string;
-  num?: string;
 }
-const { icon, title, num } = Astro.props;
+const { icon, title } = Astro.props;
 ---
 
-<article class="catalog-entry">
-  <header class="catalog-entry-num">
-    <span>{num ?? '◦'}</span>
-    <span>{title}</span>
-  </header>
-  {icon && <div class="catalog-entry-icon" aria-hidden="true">{icon}</div>}
-  <div class="catalog-entry-body">
+<div class="rounded-2xl border-2 border-cream-300 bg-white/70 p-6 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-brand-300">
+  {icon && <div class="text-3xl">{icon}</div>}
+  <h3 class="mt-3 font-heading text-xl uppercase tracking-wider text-brand-800">{title}</h3>
+  <div class="mt-2 text-brand-700 leading-relaxed">
     <slot />
   </div>
-</article>
-
-<style>
-  .catalog-entry-icon {
-    font-size: 2rem;
-    line-height: 1;
-    margin-top: 0.2rem;
-    color: var(--color-brand-500);
-  }
-  .catalog-entry-body {
-    font-family: var(--font-body);
-    color: var(--color-brand-800);
-    line-height: 1.5;
-    font-size: 0.95rem;
-  }
-  .catalog-entry-body :global(p) { margin: 0; }
-  .catalog-entry-body :global(p + p) { margin-top: 0.5rem; }
-</style>
+</div>

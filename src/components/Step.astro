@@ -6,54 +6,9 @@ interface Props {
 const { time, title } = Astro.props;
 ---
 
-<li class="program-step">
-  <div class="program-step-time">{time}</div>
-  <div class="program-step-body">
-    <h3 class="program-step-title">{title}</h3>
-    <p class="program-step-text"><slot /></p>
-  </div>
+<li class="relative">
+  <span class="absolute -left-[1.625rem] mt-1.5 inline-block h-3 w-3 rounded-full bg-accent-500 ring-4 ring-cream-50"></span>
+  <div class="font-heading text-sm uppercase tracking-wider text-accent-700">{time}</div>
+  <div class="mt-1 font-display text-lg text-brand-800">{title}</div>
+  <p class="mt-1 text-sm text-brand-700"><slot /></p>
 </li>
-
-<style>
-  .program-step {
-    display: grid;
-    grid-template-columns: minmax(7.5rem, 9rem) 1fr;
-    gap: 1.5rem;
-    padding: 1rem 0;
-    position: relative;
-    border-top: 1px solid rgba(13, 11, 10, 0.15);
-  }
-  .program-step:first-child { border-top: 1.5px solid var(--color-brand-900); }
-  .program-step:last-child { border-bottom: 1.5px solid var(--color-brand-900); }
-  .program-step-time {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
-    color: var(--color-brand-500);
-    font-weight: 600;
-    padding-top: 0.35rem;
-    border-right: 1px solid rgba(13, 11, 10, 0.18);
-    padding-right: 1.25rem;
-  }
-  .program-step-title {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 48, "wght" 600, "WONK" 1;
-    font-size: 1.5rem;
-    line-height: 1.05;
-    color: var(--color-brand-900);
-    margin: 0;
-    letter-spacing: -0.02em;
-  }
-  .program-step-text {
-    margin: 0.4rem 0 0;
-    font-family: var(--font-body);
-    color: var(--color-brand-800);
-    line-height: 1.55;
-    font-size: 0.95rem;
-  }
-  @media (max-width: 540px) {
-    .program-step { grid-template-columns: 1fr; gap: 0.25rem; }
-    .program-step-time { border-right: 0; padding-right: 0; }
-  }
-</style>

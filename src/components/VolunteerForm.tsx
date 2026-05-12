@@ -47,68 +47,18 @@ export default function VolunteerForm() {
 
   if (status.kind === 'success') {
     return (
-      <div className="vol-success">
-        <div className="vol-success-stamp">SIGNED UP</div>
-        <h2 className="vol-success-h">Thanks &mdash; you're on the list.</h2>
-        <p className="vol-success-p">
-          We'll be in touch closer to the date with timing and what to bring.
+      <div className="rounded-2xl border border-accent-300 bg-accent-50 p-8 text-center shadow-sm">
+        <h2 className="font-heading text-2xl uppercase tracking-wider text-brand-800">Thanks!</h2>
+        <p className="mt-3 text-brand-700">
+          You're on the volunteer list. We'll be in touch closer to the date with timing
+          and what to bring.
         </p>
-        <button onClick={() => setStatus({ kind: 'idle' })} className="vol-success-btn">
-          Sign up someone else →
+        <button
+          onClick={() => setStatus({ kind: 'idle' })}
+          className="mt-6 rounded-full border-2 border-brand-300 bg-white px-6 py-2 text-sm font-medium text-brand-700 hover:border-brand-500"
+        >
+          Sign up someone else
         </button>
-        <style>{`
-          .vol-success {
-            padding: 2.5rem 1.5rem;
-            text-align: center;
-            background: var(--color-brand-50);
-            border: 1.5px solid var(--color-brand-500);
-          }
-          .vol-success-stamp {
-            display: inline-block;
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
-            letter-spacing: 0.3em;
-            color: var(--color-redpen-500);
-            border: 2.5px solid var(--color-redpen-500);
-            padding: 0.4rem 0.9rem;
-            transform: rotate(-5deg);
-            margin-bottom: 1rem;
-            font-weight: 700;
-            background: rgba(193, 39, 45, 0.04);
-          }
-          .vol-success-h {
-            font-family: var(--font-display);
-            font-variation-settings: "opsz" 96, "wght" 600, "WONK" 1;
-            font-style: italic;
-            font-size: 2rem;
-            line-height: 1.05;
-            margin: 0.5rem 0 0.75rem;
-            color: var(--color-brand-900);
-          }
-          .vol-success-p {
-            font-family: var(--font-body);
-            color: var(--color-brand-800);
-            max-width: 30rem;
-            margin: 0 auto;
-            line-height: 1.5;
-          }
-          .vol-success-btn {
-            margin-top: 1.5rem;
-            display: inline-flex;
-            background: transparent;
-            border: 1.5px solid var(--color-brand-900);
-            color: var(--color-brand-900);
-            padding: 0.65rem 1.1rem;
-            font-family: var(--font-mono);
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.15s ease, color 0.15s ease;
-          }
-          .vol-success-btn:hover { background: var(--color-brand-900); color: var(--color-cream-50); }
-        `}</style>
       </div>
     );
   }
@@ -116,104 +66,82 @@ export default function VolunteerForm() {
   const submitting = status.kind === 'submitting';
 
   return (
-    <form onSubmit={onSubmit} className="vol-form">
-      <div className="vol-form-grid">
-        <div className="field-block" style={{ gridColumn: 'span 2' }}>
-          <label className="field-label" htmlFor="vol-name">
-            Full name<span className="req">*</span>
-          </label>
-          <input id="vol-name" className="field-input" type="text" name="fullName" required placeholder="Jane Mustang" />
-        </div>
+    <form onSubmit={onSubmit} className="space-y-5">
+      <Field label="Full name" name="fullName" required placeholder="Jane Mustang" />
+      <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
+      <Field label="Phone (optional)" name="phone" type="tel" placeholder="(810) 555-0123" />
 
-        <div className="field-block">
-          <label className="field-label" htmlFor="vol-email">
-            Email<span className="req">*</span>
-          </label>
-          <input id="vol-email" className="field-input" type="email" name="email" required placeholder="you@example.com" />
-        </div>
-
-        <div className="field-block">
-          <label className="field-label" htmlFor="vol-phone">Phone</label>
-          <input id="vol-phone" className="field-input" type="tel" name="phone" placeholder="(810) 555-0123" />
-        </div>
-      </div>
-
-      <fieldset className="vol-roles">
-        <legend className="field-label">
-          Which day(s) can you help?<span className="req">*</span>
-          <span className="field-label-soft"> Pick at least one.</span>
-        </legend>
-        <div className="vol-role-grid">
-          <label className="role-check">
-            <input type="checkbox" name="roleSetup" />
-            <span className="box" aria-hidden="true" />
-            <span>
-              <span className="role-check-title">Day before — setup &amp; decorate.</span>
-              <span className="role-check-body">Friday-ish: arrive at the ranch, set up tables, hang decorations, prep the space.</span>
-            </span>
-          </label>
-          <label className="role-check">
-            <input type="checkbox" name="roleCleanup" />
-            <span className="box" aria-hidden="true" />
-            <span>
-              <span className="role-check-title">Day after — cleanup.</span>
-              <span className="role-check-body">Sunday-ish: tear-down, trash, pack up decorations, leave the venue better than we found it.</span>
-            </span>
-          </label>
+      <fieldset>
+        <legend className="block text-sm font-semibold text-brand-800">Which day(s) can you help?</legend>
+        <p className="mt-1 text-xs text-cream-700">Pick at least one.</p>
+        <div className="mt-3 space-y-2">
+          <RoleCheckbox name="roleSetup" title="Setup & decorate — day before" body="Friday-ish: arrive at the ranch, set up tables, hang decorations, prep the space." />
+          <RoleCheckbox name="roleCleanup" title="Cleanup — day after" body="Sunday-ish: tear-down, trash, pack up decorations, leave the venue better than we found it." />
         </div>
       </fieldset>
 
-      <div className="field-block">
-        <label className="field-label" htmlFor="vol-notes">
-          Anything else?
-          <span className="field-label-soft"> (truck access, time of day, etc.)</span>
-        </label>
-        <textarea id="vol-notes" className="field-textarea" name="notes" rows={3} />
-      </div>
+      <label className="block">
+        <span className="block text-sm font-semibold text-brand-800">Anything else? (truck access, time of day, etc.)</span>
+        <textarea
+          name="notes"
+          rows={3}
+          className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 focus:border-brand-500 focus:outline-none"
+        />
+      </label>
 
       {status.kind === 'error' && (
-        <p className="vol-error">{status.message}</p>
+        <p className="rounded-lg border border-brand-300 bg-brand-50 px-4 py-3 text-sm text-brand-800">{status.message}</p>
       )}
 
-      <div className="vol-actions">
-        <button type="submit" disabled={submitting} className="submit-stamp">
-          <span aria-hidden="true">✪</span>
-          <span>{submitting ? 'Sending…' : 'Sign me up'}</span>
-        </button>
-      </div>
-
-      <style>{`
-        .vol-form { display: flex; flex-direction: column; gap: 1.75rem; }
-        .vol-form-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 1.5rem;
-        }
-        @media (max-width: 640px) {
-          .vol-form-grid { grid-template-columns: 1fr; }
-          .vol-form-grid .field-block { grid-column: span 1 !important; }
-        }
-        .vol-roles { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
-        .vol-role-grid { display: grid; gap: 0.75rem; }
-        .field-label-soft {
-          font-family: var(--font-mono);
-          color: var(--color-cream-700);
-          text-transform: none;
-          letter-spacing: 0.08em;
-          font-size: 0.65rem;
-          font-style: italic;
-        }
-        .vol-error {
-          margin: 0;
-          padding: 0.7rem 0.9rem;
-          background: rgba(193, 39, 45, 0.06);
-          border: 1.5px solid var(--color-redpen-500);
-          color: var(--color-redpen-600);
-          font-family: var(--font-mono);
-          font-size: 0.78rem;
-        }
-        .vol-actions { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
-      `}</style>
+      <button
+        type="submit"
+        disabled={submitting}
+        className="w-full rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-lg shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-60"
+      >
+        {submitting ? 'Sending…' : 'Sign me up'}
+      </button>
     </form>
+  );
+}
+
+function RoleCheckbox({ name, title, body }: { name: string; title: string; body: string }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-lg border-2 border-cream-300 bg-white p-4 hover:border-brand-300 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+      <input type="checkbox" name={name} className="mt-1 h-5 w-5 accent-brand-500" />
+      <span>
+        <span className="block font-semibold text-brand-800">{title}</span>
+        <span className="mt-0.5 block text-sm text-brand-700">{body}</span>
+      </span>
+    </label>
+  );
+}
+
+function Field({
+  label,
+  name,
+  type = 'text',
+  required = false,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-sm font-semibold text-brand-800">
+        {label}
+        {required && <span className="text-brand-600"> *</span>}
+      </span>
+      <input
+        name={name}
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+      />
+    </label>
   );
 }

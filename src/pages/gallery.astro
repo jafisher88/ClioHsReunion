@@ -2,183 +2,49 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Gallery" folio="05" section="THE ARCHIVE">
-  <div class="page-opener reveal">
-    <div class="page-opener-section">
-      <span class="page-opener-kicker">Issue 05 · The Archive</span>
-      <span class="page-opener-label">Gallery.</span>
-    </div>
-    <div class="page-opener-meta">
-      Found in<br />
-      the · filing · cabinet
-    </div>
-  </div>
-
-  <header class="gallery-intro reveal delay-1">
-    <p class="pull-quote">
-      A YouTube playlist of Class of 2006 memories &mdash; graduation, sports,
-      theatre, the works. Got photos or video to add?
-      <a href="/contact" class="gallery-link">Send them our way</a>
+<Layout title="Gallery">
+  <header class="animate-fade-in">
+    <p class="font-script text-2xl text-accent-600">Throwbacks</p>
+    <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Gallery</h1>
+    <p class="mt-4 max-w-2xl text-brand-700">
+      A YouTube playlist of Class of 2006 memories — graduation, sports, theatre, the works.
+      Got photos or video to add? <a href="/contact" class="text-brand-800 underline">Send them our way</a>
       and we'll get them into the mix.
     </p>
   </header>
 
-  <section class="reveal delay-2">
-    <div class="editorial-rule">
-      <span class="num">01</span>
-      <span class="label">Throwback playlist</span>
-      <span class="line"></span>
-      <span class="meta">via YouTube</span>
-    </div>
-
-    <figure class="gallery-tv">
-      <span class="tape tape-tl" aria-hidden="true"></span>
-      <span class="tape tape-tr" aria-hidden="true"></span>
-      <span class="tape tape-bl" aria-hidden="true"></span>
-      <span class="tape tape-br" aria-hidden="true"></span>
-      <div class="gallery-tv-screen">
+  <section class="mt-10 animate-fade-up">
+    <div class="overflow-hidden rounded-3xl border-2 border-cream-300 bg-black shadow-lg">
+      <div class="relative" style="padding-top: 56.25%;">
         <iframe
+          class="absolute inset-0 h-full w-full"
           src="https://www.youtube.com/embed/videoseries?list=PL72SyLQ6Qbwsx5XO_KjzEzyVGjmOF0HRN"
           title="Clio High School Class of 2006 — YouTube playlist"
+          frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           referrerpolicy="strict-origin-when-cross-origin"
           allowfullscreen
         ></iframe>
       </div>
-      <figcaption class="gallery-tv-caption">
-        ↳ <em>"Class of 2006 — Throwbacks"</em> · playlist of {`{{n}}`} videos
-      </figcaption>
-    </figure>
-
-    <div class="gallery-link-row">
+    </div>
+    <p class="mt-3 text-center text-sm text-brand-600">
       <a
         href="https://www.youtube.com/playlist?list=PL72SyLQ6Qbwsx5XO_KjzEzyVGjmOF0HRN"
         target="_blank"
         rel="noopener noreferrer"
-        class="outline-cta"
+        class="underline hover:text-brand-800"
       >
-        Open full playlist on YouTube
-        <span aria-hidden="true">↗</span>
+        Open full playlist on YouTube →
       </a>
-    </div>
+    </p>
   </section>
 
-  <section class="reveal delay-3">
-    <div class="editorial-rule">
-      <span class="num">02</span>
-      <span class="label">Photos still to come</span>
-      <span class="line"></span>
-      <span class="meta">collecting</span>
-    </div>
-
-    <div class="gallery-coming">
-      <div class="gallery-coming-stamp">
-        <span class="gallery-coming-stamp-text">DEVELOPING</span>
-      </div>
-      <p class="gallery-coming-p">
-        We'll be building out a photo gallery as we collect submissions from
-        classmates. Until then, the
-        <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="gallery-link">Facebook group</a>
-        is where most of the throwback photos live.
-      </p>
-    </div>
+  <section class="mt-16 animate-fade-up">
+    <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">More photos coming</h2>
+    <p class="mt-3 max-w-2xl text-brand-700">
+      We'll be building out a photo gallery as we collect submissions from classmates.
+      Until then, the <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="text-brand-800 underline">Facebook group</a>
+      is where most of the throwback photos live.
+    </p>
   </section>
 </Layout>
-
-<style is:global>
-  .gallery-intro { margin: 1rem 0 2rem; max-width: 50rem; }
-  .gallery-link {
-    color: var(--color-brand-700);
-    border-bottom: 1px solid var(--color-brand-500);
-    text-decoration: none;
-  }
-  .gallery-link:hover { color: var(--color-brand-500); }
-
-  .gallery-tv {
-    position: relative;
-    background: var(--color-cream-50);
-    border: 2px solid var(--color-brand-900);
-    padding: 0.75rem 0.75rem 3.5rem;
-    box-shadow: 8px 8px 0 var(--color-brand-900);
-    margin: 0.5rem 0 1.5rem;
-    max-width: 56rem;
-    transform: rotate(-0.6deg);
-  }
-  .gallery-tv:hover { transform: rotate(0); transition: transform 0.3s ease; }
-  .gallery-tv-screen {
-    position: relative;
-    padding-top: 56.25%;
-    background: #0d0b0a;
-    border: 1.5px solid var(--color-brand-900);
-  }
-  .gallery-tv-screen iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-  }
-  .gallery-tv-caption {
-    position: absolute;
-    bottom: 14px;
-    left: 16px;
-    right: 16px;
-    font-family: var(--font-script);
-    font-size: 1.3rem;
-    color: var(--color-brand-800);
-    text-align: center;
-    line-height: 1;
-  }
-  .gallery-tv-caption em {
-    font-style: italic;
-    color: var(--color-brand-900);
-  }
-
-  .gallery-link-row {
-    margin-top: 1rem;
-    display: flex;
-    justify-content: center;
-  }
-
-  .gallery-coming {
-    margin-top: 1.5rem;
-    padding: 2rem 2rem;
-    background: var(--color-cream-100);
-    border: 1.5px dashed var(--color-brand-900);
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 2rem;
-    align-items: center;
-    max-width: 56rem;
-  }
-  @media (max-width: 680px) {
-    .gallery-coming { grid-template-columns: 1fr; }
-  }
-  .gallery-coming-stamp {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 9rem;
-    height: 9rem;
-    border: 3px solid var(--color-redpen-500);
-    border-radius: 9999px;
-    transform: rotate(-9deg);
-    background: rgba(193, 39, 45, 0.04);
-  }
-  .gallery-coming-stamp-text {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    color: var(--color-redpen-500);
-    text-transform: uppercase;
-  }
-  .gallery-coming-p {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 24, "wght" 400, "WONK" 1;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    color: var(--color-brand-800);
-    margin: 0;
-  }
-</style>

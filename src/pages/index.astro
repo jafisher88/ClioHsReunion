@@ -4,759 +4,195 @@ import Card from '../components/Card.astro';
 import VolunteerForm from '../components/VolunteerForm.tsx';
 ---
 
-<Layout title="Home" folio="01" section="HOMEPAGE">
-  <!-- PAGE OPENER -->
-  <div class="page-opener reveal">
-    <div class="page-opener-section">
-      <span class="page-opener-kicker">Issue 01 · The Reunion</span>
-      <span class="page-opener-label">Homepage.</span>
-    </div>
-    <div class="page-opener-meta">
-      Save · the · date<br />
-      Nov · MMXXVI
-    </div>
-  </div>
-
-  <!-- HERO -->
-  <section class="hero reveal delay-1">
-    <div class="hero-margin">
-      <span class="hero-margin-line">
-        <span class="hero-margin-glyph">⌗</span>
-        N · O · V
-      </span>
-      <span class="hero-margin-line">
-        <span class="hero-margin-glyph">⌗</span>
-        2 · 0 · 2 · 6
-      </span>
-      <span class="hero-margin-line hero-margin-line-mute">
-        20-year reunion
-      </span>
-    </div>
-
-    <div class="hero-body">
-      <p class="hero-kicker">A publication of the planning crew · since 2026.</p>
-      <h1 class="hero-title">
-        <span class="hero-title-row hero-title-row-1">Class of</span>
-        <span class="hero-title-row hero-title-row-2"><em>twenty</em></span>
-        <span class="hero-title-row hero-title-row-3">oh-six.</span>
+<Layout title="Home">
+  <section class="animate-fade-in pt-4">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-800 to-brand-900 px-6 py-16 text-center shadow-2xl sm:py-24">
+      <div
+        class="absolute inset-0 opacity-10"
+        style="background-image: radial-gradient(circle at 20% 20%, var(--color-brand-400) 0, transparent 40%), radial-gradient(circle at 80% 80%, var(--color-brand-500) 0, transparent 40%);"
+      ></div>
+      <img
+        src="/clio-mustang.png"
+        alt="Clio Mustangs"
+        width="180"
+        height="121"
+        class="relative mx-auto h-auto w-32 drop-shadow-xl sm:w-44"
+      />
+      <p class="relative mt-6 font-script text-2xl text-accent-300 sm:text-3xl">Save the date</p>
+      <h1 class="relative mt-3 font-heading text-4xl font-bold uppercase tracking-wider text-cream-50 sm:text-6xl">
+        Clio High School Class of 2006
       </h1>
-      <p class="hero-strap">
-        It's been twenty years since we graduated.
-        <em>Let's get back together</em> &mdash; old friends, old stories,
-        a few new gray hairs.
+      <p class="relative mt-2 font-display text-xl italic text-accent-200 sm:text-2xl">20-Year Reunion</p>
+      <p class="relative mx-auto mt-8 max-w-2xl text-base leading-relaxed text-cream-200 sm:text-lg">
+        It's been 20 years since we graduated. Let's get back together —
+        old friends, old stories, a few new gray hairs.
       </p>
-
-      <div class="hero-actions">
-        <a href="/rsvp" class="ticket-cta">
-          <span class="ticket-cta-body">R.S.V.P. now</span>
-          <span class="ticket-cta-stub">Admit · 01</span>
+      <div class="relative mt-10 flex flex-wrap justify-center gap-4">
+        <a
+          href="/rsvp"
+          class="group rounded-full bg-accent-500 px-8 py-3.5 text-base font-semibold text-brand-900 shadow-lg shadow-accent-500/30 transition-all hover:bg-accent-400"
+        >
+          RSVP now <span class="inline-block transition-transform group-hover:translate-x-1">→</span>
         </a>
-        <a href="/event" class="outline-cta">
+        <a
+          href="/event"
+          class="rounded-full border-2 border-cream-200/40 px-8 py-3.5 text-base font-medium text-cream-100 hover:border-cream-200 hover:bg-cream-50/10"
+        >
           Event details
-          <span aria-hidden="true">→</span>
         </a>
       </div>
     </div>
-
-    <div class="hero-stamp">
-      <img src="/clio-mustang.png" alt="Clio Mustangs" width="320" height="216" />
-      <span class="hero-stamp-tag">✪ Official Mustang of Record</span>
-    </div>
   </section>
 
-  <!-- WHEN / WHERE / WHAT — three catalog entries -->
-  <section>
-    <div class="editorial-rule reveal delay-2">
-      <span class="num">01</span>
-      <span class="label">The Particulars</span>
-      <span class="line"></span>
-      <span class="meta">three entries</span>
-    </div>
-
-    <div class="catalog-grid reveal delay-2">
-      <div class="catalog-entry">
-        <header class="catalog-entry-num"><span>i</span><span>WHEN</span></header>
-        <h3 class="catalog-entry-label">November 2026.</h3>
-        <p class="catalog-entry-value">The exact date is being voted on in the class Facebook group.</p>
-        <p class="catalog-entry-meta">Watch the bulletin board.</p>
-      </div>
-
-      <a
-        href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="catalog-entry catalog-entry-link"
-      >
-        <header class="catalog-entry-num"><span>ii</span><span>WHERE</span></header>
-        <h3 class="catalog-entry-label">Round Em Up Ranch.</h3>
-        <p class="catalog-entry-value">Clio, Michigan.</p>
-        <p class="catalog-entry-meta">Tap to open in Google Maps ↗</p>
-      </a>
-
-      <div class="catalog-entry">
-        <header class="catalog-entry-num"><span>iii</span><span>WHAT</span></header>
-        <h3 class="catalog-entry-label">One night.</h3>
-        <p class="catalog-entry-value">Drinks, food, music, photo booth, and twenty years of stories — long overdue.</p>
-        <p class="catalog-entry-meta">Doors open 6:00 PM.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- DONATION — styled as a pledge check -->
-  <section>
-    <div class="editorial-rule reveal delay-3">
-      <span class="num">02</span>
-      <span class="label">Help cover costs</span>
-      <span class="line"></span>
-      <span class="meta">donation · optional</span>
-    </div>
-
-    <div class="check-block reveal delay-3">
-      <div class="check-card">
-        <span class="tape tape-tl" aria-hidden="true"></span>
-        <span class="tape tape-tr" aria-hidden="true"></span>
-
-        <div class="check-head">
-          <div class="check-mark">
-            <span class="check-mark-label">CLIO 06 REUNION</span>
-            <span class="check-mark-since">Annual · Est. MMVI</span>
-          </div>
-          <div class="check-no">
-            <span class="check-no-label">No.</span>
-            <span class="check-no-num">06·2026</span>
-          </div>
-        </div>
-
-        <div class="check-row check-row-payee">
-          <span class="check-row-label">Pay to the<br />order of</span>
-          <span class="check-row-value">Clio HS Class of 2006 Reunion Fund</span>
-          <span class="check-row-tail">·····</span>
-        </div>
-
-        <div class="check-row check-row-amount">
-          <span class="check-row-label">Amount</span>
-          <span class="check-amount-box">
-            <span class="check-amount-sigil">$</span>
-            <span class="check-amount-text">
-              <em>any amount helps</em>
-            </span>
-          </span>
-        </div>
-
-        <div class="check-memo">
-          <span class="check-memo-label">Memo</span>
-          <span class="check-memo-text">
-            Still nailing down the per-head cost — open as a donation for now.
-            Once costs are firm we'll share an official number.
-          </span>
-        </div>
-
-        <div class="check-foot">
-          <div class="check-foot-routing">
-            <span class="check-routing-num">⟨ V E N M O ⟩</span>
-            <span class="check-routing-account">@Jafisher88</span>
-            <span class="check-routing-note">please send as friends &amp; family</span>
-          </div>
-          <a href="https://venmo.com/u/Jafisher88" target="_blank" rel="noopener noreferrer" class="check-signature">
-            <span class="check-signature-line"></span>
-            <span class="check-signature-text">Send via Venmo →</span>
-          </a>
-        </div>
-      </div>
-
-      <figure class="check-qr">
-        <span class="tape tape-tl" aria-hidden="true"></span>
-        <img src="/venmo-qr.svg" alt="Venmo QR code for @Jafisher88" width="200" height="200" />
-        <figcaption>Scan with your phone camera</figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <!-- VOLUNTEER SIGN-UP -->
-  <section>
-    <div class="editorial-rule reveal delay-4">
-      <span class="num">03</span>
-      <span class="label">Volunteer roster</span>
-      <span class="line"></span>
-      <span class="meta">we need a few hands</span>
-    </div>
-
-    <div class="signup-block reveal delay-4">
-      <aside class="signup-pitch">
-        <span class="signup-pitch-stamp">SIGN UP</span>
-        <h2 class="signup-pitch-h">Lend a hand the day before, the day after — or both.</h2>
-        <ul class="signup-pitch-list">
-          <li>
-            <span class="signup-pitch-role">Day before</span>
-            Set up tables, hang decorations, prep the space.
-          </li>
-          <li>
-            <span class="signup-pitch-role">Day after</span>
-            Tear-down, trash, pack up &amp; leave better than we found it.
-          </li>
-        </ul>
-        <p class="signup-pitch-note">
-          Already RSVP'd? Volunteering is separate from attending.
+  <section class="mt-16 grid gap-6 animate-fade-up sm:mt-24 sm:grid-cols-3">
+    <Card icon="📅" title="When">
+      <p>November 2026 — the exact date is being voted on in the Facebook group.</p>
+    </Card>
+    <a
+      href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="block no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 rounded-2xl"
+    >
+      <Card icon="📍" title="Where">
+        <p>
+          <span class="font-semibold text-brand-800">Round Em Up Ranch</span> in Clio, Michigan.
         </p>
-      </aside>
-      <div class="signup-sheet">
-        <header class="signup-sheet-head">
-          <span class="signup-sheet-no">Form 04 · Volunteer</span>
-          <span class="signup-sheet-stamp">FILL · IN · INK</span>
-        </header>
-        <VolunteerForm client:load />
+        <p class="mt-3 text-sm font-medium text-accent-700">Open in Google Maps →</p>
+      </Card>
+    </a>
+    <Card icon="🎉" title="What">
+      <p>One night of catching up — drinks, food, music, and twenty years of stories.</p>
+    </Card>
+  </section>
+
+  <section class="mt-16 animate-fade-up sm:mt-24">
+    <div class="rounded-3xl border-2 border-cream-300 bg-white/80 p-8 shadow-sm sm:p-12">
+      <div class="grid gap-8 lg:grid-cols-5 lg:items-center">
+        <div class="lg:col-span-3">
+          <p class="font-script text-2xl text-accent-600">Pitch in</p>
+          <h2 class="mt-2 font-heading text-3xl uppercase tracking-wider text-brand-800 sm:text-4xl">
+            Help cover costs
+          </h2>
+          <p class="mt-4 text-brand-700 leading-relaxed">
+            We're still nailing down the final per-head cost, so for now this is open as
+            a donation to help cover the costs.
+            <span class="font-semibold text-brand-800">Any amount helps.</span>
+            Once costs are firm we'll share an official number.
+          </p>
+          <p class="mt-2 text-sm text-cream-700">
+            Please send as <span class="font-semibold text-brand-800">friends &amp; family</span>
+            so we can put every dollar toward the event.
+          </p>
+
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              href="https://venmo.com/u/Jafisher88"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-base font-semibold text-cream-50 shadow-lg shadow-brand-500/20 hover:bg-brand-600"
+            >
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M19.5 4.5c.6 1 .9 2 .9 3.4 0 4.3-3.7 9.9-6.7 13.8H7L4.5 4.5h5.4l1.3 10.5c1.2-2 2.7-5.1 2.7-7.3 0-1.2-.2-2-.5-2.7l5.1-.5z"/>
+              </svg>
+              Send via Venmo
+            </a>
+            <span class="text-sm text-cream-700">
+              or pay <span class="font-semibold text-brand-800">@Jafisher88</span> in the app
+            </span>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 flex justify-center">
+          <figure class="flex flex-col items-center">
+            <div class="rounded-2xl bg-white p-4 ring-2 ring-cream-300">
+              <img
+                src="/venmo-qr.svg"
+                alt="Venmo QR code for @Jafisher88"
+                width="180"
+                height="180"
+                class="block h-44 w-44"
+              />
+            </div>
+            <figcaption class="mt-3 text-xs text-cream-700 text-center">
+              Scan with your phone camera to open Venmo
+            </figcaption>
+          </figure>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- BULLETIN BOARD — stay in the loop -->
-  <section>
-    <div class="editorial-rule reveal delay-5">
-      <span class="num">04</span>
-      <span class="label">The bulletin board</span>
-      <span class="line"></span>
-      <span class="meta">stay in the loop</span>
+  <section class="mt-16 animate-fade-up sm:mt-24">
+    <div class="rounded-3xl bg-gradient-to-br from-brand-50 via-cream-50 to-accent-50 p-8 shadow-sm sm:p-12">
+      <div class="grid gap-10 lg:grid-cols-5">
+        <div class="lg:col-span-2">
+          <p class="font-script text-2xl text-accent-600">We need a few hands</p>
+          <h2 class="mt-2 font-heading text-3xl uppercase tracking-wider text-brand-800 sm:text-4xl">
+            Seeking volunteers
+          </h2>
+          <p class="mt-4 text-brand-700 leading-relaxed">
+            A reunion this good doesn't run itself. We're looking for classmates
+            who can lend a hand either the <span class="font-semibold text-brand-800">day before</span>
+            (setup &amp; decorate) or the <span class="font-semibold text-brand-800">day after</span>
+            (cleanup). One day, both — totally up to you.
+          </p>
+          <ul class="mt-6 space-y-3 text-brand-700">
+            <li class="flex gap-3">
+              <span class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-brand-500"></span>
+              <span><span class="font-semibold text-brand-800">Day before</span> — set up tables, hang decorations, prep the space.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-brand-500"></span>
+              <span><span class="font-semibold text-brand-800">Day after</span> — tear-down, trash, pack up decorations.</span>
+            </li>
+          </ul>
+          <p class="mt-6 text-sm text-cream-700">
+            Already RSVP'd? Cool — volunteering is separate from attending.
+          </p>
+        </div>
+
+        <div class="lg:col-span-3">
+          <div class="rounded-2xl border-2 border-cream-300 bg-white/90 p-6 shadow-sm sm:p-8">
+            <VolunteerForm client:load />
+          </div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="bulletin reveal delay-5">
-      <p class="bulletin-strap">
-        The Class of 2006 Facebook group is where most chatter happens &mdash; including
-        the ongoing date vote. The official Clio High School alumni site keeps class
-        pages and history.
+  <section class="mt-16 animate-fade-up sm:mt-24">
+    <div class="rounded-3xl border-2 border-cream-300 bg-white/70 p-8 shadow-sm sm:p-12">
+      <h2 class="font-heading text-3xl uppercase tracking-wider text-brand-800 sm:text-4xl">Stay in the loop</h2>
+      <p class="mt-3 max-w-2xl text-brand-700">
+        The Class of 2006 Facebook group is where most chatter happens — including the
+        ongoing date vote. The official Clio High School alumni site also keeps class
+        pages for graduates and class history.
       </p>
-
-      <div class="bulletin-grid">
-        <a class="notice notice-tilted-l" href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">
-          <span class="tape tape-tr" aria-hidden="true"></span>
-          <span class="notice-kicker">PINNED</span>
-          <span class="notice-title">Class Facebook group</span>
-          <span class="notice-meta">Active conversation · open ↗</span>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a
+          href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rounded-full bg-brand-500 px-6 py-2.5 text-sm font-semibold text-cream-50 hover:bg-brand-600"
+        >
+          Facebook group →
         </a>
-        <a class="notice" href="https://cliohighschool.net/class-of-2006.html" target="_blank" rel="noopener noreferrer">
-          <span class="tape tape-tl" aria-hidden="true"></span>
-          <span class="notice-kicker">ARCHIVE</span>
-          <span class="notice-title">cliohighschool.net</span>
-          <span class="notice-meta">Class page · open ↗</span>
+        <a
+          href="https://cliohighschool.net/class-of-2006.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rounded-full border-2 border-brand-300 bg-white px-6 py-2.5 text-sm font-medium text-brand-700 hover:border-brand-500"
+        >
+          cliohighschool.net →
         </a>
-        <a class="notice notice-tilted-r" href="/gallery">
-          <span class="tape tape-br" aria-hidden="true"></span>
-          <span class="notice-kicker">PLAYLIST</span>
-          <span class="notice-title">Throwback videos</span>
-          <span class="notice-meta">Gallery →</span>
+        <a
+          href="/gallery"
+          class="rounded-full border-2 border-brand-300 bg-white px-6 py-2.5 text-sm font-medium text-brand-700 hover:border-brand-500"
+        >
+          Throwback videos →
         </a>
       </div>
     </div>
   </section>
 </Layout>
-
-<style is:global>
-  /* =================================================================
-     HOMEPAGE — composition
-     ================================================================= */
-
-  /* Hero */
-  .hero {
-    display: grid;
-    grid-template-columns: 4rem 1fr auto;
-    gap: 2.5rem;
-    align-items: start;
-    margin: 1.5rem 0 4rem;
-    position: relative;
-  }
-  @media (max-width: 980px) { .hero { grid-template-columns: 1fr; gap: 2rem; } }
-
-  .hero-margin {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-    padding-top: 2.5rem;
-    border-right: 1px dashed rgba(13, 11, 10, 0.25);
-    padding-right: 1rem;
-    text-align: right;
-  }
-  @media (max-width: 980px) {
-    .hero-margin {
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 1rem;
-      border-right: 0;
-      border-bottom: 1px dashed rgba(13, 11, 10, 0.25);
-      padding-right: 0;
-      padding-bottom: 1rem;
-      text-align: left;
-    }
-  }
-  .hero-margin-line {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.32em;
-    color: var(--color-brand-500);
-    font-weight: 600;
-    line-height: 1;
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.2rem;
-  }
-  @media (max-width: 980px) { .hero-margin-line { flex-direction: row; align-items: center; } }
-  .hero-margin-line-mute { color: var(--color-cream-700); font-weight: 500; letter-spacing: 0.22em; }
-  .hero-margin-glyph { color: var(--color-brand-500); opacity: 0.6; }
-
-  .hero-body { padding-top: 0.5rem; }
-  .hero-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    color: var(--color-cream-700);
-    margin: 0 0 1.5rem;
-    font-weight: 500;
-  }
-  .hero-title {
-    font-family: var(--font-display);
-    margin: 0;
-    color: var(--color-brand-900);
-    letter-spacing: -0.04em;
-    line-height: 0.88;
-  }
-  .hero-title-row { display: block; }
-  .hero-title-row-1 {
-    font-variation-settings: "opsz" 144, "wght" 500, "WONK" 1;
-    font-size: clamp(2.2rem, 6vw, 4.5rem);
-    color: var(--color-brand-700);
-  }
-  .hero-title-row-2 {
-    font-style: italic;
-    font-variation-settings: "opsz" 144, "wght" 600, "WONK" 1, "SOFT" 100;
-    font-size: clamp(3.5rem, 11vw, 8.5rem);
-    color: var(--color-brand-500);
-    margin-left: 1.5vw;
-  }
-  .hero-title-row-2 em { font-style: italic; }
-  .hero-title-row-3 {
-    font-variation-settings: "opsz" 144, "wght" 700, "WONK" 1;
-    font-size: clamp(2.8rem, 7.5vw, 5.5rem);
-    margin-left: 0.5vw;
-  }
-  .hero-strap {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 24, "wght" 400, "WONK" 1;
-    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
-    line-height: 1.45;
-    color: var(--color-brand-800);
-    max-width: 36rem;
-    margin: 2rem 0 0;
-  }
-  .hero-strap em { font-style: italic; color: var(--color-brand-500); }
-  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; }
-
-  .hero-stamp {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.7rem;
-    padding-top: 1rem;
-    transform: rotate(-4deg);
-    animation: stamp-drop 0.9s ease-out both;
-    animation-delay: 0.3s;
-  }
-  @media (max-width: 980px) { .hero-stamp { align-self: center; } }
-  @media (prefers-reduced-motion: reduce) { .hero-stamp { animation: none; transform: rotate(-3deg); } }
-  .hero-stamp img {
-    width: clamp(140px, 16vw, 240px);
-    height: auto;
-    filter: drop-shadow(0 4px 8px rgba(13, 11, 10, 0.15));
-  }
-  .hero-stamp-tag {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.25em;
-    color: var(--color-redpen-500);
-    border: 1.5px solid var(--color-redpen-500);
-    padding: 0.25rem 0.5rem;
-    background: rgba(193, 39, 45, 0.04);
-  }
-
-  /* Check block */
-  .check-block {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-    gap: 2rem;
-    align-items: start;
-    margin-bottom: 2rem;
-  }
-  @media (max-width: 900px) { .check-block { grid-template-columns: 1fr; } }
-
-  .check-card {
-    position: relative;
-    background: var(--color-cream-50);
-    border: 1.5px solid var(--color-brand-900);
-    padding: 1.5rem 1.75rem 1.5rem;
-    box-shadow: 6px 6px 0 var(--color-brand-900);
-    background-image:
-      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(13, 11, 10, 0.04) 27px, rgba(13, 11, 10, 0.04) 28px);
-  }
-  .check-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(13, 11, 10, 0.25);
-  }
-  .check-mark {
-    display: flex;
-    flex-direction: column;
-    line-height: 1;
-  }
-  .check-mark-label {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 48, "wght" 700, "WONK" 1;
-    font-style: italic;
-    font-size: 1.5rem;
-    color: var(--color-brand-500);
-    letter-spacing: -0.02em;
-  }
-  .check-mark-since {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    color: var(--color-cream-700);
-    margin-top: 0.4rem;
-  }
-  .check-no { text-align: right; line-height: 1; }
-  .check-no-label {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    color: var(--color-cream-700);
-    display: block;
-  }
-  .check-no-num {
-    font-family: var(--font-display);
-    font-style: italic;
-    font-variation-settings: "opsz" 32, "wght" 600, "WONK" 1;
-    font-size: 1.1rem;
-    color: var(--color-brand-900);
-    margin-top: 0.2rem;
-    display: block;
-  }
-  .check-row {
-    display: grid;
-    grid-template-columns: 6.5rem 1fr;
-    gap: 1rem;
-    align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px dotted rgba(13, 11, 10, 0.3);
-  }
-  .check-row-label {
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    color: var(--color-cream-700);
-    line-height: 1.2;
-  }
-  .check-row-payee .check-row-value {
-    font-family: var(--font-script);
-    font-size: 1.7rem;
-    color: var(--color-brand-900);
-    font-weight: 600;
-    line-height: 1;
-  }
-  .check-row-tail { display: none; }
-  .check-row-amount {
-    grid-template-columns: 6.5rem 1fr;
-  }
-  .check-amount-box {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    border: 1.5px solid var(--color-brand-900);
-    padding: 0.5rem 1rem;
-    background: var(--color-cream-100);
-  }
-  .check-amount-sigil {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 64, "wght" 600, "WONK" 1;
-    font-size: 1.8rem;
-    color: var(--color-brand-500);
-    line-height: 1;
-  }
-  .check-amount-text {
-    font-family: var(--font-display);
-    font-style: italic;
-    font-variation-settings: "opsz" 48, "wght" 500, "WONK" 1;
-    font-size: 1.3rem;
-    color: var(--color-brand-700);
-    line-height: 1;
-  }
-  .check-memo {
-    display: grid;
-    grid-template-columns: 6.5rem 1fr;
-    gap: 1rem;
-    padding: 0.8rem 0 1rem;
-  }
-  .check-memo-label {
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    color: var(--color-cream-700);
-    line-height: 1.2;
-  }
-  .check-memo-text {
-    font-family: var(--font-script);
-    font-size: 1.2rem;
-    color: var(--color-brand-800);
-    line-height: 1.3;
-  }
-  .check-foot {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 1.5rem;
-    padding-top: 0.5rem;
-    border-top: 1.5px solid var(--color-brand-900);
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-  .check-foot-routing {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-  }
-  .check-routing-num {
-    color: var(--color-brand-500);
-    letter-spacing: 0.32em;
-    font-weight: 600;
-  }
-  .check-routing-account {
-    color: var(--color-brand-900);
-    letter-spacing: 0.18em;
-    font-weight: 600;
-  }
-  .check-routing-note {
-    color: var(--color-cream-700);
-    font-style: italic;
-    letter-spacing: 0.02em;
-    text-transform: none;
-    font-family: var(--font-body);
-    font-size: 0.78rem;
-    margin-top: 0.2rem;
-  }
-  .check-signature {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.3rem;
-    text-decoration: none;
-    color: var(--color-brand-900);
-    transition: color 0.15s ease;
-  }
-  .check-signature:hover { color: var(--color-brand-500); }
-  .check-signature-line {
-    display: block;
-    width: 14rem;
-    border-bottom: 1.5px solid var(--color-brand-900);
-  }
-  .check-signature-text {
-    font-family: var(--font-script);
-    font-size: 1.5rem;
-    line-height: 1;
-    color: inherit;
-  }
-
-  .check-qr {
-    position: relative;
-    margin: 0;
-    align-self: center;
-    background: var(--color-cream-50);
-    border: 1.5px solid var(--color-brand-900);
-    padding: 14px 14px 56px;
-    box-shadow: 6px 6px 0 var(--color-brand-900);
-    text-align: center;
-  }
-  .check-qr img {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-width: 200px;
-    margin: 0 auto;
-  }
-  .check-qr figcaption {
-    position: absolute;
-    bottom: 16px;
-    left: 14px;
-    right: 14px;
-    font-family: var(--font-script);
-    font-size: 1.1rem;
-    color: var(--color-brand-800);
-    text-align: center;
-  }
-
-  /* Signup block */
-  .signup-block {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    gap: 2rem;
-    align-items: start;
-  }
-  @media (max-width: 900px) { .signup-block { grid-template-columns: 1fr; } }
-
-  .signup-pitch {
-    position: relative;
-    padding-top: 0.5rem;
-  }
-  .signup-pitch-stamp {
-    display: inline-flex;
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.3em;
-    color: var(--color-redpen-500);
-    border: 1.5px solid var(--color-redpen-500);
-    padding: 0.3rem 0.6rem;
-    transform: rotate(-2deg);
-    margin-bottom: 1rem;
-  }
-  .signup-pitch-h {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 96, "wght" 600, "WONK" 1;
-    font-style: italic;
-    font-size: clamp(1.6rem, 2.5vw, 2.1rem);
-    line-height: 1.05;
-    color: var(--color-brand-900);
-    margin: 0;
-    letter-spacing: -0.02em;
-  }
-  .signup-pitch-list {
-    margin: 1.5rem 0 0;
-    padding: 0;
-    list-style: none;
-  }
-  .signup-pitch-list li {
-    padding: 0.7rem 0;
-    border-top: 1px dotted rgba(13, 11, 10, 0.25);
-    color: var(--color-brand-800);
-    font-size: 0.95rem;
-    line-height: 1.45;
-  }
-  .signup-pitch-list li:last-child { border-bottom: 1px dotted rgba(13, 11, 10, 0.25); }
-  .signup-pitch-role {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    color: var(--color-brand-500);
-    font-weight: 600;
-    margin-bottom: 0.2rem;
-  }
-  .signup-pitch-note {
-    margin-top: 1.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--color-cream-700);
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-  }
-
-  .signup-sheet {
-    position: relative;
-    background: var(--color-cream-50);
-    border: 1.5px solid var(--color-brand-900);
-    padding: 1.5rem 1.5rem 1.5rem;
-    box-shadow: 6px 6px 0 var(--color-brand-900);
-  }
-  .signup-sheet-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 1rem;
-    margin-bottom: 1.25rem;
-    border-bottom: 1.5px solid var(--color-brand-900);
-  }
-  .signup-sheet-no {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
-    color: var(--color-cream-700);
-  }
-  .signup-sheet-stamp {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.3em;
-    color: var(--color-redpen-500);
-    border: 1.5px solid var(--color-redpen-500);
-    padding: 0.2rem 0.5rem;
-    transform: rotate(2deg);
-  }
-
-  /* Bulletin board */
-  .bulletin-strap {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 24, "wght" 400, "WONK" 1;
-    font-size: 1.05rem;
-    line-height: 1.5;
-    color: var(--color-brand-800);
-    max-width: 40rem;
-    margin: 0 0 1.75rem;
-  }
-  .bulletin-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.25rem;
-  }
-  @media (max-width: 800px) { .bulletin-grid { grid-template-columns: 1fr; } }
-
-  .notice {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    padding: 1.25rem 1.25rem 1.1rem;
-    background: var(--color-cream-50);
-    border: 1px solid var(--color-brand-900);
-    text-decoration: none;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    box-shadow: 3px 3px 0 var(--color-brand-900);
-  }
-  .notice:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--color-brand-900); }
-  .notice-tilted-l { transform: rotate(-1.2deg); }
-  .notice-tilted-l:hover { transform: rotate(-1.2deg) translate(-2px, -2px); }
-  .notice-tilted-r { transform: rotate(1deg); }
-  .notice-tilted-r:hover { transform: rotate(1deg) translate(-2px, -2px); }
-  .notice-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.28em;
-    color: var(--color-redpen-500);
-    font-weight: 600;
-  }
-  .notice-title {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 48, "wght" 600, "WONK" 1;
-    font-size: 1.35rem;
-    color: var(--color-brand-900);
-    line-height: 1.05;
-    margin-top: 0.2rem;
-    letter-spacing: -0.02em;
-  }
-  .notice-meta {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: var(--color-cream-700);
-    margin-top: 0.5rem;
-  }
-</style>
