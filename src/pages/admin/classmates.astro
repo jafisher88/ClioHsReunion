@@ -274,8 +274,7 @@ const unmatched = unmatchedResult.results ?? [];
             <tr>
               <th class="num">#</th>
               <th>Name</th>
-              <th>Preferred</th>
-              <th>Maiden</th>
+              <th>Yearbook name</th>
               <th>RSVP</th>
               <th>Email</th>
               <th>Notes</th>
@@ -293,6 +292,12 @@ const unmatched = unmatchedResult.results ?? [];
                 isDeceased: r.IsDeceased === 1,
               });
               const searchHay = `${r.FullName} ${r.MaidenName ?? ''} ${r.PreferredFirstName ?? ''}`.toLowerCase();
+              const nameParts = r.FullName.trim().split(/\s+/);
+              const firstNameOfFull = nameParts[0] ?? '';
+              const lastNameOfFull = nameParts[nameParts.length - 1] ?? '';
+              const hasMaiden = !!(r.MaidenName && r.MaidenName.trim() &&
+                r.MaidenName.trim().toLowerCase() !== lastNameOfFull.toLowerCase());
+              const yearbookName = hasMaiden ? `${firstNameOfFull} ${r.MaidenName!.trim()}` : r.FullName;
               return (
                 <tr
                   data-classmate-id={r.Id}
@@ -306,14 +311,7 @@ const unmatched = unmatchedResult.results ?? [];
                       <span class="ml-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">remembered</span>
                     )}
                   </td>
-                  <td>
-                    {r.PreferredFirstName ? (
-                      <span class="inline-flex items-center rounded-full bg-accent-100 px-2 py-0.5 font-mono text-[0.65rem] font-semibold text-accent-700">
-                        {r.PreferredFirstName}
-                      </span>
-                    ) : <span class="dim">—</span>}
-                  </td>
-                  <td class="dim">{r.MaidenName ?? '—'}</td>
+                  <td class="dim">{hasMaiden ? <span class="italic text-brand-800">{yearbookName}</span> : yearbookName}</td>
                   <td>
                     {r.IsDeceased === 1 ? (
                       <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">in memoriam</span>
