@@ -2,12 +2,18 @@
 
 @theme {
   /*
-   * Clio High School Class of 2006 — Mustang Red on Cream
-   * Warm, nostalgic palette. Reunion banner energy without being a yearbook.
+   * Clio High School Class of 2006 — Mustang Orange on Cream/Charcoal
+   *
+   * Matches the official Clio Area Schools branding: vivid orange + near-black.
+   * The brand scale doubles duty:
+   *   - brand-50…brand-600 are the orange family (CTAs, accents, school spirit).
+   *   - brand-700…brand-900 are deep warm charcoals (body text, footer, hero
+   *     gradient base) — they read as "school black" without being a pure flat
+   *     #000, so the orange has something warm to sit against.
    */
 
-  /* Cream / paper backdrop */
-  --color-cream-50: #fdfbf6;
+  /* Paper backdrop — kept from the prior design for warmth */
+  --color-cream-50:  #fdfbf6;
   --color-cream-100: #f8f2e6;
   --color-cream-200: #efe5cf;
   --color-cream-300: #e2d4b5;
@@ -18,19 +24,21 @@
   --color-cream-800: #4a3f26;
   --color-cream-900: #2c2616;
 
-  /* Brand: deep mustang red */
-  --color-brand-50:  #fcf3f2;
-  --color-brand-100: #fbe1df;
-  --color-brand-200: #f6bcb8;
-  --color-brand-300: #ed8e87;
-  --color-brand-400: #df5d54;
-  --color-brand-500: #c93b33;
-  --color-brand-600: #ad2924;
-  --color-brand-700: #8a1f1d;
-  --color-brand-800: #6a1817;
-  --color-brand-900: #441010;
+  /* Brand: Clio Mustang orange (top) → near-black (bottom).
+     Sampled brand-500 (#f26901) directly from the official logo. */
+  --color-brand-50:  #fff4e6;
+  --color-brand-100: #ffe2bf;
+  --color-brand-200: #ffc683;
+  --color-brand-300: #ffa84a;
+  --color-brand-400: #fb8b1d;
+  --color-brand-500: #f26901;  /* CLIO ORANGE */
+  --color-brand-600: #c75603;
+  --color-brand-700: #2b2520;  /* warm charcoal — body text / dark CTAs */
+  --color-brand-800: #1a1714;  /* deeper charcoal — nav, panels */
+  --color-brand-900: #0d0b0a;  /* near-black — footer, hero base */
 
-  /* Accent: aged-yearbook gold */
+  /* Accent: aged gold — used sparingly for handwritten/script flourishes
+     and small highlights. Keeps the design from being purely two-color. */
   --color-accent-50:  #fbf5e3;
   --color-accent-100: #f5e9bf;
   --color-accent-200: #ecd47f;
@@ -47,7 +55,7 @@
   --font-script: 'Dancing Script', cursive;
 }
 
-/* Subtle paper grain */
+/* Subtle paper grain — kept */
 .grain {
   position: relative;
 }

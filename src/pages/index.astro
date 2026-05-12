@@ -5,12 +5,19 @@ import Card from '../components/Card.astro';
 
 <Layout title="Home">
   <section class="animate-fade-in pt-4">
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 px-6 py-16 text-center shadow-2xl sm:py-24">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-800 to-brand-900 px-6 py-16 text-center shadow-2xl sm:py-24">
       <div
         class="absolute inset-0 opacity-10"
-        style="background-image: radial-gradient(circle at 20% 20%, var(--color-accent-300) 0, transparent 40%), radial-gradient(circle at 80% 80%, var(--color-accent-500) 0, transparent 40%);"
+        style="background-image: radial-gradient(circle at 20% 20%, var(--color-brand-400) 0, transparent 40%), radial-gradient(circle at 80% 80%, var(--color-brand-500) 0, transparent 40%);"
       ></div>
-      <p class="relative font-script text-2xl text-accent-300 sm:text-3xl">Save the date</p>
+      <img
+        src="/clio-mustang.png"
+        alt="Clio Mustangs"
+        width="180"
+        height="121"
+        class="relative mx-auto h-auto w-32 drop-shadow-xl sm:w-44"
+      />
+      <p class="relative mt-6 font-script text-2xl text-accent-300 sm:text-3xl">Save the date</p>
       <h1 class="relative mt-3 font-heading text-4xl font-bold uppercase tracking-wider text-cream-50 sm:text-6xl">
         Clio High School Class of 2006
       </h1>
@@ -72,7 +79,7 @@ import Card from '../components/Card.astro';
           href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr"
           target="_blank"
           rel="noopener noreferrer"
-          class="rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-cream-50 hover:bg-brand-800"
+          class="rounded-full bg-brand-500 px-6 py-2.5 text-sm font-semibold text-cream-50 hover:bg-brand-600"
         >
           Facebook group →
         </a>

@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#8a1f1d"/>
-  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle"
+  <rect width="64" height="64" rx="10" fill="#0d0b0a"/>
+  <text x="50%" y="56%" text-anchor="middle" dominant-baseline="middle"
         font-family="Georgia, 'Times New Roman', serif"
-        font-style="italic" font-weight="700" font-size="22" fill="#f5e9bf">
+        font-style="italic" font-weight="700" font-size="22" fill="#f26901">
     '06
   </text>
-  <text x="50%" y="80%" text-anchor="middle" dominant-baseline="middle"
+  <text x="50%" y="82%" text-anchor="middle" dominant-baseline="middle"
         font-family="Arial, sans-serif" font-weight="700" font-size="9"
-        letter-spacing="2" fill="#fdfbf6">
+        letter-spacing="2" fill="#f4ecdf">
     CLIO
   </text>
 </svg>

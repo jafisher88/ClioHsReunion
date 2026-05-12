@@ -92,7 +92,7 @@ export default function RsvpForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-full bg-brand-700 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-lg shadow-brand-700/20 hover:bg-brand-800 disabled:opacity-60"
+        className="w-full rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-lg shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-60"
       >
         {submitting ? 'Sending…' : 'Send RSVP'}
       </button>
