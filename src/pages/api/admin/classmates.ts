@@ -18,6 +18,7 @@ function clampText(value: unknown, max: number): string | null {
 interface ClassmateInput {
   fullName: string;
   maidenName: string | null;
+  preferredFirstName: string | null;
   notes: string | null;
   isDeceased: boolean;
 }
@@ -34,6 +35,7 @@ function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: fa
     value: {
       fullName,
       maidenName: clampText(b.maidenName, MAX_NAME),
+      preferredFirstName: clampText(b.preferredFirstName, MAX_NAME),
       notes: clampText(b.notes, MAX_NOTES),
       isDeceased: b.isDeceased === true,
     },
@@ -42,9 +44,9 @@ function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: fa
 
 /**
  * POST /api/admin/classmates
- *   Single add: { fullName, maidenName?, notes?, isDeceased? }
- *   Bulk add:   { bulk: "line\nline\nline" } — one classmate per line. Each
- *               line may use "FullName | MaidenName" to set maiden name.
+ *   Single add: { fullName, maidenName?, preferredFirstName?, notes?, isDeceased? }
+ *   Bulk add:   { bulk: "line\nline\nline" } — one classmate per line.
+ *               Each line may use "FullName | MaidenName" to set maiden.
  */
 export const POST: APIRoute = async ({ request }) => {
   const admin = await getAdmin(request, env);
@@ -92,12 +94,13 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const res = await env.DB
       .prepare(
-        `INSERT INTO Classmates (FullName, MaidenName, Notes, IsDeceased, CreatedBy)
-         VALUES (?1, ?2, ?3, ?4, ?5)`
+        `INSERT INTO Classmates (FullName, MaidenName, PreferredFirstName, Notes, IsDeceased, CreatedBy)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
       )
       .bind(
         result.value.fullName,
         result.value.maidenName,
+        result.value.preferredFirstName,
         result.value.notes,
         result.value.isDeceased ? 1 : 0,
         admin.email,
@@ -134,13 +137,15 @@ export const PATCH: APIRoute = async ({ request }) => {
     const res = await env.DB
       .prepare(
         `UPDATE Classmates
-            SET FullName = ?1, MaidenName = ?2, Notes = ?3, IsDeceased = ?4,
+            SET FullName = ?1, MaidenName = ?2, PreferredFirstName = ?3,
+                Notes = ?4, IsDeceased = ?5,
                 UpdatedAt = CURRENT_TIMESTAMP
-          WHERE Id = ?5`
+          WHERE Id = ?6`
       )
       .bind(
         result.value.fullName,
         result.value.maidenName,
+        result.value.preferredFirstName,
         result.value.notes,
         result.value.isDeceased ? 1 : 0,
         id,

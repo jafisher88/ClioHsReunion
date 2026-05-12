@@ -12,6 +12,7 @@ interface RosterRow {
   Id: number;
   FullName: string;
   MaidenName: string | null;
+  PreferredFirstName: string | null;
   Notes: string | null;
   IsDeceased: number;
   RsvpAttending: 'yes' | 'no' | 'maybe' | null;
@@ -19,12 +20,14 @@ interface RosterRow {
   RsvpEmail: string | null;
 }
 
-// LEFT JOIN classmates → rsvps on case-insensitive trimmed full name match.
-// One classmate can have multiple RSVPs in theory (e.g. somebody resubmits);
-// we pick the latest by CreatedAt.
+// Match RSVPs to classmates on:
+//   1. exact case-insensitive full-name match, OR
+//   2. {PreferredFirstName + last-name-portion-of-FullName} match
+//      where the "last-name portion" is everything after the first space.
+// One classmate can match multiple RSVPs; ROW_NUMBER picks the latest.
 const rosterResult = await env.DB
   .prepare(
-    `SELECT c.Id, c.FullName, c.MaidenName, c.Notes, c.IsDeceased,
+    `SELECT c.Id, c.FullName, c.MaidenName, c.PreferredFirstName, c.Notes, c.IsDeceased,
             r.Attending  AS RsvpAttending,
             r.GuestCount AS RsvpGuests,
             r.Email      AS RsvpEmail
@@ -34,28 +37,32 @@ const rosterResult = await env.DB
                 ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(FullName)) ORDER BY CreatedAt DESC) AS rn
          FROM Rsvps
        ) r
-         ON LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.FullName)) AND r.rn = 1
+         ON r.rn = 1 AND (
+              LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.FullName))
+              OR (c.PreferredFirstName IS NOT NULL AND c.PreferredFirstName <> ''
+                  AND LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.PreferredFirstName || ' ' || substr(c.FullName, instr(c.FullName, ' ') + 1))))
+            )
    ORDER BY c.FullName COLLATE NOCASE ASC`
   )
   .all<RosterRow>();
 const roster = rosterResult.results ?? [];
 
-// Aggregate stats
 const total = roster.length;
 const rsvped = roster.filter((r) => r.RsvpAttending !== null).length;
 const rsvpYes = roster.filter((r) => r.RsvpAttending === 'yes').length;
 const rsvpMaybe = roster.filter((r) => r.RsvpAttending === 'maybe').length;
-const rsvpNo = roster.filter((r) => r.RsvpAttending === 'no').length;
 const deceased = roster.filter((r) => r.IsDeceased === 1).length;
 const notYet = total - rsvped - deceased;
 
-// Unmatched RSVPs (people who RSVPed but aren't in the roster) — useful audit.
+// Unmatched RSVPs — same alternate-name match as above, inverted.
 const unmatchedResult = await env.DB
   .prepare(
     `SELECT DISTINCT r.FullName, r.Email, r.Attending
        FROM Rsvps r
        LEFT JOIN Classmates c
          ON LOWER(TRIM(c.FullName)) = LOWER(TRIM(r.FullName))
+         OR (c.PreferredFirstName IS NOT NULL AND c.PreferredFirstName <> ''
+             AND LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.PreferredFirstName || ' ' || substr(c.FullName, instr(c.FullName, ' ') + 1))))
       WHERE c.Id IS NULL
    ORDER BY r.FullName COLLATE NOCASE ASC`
   )
@@ -69,8 +76,8 @@ const unmatched = unmatchedResult.results ?? [];
       <p class="font-script text-2xl text-accent-600">Class of 2006</p>
       <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Classmates roster</h1>
       <p class="mt-2 max-w-2xl text-sm text-cream-700">
-        The canonical list of '06 graduates (from the yearbook). RSVP submissions are
-        auto-matched against this list by full name (case-insensitive).
+        The canonical list of '06 graduates (from the yearbook). RSVP submissions
+        auto-match against this list by full name <em>or</em> by preferred name + last name.
       </p>
     </div>
   </header>
@@ -106,6 +113,24 @@ const unmatched = unmatchedResult.results ?? [];
     </div>
   </section>
 
+  <!-- MERGE MODE BANNER (hidden until activated) -->
+  <div id="merge-banner" class="hidden mb-8 rounded-2xl border-2 border-brand-500 bg-brand-50 p-4 sm:p-5">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-brand-700">Merge mode</span>
+      <span class="text-sm text-brand-900">
+        Keeping <strong id="merge-primary-name">—</strong>.
+        Click <em>"Merge into this"</em> on the duplicate row to merge it in.
+      </span>
+      <button
+        type="button"
+        id="merge-cancel"
+        class="ml-auto rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+      >
+        Cancel merge
+      </button>
+    </div>
+  </div>
+
   <!-- BULK IMPORT -->
   <section class="mb-12">
     <header class="mb-4 flex items-baseline justify-between gap-3">
@@ -118,12 +143,12 @@ const unmatched = unmatchedResult.results ?? [];
           <span class="block text-sm font-semibold text-brand-900">Paste classmate list</span>
           <p class="text-xs text-cream-700">
             One name per line. Optionally use <code class="rounded bg-cream-100 px-1.5 py-0.5 font-mono text-brand-700">Full Name | Maiden Name</code>
-            on a line to record a maiden name. Duplicates create separate rows; clean them up via Edit / Delete after.
+            on a line. Preferred name is set per row via the edit form below.
           </p>
           <textarea
             name="bulk"
             rows="8"
-            placeholder="Aaron Smith&#10;Allison Brown | Garcia&#10;Ben Carter&#10;Brandon Davis&#10;…"
+            placeholder="Aaron Smith&#10;Allison Brown | Garcia&#10;Ben Carter&#10;…"
             class="mt-2 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 font-mono text-sm text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
           ></textarea>
         </label>
@@ -153,21 +178,33 @@ const unmatched = unmatchedResult.results ?? [];
 
         <label class="block sm:col-span-1">
           <span class="block text-sm font-semibold text-brand-900">Full name <span class="text-brand-500">*</span></span>
+          <p class="text-xs text-cream-700">As it appears in the yearbook.</p>
           <input
             type="text"
             name="fullName"
             required
-            placeholder="Jane Doe"
+            placeholder="Rebecca Frey"
             class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
           />
         </label>
 
         <label class="block sm:col-span-1">
+          <span class="block text-sm font-semibold text-brand-900">Preferred first name <span class="font-normal text-cream-700">(optional)</span></span>
+          <p class="text-xs text-cream-700">What they go by. e.g. "Becky" for Rebecca.</p>
+          <input
+            type="text"
+            name="preferredFirstName"
+            placeholder="Becky"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-2">
           <span class="block text-sm font-semibold text-brand-900">Maiden name <span class="font-normal text-cream-700">(optional)</span></span>
           <input
             type="text"
             name="maidenName"
-            placeholder="Smith"
+            placeholder="Kirby"
             class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
           />
         </label>
@@ -183,7 +220,7 @@ const unmatched = unmatchedResult.results ?? [];
 
         <label class="flex items-center gap-2 sm:col-span-2">
           <input type="checkbox" name="isDeceased" class="h-4 w-4 accent-brand-500" />
-          <span class="text-sm text-brand-900">Mark as deceased (also add a tribute on the In Memoriam page if you'd like.)</span>
+          <span class="text-sm text-brand-900">Mark as deceased (and add a tribute on the In Memoriam page if you'd like).</span>
         </label>
 
         <div class="sm:col-span-2 flex flex-wrap items-center gap-3">
@@ -236,7 +273,7 @@ const unmatched = unmatchedResult.results ?? [];
               <th>RSVP</th>
               <th>Email</th>
               <th>Notes</th>
-              <th class="num">Action</th>
+              <th class="num">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -245,18 +282,25 @@ const unmatched = unmatchedResult.results ?? [];
                 id: r.Id,
                 fullName: r.FullName,
                 maidenName: r.MaidenName ?? '',
+                preferredFirstName: r.PreferredFirstName ?? '',
                 notes: r.Notes ?? '',
                 isDeceased: r.IsDeceased === 1,
               });
+              const searchHay = `${r.FullName} ${r.MaidenName ?? ''} ${r.PreferredFirstName ?? ''}`.toLowerCase();
               return (
                 <tr
                   data-classmate-id={r.Id}
                   data-classmate={data}
-                  data-search={`${r.FullName} ${r.MaidenName ?? ''}`.toLowerCase()}
+                  data-search={searchHay}
                 >
                   <td class="num mono dim">{String(idx + 1).padStart(3, '0')}</td>
                   <td>
                     <span class="font-semibold">{r.FullName}</span>
+                    {r.PreferredFirstName && (
+                      <span class="ml-2 inline-flex items-center rounded-full bg-accent-100 px-2 py-0.5 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent-700">
+                        {r.PreferredFirstName}
+                      </span>
+                    )}
                     {r.IsDeceased === 1 && (
                       <span class="ml-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">remembered</span>
                     )}
@@ -277,7 +321,8 @@ const unmatched = unmatchedResult.results ?? [];
                   </td>
                   <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
                   <td class="num">
-                    <div class="inline-flex gap-2">
+                    {/* Normal action buttons */}
+                    <div class="actions-normal inline-flex gap-2">
                       <button
                         type="button"
                         class="edit-btn rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
@@ -286,11 +331,31 @@ const unmatched = unmatchedResult.results ?? [];
                       </button>
                       <button
                         type="button"
+                        class="merge-start-btn rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+                      >
+                        Merge
+                      </button>
+                      <button
+                        type="button"
                         class="delete-btn rounded-full border border-rose-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-rose-700 transition-colors hover:border-rose-500 hover:bg-rose-50"
                         data-name={r.FullName}
                       >
                         Delete
                       </button>
+                    </div>
+                    {/* Merge-mode actions (hidden by default) */}
+                    <div class="actions-merge hidden inline-flex">
+                      <button
+                        type="button"
+                        class="merge-target-btn rounded-full border-2 border-brand-500 bg-brand-50 px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:bg-brand-100"
+                      >
+                        ← Merge into this
+                      </button>
+                    </div>
+                    <div class="actions-merge-primary hidden inline-flex">
+                      <span class="rounded-full bg-brand-500 px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-cream-50">
+                        Keeping this row
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -310,8 +375,8 @@ const unmatched = unmatchedResult.results ?? [];
         <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">{unmatched.length} mismatch{unmatched.length === 1 ? '' : 'es'}</span>
       </header>
       <p class="mb-3 text-sm text-cream-700">
-        These RSVP submissions don't match any roster name. Add the classmate above (or
-        fix the roster name) so they're tracked.
+        These RSVP submissions don't match any roster name (even with preferred name).
+        Add a preferred name to a roster row, fix a typo, or add the missing classmate.
       </p>
       <div class="admin-table-wrap">
         <table class="admin-table">
@@ -347,11 +412,16 @@ const unmatched = unmatchedResult.results ?? [];
     const bulkMessage = document.getElementById('bulk-message');
     const singleForm = document.getElementById('single-form');
     const singleMessage = document.getElementById('single-message');
-    const singleSubmit = document.getElementById('single-submit');
     const singleSubmitLabel = document.getElementById('single-submit-label');
     const singleCancel = document.getElementById('single-cancel');
     const modeLabel = document.getElementById('single-mode-label');
     const filter = document.getElementById('roster-filter');
+
+    const mergeBanner = document.getElementById('merge-banner');
+    const mergePrimaryName = document.getElementById('merge-primary-name');
+    const mergeCancelBtn = document.getElementById('merge-cancel');
+
+    let mergePrimaryId = null;
 
     function setMessage(el, text, tone) {
       el.textContent = text;
@@ -405,6 +475,7 @@ const unmatched = unmatchedResult.results ?? [];
         ...(id ? { id: Number(id) } : {}),
         fullName: fd.get('fullName'),
         maidenName: fd.get('maidenName'),
+        preferredFirstName: fd.get('preferredFirstName'),
         notes: fd.get('notes'),
         isDeceased: fd.get('isDeceased') === 'on',
       };
@@ -427,12 +498,52 @@ const unmatched = unmatchedResult.results ?? [];
       }
     });
 
+    // -------- Merge mode --------
+    function enterMergeMode(primaryId, primaryName) {
+      mergePrimaryId = primaryId;
+      mergePrimaryName.textContent = primaryName;
+      mergeBanner.classList.remove('hidden');
+
+      document.querySelectorAll('tr[data-classmate-id]').forEach((row) => {
+        const id = Number(row.getAttribute('data-classmate-id'));
+        const normal = row.querySelector('.actions-normal');
+        const targetUi = row.querySelector('.actions-merge');
+        const primaryUi = row.querySelector('.actions-merge-primary');
+        normal.classList.add('hidden');
+        if (id === primaryId) {
+          targetUi.classList.add('hidden');
+          primaryUi.classList.remove('hidden');
+          row.classList.add('bg-brand-50');
+        } else {
+          targetUi.classList.remove('hidden');
+          primaryUi.classList.add('hidden');
+        }
+      });
+
+      // Smoothly scroll to top so they see the banner.
+      mergeBanner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function exitMergeMode() {
+      mergePrimaryId = null;
+      mergeBanner.classList.add('hidden');
+      document.querySelectorAll('tr[data-classmate-id]').forEach((row) => {
+        row.querySelector('.actions-normal')?.classList.remove('hidden');
+        row.querySelector('.actions-merge')?.classList.add('hidden');
+        row.querySelector('.actions-merge-primary')?.classList.add('hidden');
+        row.classList.remove('bg-brand-50');
+      });
+    }
+
+    mergeCancelBtn.addEventListener('click', exitMergeMode);
+
     document.querySelectorAll('tr[data-classmate-id]').forEach((row) => {
       const data = JSON.parse(row.getAttribute('data-classmate') || '{}');
       row.querySelector('.edit-btn')?.addEventListener('click', () => {
         singleForm.elements.id.value = data.id;
         singleForm.elements.fullName.value = data.fullName ?? '';
         singleForm.elements.maidenName.value = data.maidenName ?? '';
+        singleForm.elements.preferredFirstName.value = data.preferredFirstName ?? '';
         singleForm.elements.notes.value = data.notes ?? '';
         singleForm.elements.isDeceased.checked = !!data.isDeceased;
         singleSubmitLabel.textContent = 'Update classmate';
@@ -440,6 +551,7 @@ const unmatched = unmatchedResult.results ?? [];
         modeLabel.textContent = `editing #${data.id}`;
         singleForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
+
       row.querySelector('.delete-btn')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         const name = btn.getAttribute('data-name');
@@ -449,6 +561,29 @@ const unmatched = unmatchedResult.results ?? [];
         else {
           const body = await res.json().catch(() => ({}));
           alert(body && body.error ? body.error : `Failed (${res.status})`);
+        }
+      });
+
+      row.querySelector('.merge-start-btn')?.addEventListener('click', () => {
+        enterMergeMode(data.id, data.fullName);
+      });
+
+      row.querySelector('.merge-target-btn')?.addEventListener('click', async () => {
+        if (mergePrimaryId === null) return;
+        if (!confirm(`Merge "${data.fullName}" INTO the kept row, then delete this row?\n\n` +
+                     `The kept row's fields win on conflict; missing fields will be filled from this one.\n` +
+                     `Notes are combined. This can't be undone.`)) {
+          return;
+        }
+        const res = await fetch('/api/admin/classmates/merge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ primaryId: mergePrimaryId, mergeId: data.id }),
+        });
+        if (res.ok) location.reload();
+        else {
+          const body = await res.json().catch(() => ({}));
+          alert(body && body.error ? body.error : `Merge failed (${res.status})`);
         }
       });
     });
