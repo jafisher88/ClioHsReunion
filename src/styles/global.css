@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  /*
+   * Clio HS Class of 2006 — Mustang Red on Cream
+   * Warm, nostalgic palette. Reunion banner energy without being a yearbook.
+   */
+
+  /* Cream / paper backdrop */
+  --color-cream-50: #fdfbf6;
+  --color-cream-100: #f8f2e6;
+  --color-cream-200: #efe5cf;
+  --color-cream-300: #e2d4b5;
+  --color-cream-400: #cdb98e;
+  --color-cream-500: #b29969;
+  --color-cream-600: #8d7849;
+  --color-cream-700: #6b5b37;
+  --color-cream-800: #4a3f26;
+  --color-cream-900: #2c2616;
+
+  /* Brand: deep mustang red */
+  --color-brand-50:  #fcf3f2;
+  --color-brand-100: #fbe1df;
+  --color-brand-200: #f6bcb8;
+  --color-brand-300: #ed8e87;
+  --color-brand-400: #df5d54;
+  --color-brand-500: #c93b33;
+  --color-brand-600: #ad2924;
+  --color-brand-700: #8a1f1d;
+  --color-brand-800: #6a1817;
+  --color-brand-900: #441010;
+
+  /* Accent: aged-yearbook gold */
+  --color-accent-50:  #fbf5e3;
+  --color-accent-100: #f5e9bf;
+  --color-accent-200: #ecd47f;
+  --color-accent-300: #dcb946;
+  --color-accent-400: #c79f24;
+  --color-accent-500: #a4811a;
+  --color-accent-600: #806413;
+  --color-accent-700: #5e480e;
+
+  /* Typography */
+  --font-body: 'Outfit', system-ui, sans-serif;
+  --font-heading: 'Oswald', system-ui, sans-serif;
+  --font-display: 'Libre Baskerville', Georgia, serif;
+  --font-script: 'Dancing Script', cursive;
+}
+
+/* Subtle paper grain */
+.grain {
+  position: relative;
+}
+.grain::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.6s ease-out both; }
+.animate-fade-up { animation: fade-up 0.7s ease-out both; }

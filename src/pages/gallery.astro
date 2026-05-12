@@ -1,0 +1,50 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Gallery">
+  <header class="animate-fade-in">
+    <p class="font-script text-2xl text-accent-600">Throwbacks</p>
+    <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Gallery</h1>
+    <p class="mt-4 max-w-2xl text-brand-700">
+      A YouTube playlist of Class of 2006 memories — graduation, sports, theatre, the works.
+      Got photos or video to add? <a href="/contact" class="text-brand-800 underline">Send them our way</a>
+      and we'll get them into the mix.
+    </p>
+  </header>
+
+  <section class="mt-10 animate-fade-up">
+    <div class="overflow-hidden rounded-3xl border-2 border-cream-300 bg-black shadow-lg">
+      <div class="relative" style="padding-top: 56.25%;">
+        <iframe
+          class="absolute inset-0 h-full w-full"
+          src="https://www.youtube.com/embed/videoseries?list=PL72SyLQ6Qbwsx5XO_KjzEzyVGjmOF0HRN"
+          title="Clio HS Class of 2006 — YouTube playlist"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+    <p class="mt-3 text-center text-sm text-brand-600">
+      <a
+        href="https://www.youtube.com/playlist?list=PL72SyLQ6Qbwsx5XO_KjzEzyVGjmOF0HRN"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="underline hover:text-brand-800"
+      >
+        Open full playlist on YouTube →
+      </a>
+    </p>
+  </section>
+
+  <section class="mt-16 animate-fade-up">
+    <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">More photos coming</h2>
+    <p class="mt-3 max-w-2xl text-brand-700">
+      We'll be building out a photo gallery as we collect submissions from classmates.
+      Until then, the <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" class="text-brand-800 underline">Facebook group</a>
+      is where most of the throwback photos live.
+    </p>
+  </section>
+</Layout>

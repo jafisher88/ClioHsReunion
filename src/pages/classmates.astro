@@ -1,0 +1,51 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Card from '../components/Card.astro';
+---
+
+<Layout title="Classmates">
+  <header class="animate-fade-in">
+    <p class="font-script text-2xl text-accent-600">Mustangs of '06</p>
+    <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Classmates</h1>
+    <p class="mt-4 max-w-2xl text-brand-700">
+      We don't try to duplicate what already exists — the Facebook group and the official
+      alumni site are still the best places to find old classmates and keep up.
+    </p>
+  </header>
+
+  <section class="mt-10 grid gap-6 animate-fade-up sm:grid-cols-2">
+    <Card icon="👥" title="Class Facebook Group">
+      <p>The most active place to reconnect, share photos, and see who's coming.</p>
+      <a
+        href="https://www.facebook.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-4 inline-flex rounded-full bg-brand-700 px-5 py-2 text-sm font-semibold text-cream-50 hover:bg-brand-800"
+      >
+        Open Facebook group →
+      </a>
+    </Card>
+    <Card icon="🎓" title="Official Clio HS alumni site">
+      <p>Class roster, class history, and links to other reunion years.</p>
+      <a
+        href="https://cliohighschool.net/class-of-2006.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-4 inline-flex rounded-full border-2 border-brand-300 bg-white px-5 py-2 text-sm font-medium text-brand-700 hover:border-brand-500"
+      >
+        cliohighschool.net →
+      </a>
+    </Card>
+  </section>
+
+  <section class="mt-16 animate-fade-up">
+    <div class="rounded-3xl border-2 border-cream-300 bg-white/70 p-8 shadow-sm sm:p-12">
+      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Help us find everyone</h2>
+      <p class="mt-3 max-w-2xl text-brand-700">
+        Lost touch with a classmate? Know somebody who isn't in the Facebook group?
+        <a href="/contact" class="font-semibold text-brand-800 underline">Send us their name</a>
+        and we'll do our best to track them down before the reunion.
+      </p>
+    </div>
+  </section>
+</Layout>

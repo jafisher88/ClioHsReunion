@@ -1,0 +1,14 @@
+---
+interface Props {
+  time: string;
+  title: string;
+}
+const { time, title } = Astro.props;
+---
+
+<li class="relative">
+  <span class="absolute -left-[1.625rem] mt-1.5 inline-block h-3 w-3 rounded-full bg-accent-500 ring-4 ring-cream-50"></span>
+  <div class="font-heading text-sm uppercase tracking-wider text-accent-700">{time}</div>
+  <div class="mt-1 font-display text-lg text-brand-800">{title}</div>
+  <p class="mt-1 text-sm text-brand-700"><slot /></p>
+</li>

@@ -1,0 +1,10 @@
+# Cloudflare Workers secrets for local development
+# Copy this file to .dev.vars and fill in your values
+# NEVER commit .dev.vars — it contains credentials
+
+# Optional: Resend API key for emailing RSVP confirmations to the organizer.
+# Leave blank to skip email and only persist RSVPs to D1.
+RESEND_API_KEY=
+
+# Where confirmation/notification emails should be sent (the organizer).
+ORGANIZER_EMAIL=

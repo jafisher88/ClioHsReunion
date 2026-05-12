@@ -1,0 +1,150 @@
+---
+import Logo from '../components/Logo.astro';
+import MobileMenu from '../components/MobileMenu.tsx';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+}
+
+const {
+  title,
+  description = 'Clio High School Class of 2006 — 20-year reunion. Event details, RSVP, and classmate links.',
+  image,
+} = Astro.props;
+
+const pageTitle = title === 'Home' ? "Clio HS Class of 2006 — 20-Year Reunion" : `${title} | Clio HS Class of 2006`;
+const ogImage = image || 'https://cliohsreunion.com/og.png';
+const canonicalUrl = new URL(Astro.url.pathname, 'https://cliohsreunion.com').href;
+
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/event', label: 'Event' },
+  { href: '/rsvp', label: 'RSVP', cta: true },
+  { href: '/gallery', label: 'Gallery' },
+  { href: '/classmates', label: 'Classmates' },
+  { href: '/contact', label: 'Contact' },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300..700&family=Oswald:wght@500;700&family=Dancing+Script:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="Clio HS Class of 2006 Reunion" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <title>{pageTitle}</title>
+  </head>
+  <body class="grain min-h-screen bg-cream-50 font-body text-brand-900 antialiased">
+    <header
+      class="sticky top-0 border-b border-cream-300/60 bg-cream-50/95 backdrop-blur-md"
+      style="z-index: 100; -webkit-backdrop-filter: blur(12px);"
+    >
+      <nav class="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+        <a href="/" class="transition-opacity hover:opacity-80">
+          <Logo size="md" />
+        </a>
+        <ul class="hidden items-center gap-6 text-sm font-medium md:flex">
+          {navLinks.map(l => (
+            <li>
+              {l.cta ? (
+                <a
+                  href={l.href}
+                  class="rounded-full bg-brand-700 px-4 py-1.5 font-semibold text-cream-50 transition-colors hover:bg-brand-800"
+                >
+                  {l.label}
+                </a>
+              ) : (
+                <a
+                  href={l.href}
+                  class="relative text-brand-700 transition-colors hover:text-brand-900 after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 after:bg-accent-500 after:transition-all hover:after:w-full"
+                >
+                  {l.label}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+        <MobileMenu client:load />
+      </nav>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 relative" style="z-index: 2;">
+      <slot />
+    </main>
+
+    <footer class="border-t border-cream-300/60 bg-brand-900">
+      <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+        <div class="grid gap-8 md:grid-cols-3">
+          <div>
+            <Logo size="md" variant="dark" />
+            <p class="mt-4 text-sm leading-relaxed text-cream-300">
+              Clio High School Class of 2006 — celebrating 20 years since graduation.
+              Once a Mustang, always a Mustang.
+            </p>
+          </div>
+          <div>
+            <h3 class="font-heading text-sm font-bold uppercase tracking-wider text-cream-200">Quick Links</h3>
+            <ul class="mt-3 space-y-2">
+              {navLinks.map(l => (
+                <li>
+                  <a href={l.href} class="text-sm text-cream-300 transition-colors hover:text-accent-300">
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-heading text-sm font-bold uppercase tracking-wider text-cream-200">Stay Connected</h3>
+            <ul class="mt-3 space-y-2 text-sm text-cream-300">
+              <li>
+                <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" class="hover:text-accent-300">
+                  Class Facebook group →
+                </a>
+              </li>
+              <li>
+                <a href="https://cliohighschool.net/class-of-2006.html" target="_blank" rel="noopener noreferrer" class="hover:text-accent-300">
+                  cliohighschool.net →
+                </a>
+              </li>
+              <li>
+                <a href="/contact" class="hover:text-accent-300">Contact the planning crew →</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-10 border-t border-cream-800/40 pt-6 text-center text-xs text-cream-400">
+          &copy; {new Date().getFullYear()} Clio HS Class of 2006 Reunion. Made with love by classmates.
+        </div>
+      </div>
+    </footer>
+
+    <style is:global>
+      @import "../styles/global.css";
+    </style>
+  </body>
+</html>

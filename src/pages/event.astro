@@ -1,0 +1,68 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Card from '../components/Card.astro';
+import Step from '../components/Step.astro';
+---
+
+<Layout title="Event">
+  <header class="animate-fade-in">
+    <p class="font-script text-2xl text-accent-600">The reunion</p>
+    <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Event Details</h1>
+    <p class="mt-4 max-w-2xl text-lg text-brand-700">
+      We're putting the final touches on the schedule. Here's what we know so far — check back
+      as details firm up, and follow the Facebook group for live updates.
+    </p>
+  </header>
+
+  <section class="mt-12 grid gap-6 animate-fade-up sm:grid-cols-2">
+    <Card icon="📅" title="Date">
+      <p class="text-lg">Fall 2026</p>
+      <p class="mt-1 text-sm text-cream-700">Exact date being coordinated with the venue — TBA.</p>
+    </Card>
+    <Card icon="📍" title="Venue">
+      <p class="text-lg">TBA, Clio, Michigan</p>
+      <p class="mt-1 text-sm text-cream-700">We're scouting a few local spots that can host a crowd.</p>
+    </Card>
+    <Card icon="🍽️" title="Food & Drink">
+      <p>Appetizers and a cash bar planned. Final menu and pricing once the venue is locked in.</p>
+    </Card>
+    <Card icon="🎟️" title="Cost">
+      <p>Ticket pricing will be announced with the venue. RSVP first — payment details to follow.</p>
+    </Card>
+  </section>
+
+  <section class="mt-16 animate-fade-up">
+    <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Tentative schedule</h2>
+    <ol class="mt-6 space-y-4 border-l-2 border-accent-300 pl-6">
+      <Step time="6:00 PM" title="Doors open">
+        Sign in, grab a name tag (yes, you'll need one — 20 years is 20 years), say hi.
+      </Step>
+      <Step time="6:30 PM" title="Welcome & hors d'oeuvres">
+        Quick welcome from the planning crew, then mingle.
+      </Step>
+      <Step time="7:30 PM" title="Toast & memories">
+        A toast to classmates we've lost, and a few yearbook throwbacks on the big screen.
+      </Step>
+      <Step time="8:00 PM" title="Music & dancing">
+        DJ takes over with a 2002–2006 playlist. Requests welcome.
+      </Step>
+      <Step time="11:00 PM" title="Last call">
+        Hugs, photos, and "let's not wait ten years next time."
+      </Step>
+    </ol>
+  </section>
+
+  <section class="mt-16 animate-fade-up">
+    <div class="rounded-3xl bg-gradient-to-br from-accent-100 via-accent-200/60 to-cream-100 p-8 shadow-sm sm:p-12">
+      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Ready to RSVP?</h2>
+      <p class="mt-3 max-w-2xl text-brand-700">
+        Even a tentative "maybe" helps us plan headcount with the venue. Takes about a minute.
+      </p>
+      <a href="/rsvp" class="mt-6 inline-flex rounded-full bg-brand-700 px-8 py-3.5 text-base font-semibold text-cream-50 hover:bg-brand-800">
+        RSVP →
+      </a>
+    </div>
+  </section>
+</Layout>
+
+<style></style>

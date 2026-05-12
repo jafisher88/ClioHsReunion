@@ -1,0 +1,22 @@
+name = "cliohsreunion"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+# TODO: fill in once you `gh repo` / Cloudflare account is connected
+# account_id = ""
+
+routes = [
+  { pattern = "cliohsreunion.com", custom_domain = true },
+  { pattern = "www.cliohsreunion.com", custom_domain = true }
+]
+
+# RSVP storage. Create with:
+#   npx wrangler d1 create cliohsreunion-db
+# then paste the returned database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "cliohsreunion-db"
+database_id = "REPLACE_AFTER_WRANGLER_D1_CREATE"
+migrations_dir = "migrations"
+
+[vars]
+EVENT_NAME = "Clio High School Class of 2006 — 20 Year Reunion"

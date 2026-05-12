@@ -1,0 +1,84 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Card from '../components/Card.astro';
+---
+
+<Layout title="Home">
+  <section class="animate-fade-in pt-4">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 px-6 py-16 text-center shadow-2xl sm:py-24">
+      <div
+        class="absolute inset-0 opacity-10"
+        style="background-image: radial-gradient(circle at 20% 20%, var(--color-accent-300) 0, transparent 40%), radial-gradient(circle at 80% 80%, var(--color-accent-500) 0, transparent 40%);"
+      ></div>
+      <p class="relative font-script text-2xl text-accent-300 sm:text-3xl">Save the date</p>
+      <h1 class="relative mt-3 font-heading text-4xl font-bold uppercase tracking-wider text-cream-50 sm:text-6xl">
+        Clio HS Class of 2006
+      </h1>
+      <p class="relative mt-2 font-display text-xl italic text-accent-200 sm:text-2xl">20-Year Reunion</p>
+      <p class="relative mx-auto mt-8 max-w-2xl text-base leading-relaxed text-cream-200 sm:text-lg">
+        It's been twenty years since we walked across the stage at Clio High.
+        Let's get the gang back together — old friends, old stories, and a few new gray hairs.
+      </p>
+      <div class="relative mt-10 flex flex-wrap justify-center gap-4">
+        <a
+          href="/rsvp"
+          class="group rounded-full bg-accent-500 px-8 py-3.5 text-base font-semibold text-brand-900 shadow-lg shadow-accent-500/30 transition-all hover:bg-accent-400"
+        >
+          RSVP now <span class="inline-block transition-transform group-hover:translate-x-1">→</span>
+        </a>
+        <a
+          href="/event"
+          class="rounded-full border-2 border-cream-200/40 px-8 py-3.5 text-base font-medium text-cream-100 hover:border-cream-200 hover:bg-cream-50/10"
+        >
+          Event details
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-16 grid gap-6 animate-fade-up sm:mt-24 sm:grid-cols-3">
+    <Card icon="📅" title="When">
+      <p>Fall 2026 — exact date coming soon. Watch this page or the Facebook group.</p>
+    </Card>
+    <Card icon="📍" title="Where">
+      <p>Clio, Michigan. Venue still being locked in.</p>
+    </Card>
+    <Card icon="🎉" title="What">
+      <p>One night of catching up — drinks, food, music, and twenty years of stories.</p>
+    </Card>
+  </section>
+
+  <section class="mt-16 animate-fade-up sm:mt-24">
+    <div class="rounded-3xl border-2 border-cream-300 bg-white/70 p-8 shadow-sm sm:p-12">
+      <h2 class="font-heading text-3xl uppercase tracking-wider text-brand-800 sm:text-4xl">Stay in the loop</h2>
+      <p class="mt-3 max-w-2xl text-brand-700">
+        The Class of 2006 Facebook group is where most chatter happens. The official Clio HS
+        alumni site also keeps class pages for graduates and class history.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a
+          href="https://www.facebook.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-cream-50 hover:bg-brand-800"
+        >
+          Facebook group →
+        </a>
+        <a
+          href="https://cliohighschool.net/class-of-2006.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rounded-full border-2 border-brand-300 bg-white px-6 py-2.5 text-sm font-medium text-brand-700 hover:border-brand-500"
+        >
+          cliohighschool.net →
+        </a>
+        <a
+          href="/gallery"
+          class="rounded-full border-2 border-brand-300 bg-white px-6 py-2.5 text-sm font-medium text-brand-700 hover:border-brand-500"
+        >
+          Throwback videos →
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
