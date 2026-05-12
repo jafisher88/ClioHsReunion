@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 
 interface RsvpPayload {
   fullName: string;
@@ -43,7 +44,7 @@ function validate(body: unknown): { ok: true; value: RsvpPayload } | { ok: false
   };
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   let payload: unknown;
   try {
     payload = await request.json();
@@ -56,7 +57,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return Response.json({ error: result.error }, { status: 400 });
   }
 
-  const env = (locals as App.Locals).runtime?.env ?? (locals as App.Locals);
   const db = env.DB;
 
   if (!db) {
