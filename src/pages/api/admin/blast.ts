@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin } from '../../../lib/admin-auth';
 import { renderHtmlEmail, resendBatch, type ResendEmail } from '../../../lib/resend';
+import { personalize, resolveFirstNames } from '../../../lib/personalization';
 
 const VALID_AUDIENCES = new Set([
   'rsvp-yes',
@@ -124,8 +125,13 @@ export const POST: APIRoute = async ({ request }) => {
     return jsonError('No recipients matched that audience.', 400);
   }
 
-  const html = renderHtmlEmail({ subject: result.value.subject, bodyText: result.value.body });
-  const text = result.value.body;
+  // Personalize per recipient: anywhere the admin typed {firstName} in the
+  // subject or body gets replaced with the recipient's preferred name (with
+  // a graceful chain of fallbacks → eventually "Mustang").
+  const { byEmail, fallback } = await resolveFirstNames(env.DB, recipients);
+
+  const subjectTpl = result.value.subject;
+  const bodyTpl = result.value.body;
 
   // Send in batches of 100 (Resend's batch endpoint limit).
   const batches: string[][] = [];
@@ -135,13 +141,13 @@ export const POST: APIRoute = async ({ request }) => {
 
   let firstBatchId: string | undefined;
   for (const batch of batches) {
-    const msgs: ResendEmail[] = batch.map((to) => ({
-      to,
-      subject: result.value.subject,
-      html,
-      text,
-      replyTo: admin.email,
-    }));
+    const msgs: ResendEmail[] = batch.map((to) => {
+      const firstName = byEmail.get(to.toLowerCase().trim()) || fallback;
+      const subject = personalize(subjectTpl, firstName);
+      const text = personalize(bodyTpl, firstName);
+      const html = renderHtmlEmail({ subject, bodyText: text });
+      return { to, subject, html, text, replyTo: admin.email };
+    });
     try {
       const res = await resendBatch(env.RESEND_API_KEY!, msgs);
       if (!firstBatchId && res.data && res.data[0]?.id) {

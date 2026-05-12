@@ -142,13 +142,17 @@ const audienceLabel: Record<string, string> = {
         <label class="block">
           <span class="block text-sm font-semibold text-brand-900">
             Message <span class="text-brand-500">*</span>
-            <span class="ml-2 font-normal text-cream-700">Plain text — links auto-detected, blank lines start new paragraphs.</span>
           </span>
+          <p class="mt-0.5 text-xs text-cream-700">
+            Plain text — links auto-detected, blank lines start new paragraphs.
+            Use <code class="rounded bg-cream-100 px-1.5 py-0.5 font-mono text-brand-700">{firstName}</code>
+            anywhere in subject or body to personalize per recipient (uses their preferred name when set).
+          </p>
           <textarea
             name="body"
             required
             rows="10"
-            placeholder="Hey Mustangs,&#10;&#10;Date is locked: November 14, 2026 at Round Em Up Ranch.&#10;&#10;Update your RSVP at cliohsreunion.com/rsvp.&#10;&#10;— The planning crew"
+            placeholder="Hey {firstName},&#10;&#10;Date is locked: November 14, 2026 at Round Em Up Ranch.&#10;&#10;Update your RSVP at cliohsreunion.com/rsvp.&#10;&#10;— The planning crew"
             class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
           ></textarea>
         </label>

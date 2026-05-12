@@ -1,4 +1,5 @@
 import { renderHtmlEmail, resendBatch, type ResendEmail } from './resend';
+import { DEFAULT_FALLBACK, personalize, resolveFirstNames } from './personalization';
 
 export type ReminderKind = '30day' | '7day' | 'dayof';
 
@@ -34,7 +35,7 @@ interface ReminderTemplate {
 const TEMPLATES: Record<ReminderKind, ReminderTemplate> = {
   '30day': {
     subject: (date) => `30 days to the reunion — ${date}`,
-    body: (date) => `Hey Mustangs,
+    body: (date) => `Hey {firstName},
 
 The Clio High School Class of 2006 reunion is just 30 days out.
 
@@ -56,7 +57,7 @@ cliohsreunion.com`,
   },
   '7day': {
     subject: (date) => `One week out — ${date}`,
-    body: (date) => `Hey Mustangs,
+    body: (date) => `Hey {firstName},
 
 Just a week until the Class of 2006 reunion at Round Em Up Ranch on ${date}.
 
@@ -75,7 +76,7 @@ cliohsreunion.com`,
   },
   'dayof': {
     subject: (date) => `Tonight — Class of 2006 reunion`,
-    body: (date) => `Hey Mustangs,
+    body: (date) => `Hey {firstName},
 
 Tonight's the night. ${date}.
 
@@ -94,17 +95,12 @@ cliohsreunion.com`,
  */
 export function daysUntilEvent(eventDate: string | null, now: Date = new Date()): number | null {
   if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return null;
-  // Compare at UTC date precision so we don't get jittered by DST or TZ.
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const [y, m, d] = eventDate.split('-').map(Number);
   const event = new Date(Date.UTC(y, m - 1, d));
   return Math.round((event.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
 }
 
-/**
- * Map days-until-event → which reminder, if any, fires today.
- * 30, 7, and 0 trigger their respective kinds.
- */
 export function reminderKindFor(daysUntil: number | null): ReminderKind | null {
   if (daysUntil === null) return null;
   if (daysUntil === 30) return '30day';
@@ -113,16 +109,12 @@ export function reminderKindFor(daysUntil: number | null): ReminderKind | null {
   return null;
 }
 
-/**
- * For a given kind, who should receive it? RSVP yes + maybe.
- */
 async function recipientsFor(kind: ReminderKind, db: D1Database): Promise<string[]> {
   const res = await db
     .prepare(`SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending IN ('yes', 'maybe')`)
     .all<{ email: string }>();
   const rows = res.results ?? [];
 
-  // Filter out anyone who's already received this kind.
   const already = await db
     .prepare(`SELECT Email FROM ReminderSends WHERE ReminderKind = ?1`)
     .bind(kind)
@@ -133,12 +125,8 @@ async function recipientsFor(kind: ReminderKind, db: D1Database): Promise<string
 }
 
 /**
- * Actually run a reminder send for a given kind. Sends to all RSVP yes/maybe
- * who haven't been sent this kind yet. Records sends in ReminderSends so
- * subsequent invocations are no-ops.
- *
- * `force` is for the admin "test send to me" path — passes overrideRecipients
- * and skips the DB recording.
+ * Run a reminder send for the given kind. Personalizes `{firstName}` per
+ * recipient using the Classmates preferred-name lookup.
  */
 export async function runReminder(args: {
   kind: ReminderKind;
@@ -161,9 +149,8 @@ export async function runReminder(args: {
 
   const tpl = TEMPLATES[args.kind];
   const formattedDate = fmtEventDate(args.eventDate);
-  const subject = tpl.subject(formattedDate);
-  const bodyText = tpl.body(formattedDate);
-  const html = renderHtmlEmail({ subject, bodyText });
+  const subjectTpl = tpl.subject(formattedDate);
+  const bodyTpl = tpl.body(formattedDate);
 
   const recipients = args.overrideRecipients
     ? args.overrideRecipients
@@ -172,20 +159,19 @@ export async function runReminder(args: {
   result.attempted = recipients.length;
   if (recipients.length === 0) return result;
 
+  const { byEmail, fallback } = await resolveFirstNames(args.db, recipients);
+
   for (let i = 0; i < recipients.length; i += 100) {
     const batch = recipients.slice(i, i + 100);
-    const msgs: ResendEmail[] = batch.map((to) => ({
-      to,
-      subject,
-      html,
-      text: bodyText,
-      replyTo: args.replyTo,
-    }));
+    const msgs: ResendEmail[] = batch.map((to) => {
+      const firstName = byEmail.get(to.toLowerCase().trim()) || fallback;
+      const subject = personalize(subjectTpl, firstName);
+      const text = personalize(bodyTpl, firstName);
+      const html = renderHtmlEmail({ subject, bodyText: text });
+      return { to, subject, html, text, replyTo: args.replyTo };
+    });
     try {
       await resendBatch(args.resendApiKey, msgs);
-
-      // Record the sends (best-effort; ignore individual UNIQUE-constraint
-      // failures so partial repeats don't block the rest).
       if (!args.skipRecording) {
         for (const email of batch) {
           try {
