@@ -1,0 +1,336 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { env } from 'cloudflare:workers';
+import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return Astro.redirect(loginUrlFor(Astro.request));
+}
+
+interface BlastRow {
+  Id: number;
+  Subject: string;
+  Audience: string;
+  RecipientCount: number;
+  SentBy: string;
+  SentAt: string;
+}
+
+// Precompute recipient counts so admins see scope before composing.
+const [yes, maybe, all, vols, every, history] = await Promise.all([
+  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'yes'`).first<{ n: number }>(),
+  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'maybe'`).first<{ n: number }>(),
+  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps`).first<{ n: number }>(),
+  env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Volunteers`).first<{ n: number }>(),
+  env.DB.prepare(`SELECT COUNT(*) AS n FROM (
+    SELECT DISTINCT LOWER(Email) AS e FROM Rsvps
+    UNION
+    SELECT DISTINCT LOWER(Email) AS e FROM Volunteers
+  )`).first<{ n: number }>(),
+  env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt
+                    FROM EmailBlasts
+                ORDER BY SentAt DESC
+                   LIMIT 10`).all<BlastRow>(),
+]);
+
+const counts = {
+  'rsvp-yes':   yes?.n ?? 0,
+  'rsvp-maybe': maybe?.n ?? 0,
+  'rsvp-all':   all?.n ?? 0,
+  'volunteers': vols?.n ?? 0,
+  'everyone':   every?.n ?? 0,
+};
+const blastHistory = history.results ?? [];
+
+const audienceOptions = [
+  { value: 'rsvp-yes',   label: 'RSVPs · Yes only',     desc: 'Confirmed attendees.' },
+  { value: 'rsvp-maybe', label: 'RSVPs · Maybe only',   desc: 'Tentative replies.' },
+  { value: 'rsvp-all',   label: 'RSVPs · All',           desc: 'Yes / maybe / no.' },
+  { value: 'volunteers', label: 'Volunteers',            desc: 'Day-before & day-after helpers.' },
+  { value: 'everyone',   label: 'Everyone',              desc: 'RSVPs ∪ volunteers, deduped.' },
+  { value: 'custom',     label: 'Custom list',           desc: 'Type emails by hand.' },
+];
+
+function fmtDate(iso: string): string {
+  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
+}
+
+const audienceLabel: Record<string, string> = {
+  'rsvp-yes':   'RSVPs · Yes',
+  'rsvp-maybe': 'RSVPs · Maybe',
+  'rsvp-all':   'All RSVPs',
+  'volunteers': 'Volunteers',
+  'everyone':   'Everyone',
+  'custom':     'Custom list',
+};
+---
+
+<AdminLayout title="Email blast" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">Announcements</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Email blast</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        Send a broadcast to classmates. Emails come from
+        <span class="font-mono text-brand-700">noreply@cliohsreunion.com</span>;
+        replies route back to <span class="font-mono text-brand-700">{admin.email}</span>.
+      </p>
+    </div>
+  </header>
+
+  <section class="mb-12">
+    <header class="mb-4">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Compose</h2>
+    </header>
+
+    <div class="rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8">
+      <form id="blast-form" class="space-y-6">
+        {/* Audience */}
+        <fieldset>
+          <legend class="block text-sm font-semibold text-brand-900">
+            Audience <span class="text-brand-500">*</span>
+          </legend>
+          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {audienceOptions.map((opt) => (
+              <label class="group/r cursor-pointer">
+                <input type="radio" name="audience" value={opt.value} required class="peer sr-only" />
+                <span class="block rounded-xl border-2 border-cream-300 bg-white p-4 transition-all duration-150 group-hover/r:border-brand-300 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:shadow-[inset_0_0_0_1px_var(--color-brand-500)]">
+                  <span class="flex items-baseline justify-between gap-2">
+                    <span class="font-semibold text-brand-900">{opt.label}</span>
+                    {opt.value !== 'custom' && (
+                      <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">
+                        {counts[opt.value as keyof typeof counts]} recipients
+                      </span>
+                    )}
+                  </span>
+                  <span class="mt-1 block text-xs text-cream-700">{opt.desc}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div id="custom-emails-wrap" class="hidden">
+          <label class="block">
+            <span class="block text-sm font-semibold text-brand-900">Custom email list</span>
+            <p class="text-xs text-cream-700">One per line or comma-separated.</p>
+            <textarea
+              id="custom-emails"
+              rows="3"
+              placeholder="jane@example.com&#10;john@example.com"
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 font-mono text-sm text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            ></textarea>
+          </label>
+        </div>
+
+        <label class="block">
+          <span class="block text-sm font-semibold text-brand-900">Subject <span class="text-brand-500">*</span></span>
+          <input
+            type="text"
+            name="subject"
+            required
+            maxlength="200"
+            placeholder="Date locked in — November 14, 2026"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block">
+          <span class="block text-sm font-semibold text-brand-900">
+            Message <span class="text-brand-500">*</span>
+            <span class="ml-2 font-normal text-cream-700">Plain text — links auto-detected, blank lines start new paragraphs.</span>
+          </span>
+          <textarea
+            name="body"
+            required
+            rows="10"
+            placeholder="Hey Mustangs,&#10;&#10;Date is locked: November 14, 2026 at Round Em Up Ranch.&#10;&#10;Update your RSVP at cliohsreunion.com/rsvp.&#10;&#10;— The planning crew"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          ></textarea>
+        </label>
+
+        <div class="flex flex-wrap items-center gap-3 border-t border-cream-200 pt-5">
+          <button
+            type="button"
+            id="send-test"
+            class="inline-flex items-center gap-2 rounded-full border-2 border-cream-400 bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 transition-all duration-200 hover:border-brand-500 hover:bg-brand-50 hover:-translate-y-0.5"
+          >
+            Send test to me
+            <span aria-hidden="true">→</span>
+          </button>
+          <button
+            type="submit"
+            id="send-live"
+            class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+          >
+            <span id="send-live-label">Send to audience</span>
+            <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+          </button>
+          <p id="blast-message" class="hidden text-sm"></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {blastHistory.length > 0 && (
+    <section class="mb-12">
+      <header class="mb-4 flex items-baseline justify-between gap-3">
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Recent sends</h2>
+        <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">last 10</span>
+      </header>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Subject</th>
+              <th>Audience</th>
+              <th class="num">Recipients</th>
+              <th>Sent by</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody>
+            {blastHistory.map((b) => (
+              <tr>
+                <td class="num mono dim">#{b.Id}</td>
+                <td><span class="font-semibold">{b.Subject}</span></td>
+                <td class="mono dim">{audienceLabel[b.Audience] ?? b.Audience}</td>
+                <td class="num">{b.RecipientCount}</td>
+                <td class="mono dim">{b.SentBy.split('@')[0]}</td>
+                <td class="mono dim whitespace-nowrap">{fmtDate(b.SentAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+</AdminLayout>
+
+<script is:inline>
+  (function () {
+    const form = document.getElementById('blast-form');
+    const message = document.getElementById('blast-message');
+    const sendTestBtn = document.getElementById('send-test');
+    const sendLiveBtn = document.getElementById('send-live');
+    const sendLiveLabel = document.getElementById('send-live-label');
+    const customWrap = document.getElementById('custom-emails-wrap');
+    const customTextarea = document.getElementById('custom-emails');
+    const audienceInputs = form.querySelectorAll('input[name="audience"]');
+
+    function setMessage(text, tone) {
+      message.textContent = text;
+      message.hidden = false;
+      message.classList.remove('hidden', 'text-brand-700', 'text-rose-700', 'text-emerald-700');
+      message.classList.add(
+        tone === 'error' ? 'text-rose-700' :
+        tone === 'ok'    ? 'text-emerald-700' :
+                           'text-brand-700',
+      );
+    }
+
+    audienceInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        if (input.checked && input.value === 'custom') {
+          customWrap.classList.remove('hidden');
+        } else if (input.checked) {
+          customWrap.classList.add('hidden');
+        }
+      });
+    });
+
+    function parseCustomEmails() {
+      const raw = customTextarea.value || '';
+      return raw
+        .split(/[\s,;]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    function readPayload() {
+      const fd = new FormData(form);
+      const audience = String(fd.get('audience') ?? '');
+      const payload = {
+        subject: String(fd.get('subject') ?? '').trim(),
+        body:    String(fd.get('body') ?? '').trim(),
+        audience,
+      };
+      if (audience === 'custom') {
+        payload.customEmails = parseCustomEmails();
+      }
+      return payload;
+    }
+
+    async function send(testMode) {
+      const payload = readPayload();
+      if (!payload.audience) { setMessage('Pick an audience.', 'error'); return; }
+      if (!payload.subject)  { setMessage('Subject required.', 'error'); return; }
+      if (!payload.body)     { setMessage('Message body required.', 'error'); return; }
+      if (payload.audience === 'custom' && (!payload.customEmails || payload.customEmails.length === 0)) {
+        setMessage('Add at least one custom email.', 'error');
+        return;
+      }
+
+      const label = testMode ? 'Sending test…' : `Send to audience`;
+      sendTestBtn.disabled = true;
+      sendLiveBtn.disabled = true;
+      sendLiveLabel.textContent = testMode ? 'Sending test…' : 'Sending…';
+      setMessage(testMode ? 'Sending test to you…' : 'Sending blast…', 'info');
+
+      try {
+        const res = await fetch('/api/admin/blast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, testMode: !!testMode }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessage((body && body.error) || `Failed (${res.status})`, 'error');
+          return;
+        }
+        if (testMode) {
+          setMessage('Test sent — check your inbox.', 'ok');
+        } else {
+          setMessage(`Sent to ${body.recipientCount} recipient${body.recipientCount === 1 ? '' : 's'}. Reloading…`, 'ok');
+          setTimeout(() => location.reload(), 1200);
+        }
+      } catch {
+        setMessage('Network error.', 'error');
+      } finally {
+        sendTestBtn.disabled = false;
+        sendLiveBtn.disabled = false;
+        sendLiveLabel.textContent = 'Send to audience';
+      }
+    }
+
+    sendTestBtn.addEventListener('click', () => {
+      const payload = readPayload();
+      if (!payload.subject || !payload.body) {
+        setMessage('Fill out subject + body before sending a test.', 'error');
+        return;
+      }
+      send(true);
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const payload = readPayload();
+      const audienceLabels = {
+        'rsvp-yes': 'Yes RSVPs',
+        'rsvp-maybe': 'Maybe RSVPs',
+        'rsvp-all': 'all RSVPs',
+        'volunteers': 'volunteers',
+        'everyone': 'everyone',
+        'custom': `${payload.customEmails?.length ?? 0} custom recipients`,
+      };
+      const label = audienceLabels[payload.audience] ?? payload.audience;
+      if (!confirm(`Send "${payload.subject}" to ${label}? This cannot be unsent.`)) return;
+      send(false);
+    });
+  })();
+</script>
