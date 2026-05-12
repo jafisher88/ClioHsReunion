@@ -4,6 +4,8 @@ import { getAdmin } from '../../../lib/admin-auth';
 
 const MAX_NAME = 200;
 const MAX_NOTES = 2000;
+const MAX_EMAIL = 320;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function jsonError(message: string, status: number): Response {
   return Response.json({ error: message }, { status });
@@ -19,6 +21,7 @@ interface ClassmateInput {
   fullName: string;
   maidenName: string | null;
   preferredFirstName: string | null;
+  email: string | null;
   notes: string | null;
   isDeceased: boolean;
 }
@@ -30,12 +33,17 @@ function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: fa
   const fullName = clampText(b.fullName, MAX_NAME);
   if (!fullName) return { ok: false, error: 'Please enter a name.' };
 
+  const emailRaw = clampText(b.email, MAX_EMAIL);
+  const email = emailRaw ? emailRaw.toLowerCase() : null;
+  if (email && !EMAIL_RE.test(email)) return { ok: false, error: 'Email looks invalid.' };
+
   return {
     ok: true,
     value: {
       fullName,
       maidenName: clampText(b.maidenName, MAX_NAME),
       preferredFirstName: clampText(b.preferredFirstName, MAX_NAME),
+      email,
       notes: clampText(b.notes, MAX_NOTES),
       isDeceased: b.isDeceased === true,
     },
@@ -94,13 +102,14 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const res = await env.DB
       .prepare(
-        `INSERT INTO Classmates (FullName, MaidenName, PreferredFirstName, Notes, IsDeceased, CreatedBy)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+        `INSERT INTO Classmates (FullName, MaidenName, PreferredFirstName, Email, Notes, IsDeceased, CreatedBy)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
       )
       .bind(
         result.value.fullName,
         result.value.maidenName,
         result.value.preferredFirstName,
+        result.value.email,
         result.value.notes,
         result.value.isDeceased ? 1 : 0,
         admin.email,
@@ -138,14 +147,15 @@ export const PATCH: APIRoute = async ({ request }) => {
       .prepare(
         `UPDATE Classmates
             SET FullName = ?1, MaidenName = ?2, PreferredFirstName = ?3,
-                Notes = ?4, IsDeceased = ?5,
+                Email = ?4, Notes = ?5, IsDeceased = ?6,
                 UpdatedAt = CURRENT_TIMESTAMP
-          WHERE Id = ?6`
+          WHERE Id = ?7`
       )
       .bind(
         result.value.fullName,
         result.value.maidenName,
         result.value.preferredFirstName,
+        result.value.email,
         result.value.notes,
         result.value.isDeceased ? 1 : 0,
         id,

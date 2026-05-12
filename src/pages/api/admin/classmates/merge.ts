@@ -7,6 +7,7 @@ interface Row {
   FullName: string;
   MaidenName: string | null;
   PreferredFirstName: string | null;
+  Email: string | null;
   Notes: string | null;
   IsDeceased: number;
 }
@@ -44,7 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   const rows = await env.DB
     .prepare(
-      `SELECT Id, FullName, MaidenName, PreferredFirstName, Notes, IsDeceased
+      `SELECT Id, FullName, MaidenName, PreferredFirstName, Email, Notes, IsDeceased
          FROM Classmates WHERE Id IN (?1, ?2)`
     )
     .bind(primaryId, mergeId)
@@ -58,6 +59,7 @@ export const POST: APIRoute = async ({ request }) => {
   // from `merging`.
   const mergedMaiden = primary.MaidenName ?? merging.MaidenName;
   const mergedPreferred = primary.PreferredFirstName ?? merging.PreferredFirstName;
+  const mergedEmail = primary.Email ?? merging.Email;
   const mergedDeceased = (primary.IsDeceased === 1 || merging.IsDeceased === 1) ? 1 : 0;
   const mergedNotes = (() => {
     const a = (primary.Notes ?? '').trim();
@@ -71,12 +73,12 @@ export const POST: APIRoute = async ({ request }) => {
       env.DB
         .prepare(
           `UPDATE Classmates
-              SET MaidenName = ?1, PreferredFirstName = ?2,
-                  Notes = ?3, IsDeceased = ?4,
+              SET MaidenName = ?1, PreferredFirstName = ?2, Email = ?3,
+                  Notes = ?4, IsDeceased = ?5,
                   UpdatedAt = CURRENT_TIMESTAMP
-            WHERE Id = ?5`
+            WHERE Id = ?6`
         )
-        .bind(mergedMaiden, mergedPreferred, mergedNotes, mergedDeceased, primaryId),
+        .bind(mergedMaiden, mergedPreferred, mergedEmail, mergedNotes, mergedDeceased, primaryId),
       env.DB.prepare(`DELETE FROM Classmates WHERE Id = ?1`).bind(mergeId),
     ]);
   } catch (err) {
