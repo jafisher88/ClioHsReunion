@@ -39,12 +39,13 @@ export default function RsvpForm() {
 
   if (status.kind === 'success') {
     return (
-      <div className="rounded-2xl border border-accent-300 bg-accent-50 p-8 text-center shadow-sm">
-        <h2 className="font-heading text-2xl uppercase tracking-wider text-brand-800">You're in!</h2>
-        <p className="mt-3 text-brand-700">Thanks for your RSVP. We'll be in touch with more details as the reunion gets closer.</p>
+      <div className="rounded-2xl border-2 border-accent-300 bg-gradient-to-br from-accent-50 via-cream-50 to-cream-50 p-8 text-center shadow-soft">
+        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-100 text-2xl">✓</div>
+        <h2 className="font-heading text-2xl font-semibold uppercase tracking-[0.06em] text-brand-900">You're in!</h2>
+        <p className="mx-auto mt-3 max-w-md text-brand-700">Thanks for your RSVP. We'll be in touch with more details as the reunion gets closer.</p>
         <button
           onClick={() => setStatus({ kind: 'idle' })}
-          className="mt-6 rounded-full border-2 border-brand-300 bg-white px-6 py-2 text-sm font-medium text-brand-700 hover:border-brand-500"
+          className="mt-6 rounded-full border-2 border-brand-300 bg-white px-6 py-2 text-sm font-semibold text-brand-700 transition-all duration-200 hover:border-brand-500 hover:bg-brand-50 hover:-translate-y-0.5"
         >
           Submit another RSVP
         </button>
@@ -61,12 +62,14 @@ export default function RsvpForm() {
       <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
 
       <fieldset>
-        <legend className="block text-sm font-semibold text-brand-800">Will you be attending?</legend>
+        <legend className="block text-sm font-semibold text-brand-900">
+          Will you be attending? <span className="text-brand-500">*</span>
+        </legend>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {(['yes', 'maybe', 'no'] as const).map(v => (
-            <label key={v} className="cursor-pointer">
+            <label key={v} className="group/r cursor-pointer">
               <input type="radio" name="attending" value={v} required className="peer sr-only" defaultChecked={v === 'yes'} />
-              <span className="block rounded-lg border-2 border-cream-300 bg-white px-4 py-3 text-center text-sm font-medium capitalize text-brand-700 peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-800">
+              <span className="block rounded-lg border-2 border-cream-300 bg-white px-4 py-3 text-center text-sm font-semibold capitalize text-brand-700 transition-all duration-150 group-hover/r:border-brand-300 group-hover/r:bg-brand-50/50 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:text-brand-900 peer-checked:shadow-[inset_0_0_0_1px_var(--color-brand-500)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500">
                 {v}
               </span>
             </label>
@@ -77,11 +80,11 @@ export default function RsvpForm() {
       <Field label="How many in your party? (including you)" name="guestCount" type="number" defaultValue="1" min={0} max={10} required />
 
       <label className="block">
-        <span className="block text-sm font-semibold text-brand-800">Anything else? (dietary needs, song requests, hellos)</span>
+        <span className="block text-sm font-semibold text-brand-900">Anything else? <span className="font-normal text-cream-700">(dietary needs, song requests, hellos)</span></span>
         <textarea
           name="notes"
           rows={4}
-          className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 focus:border-brand-500 focus:outline-none"
+          className="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
         />
       </label>
 
@@ -92,9 +95,14 @@ export default function RsvpForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-lg shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-60"
+        className="group/submit inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_12px_24px_-8px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
       >
-        {submitting ? 'Sending…' : 'Send RSVP'}
+        {submitting ? 'Sending…' : (
+          <>
+            Send RSVP
+            <span className="transition-transform duration-200 group-hover/submit:translate-x-0.5" aria-hidden="true">→</span>
+          </>
+        )}
       </button>
     </form>
   );
@@ -121,9 +129,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-sm font-semibold text-brand-800">
+      <span className="block text-sm font-semibold text-brand-900">
         {label}
-        {required && <span className="text-brand-600"> *</span>}
+        {required && <span className="text-brand-500"> *</span>}
       </span>
       <input
         name={name}
@@ -133,7 +141,7 @@ function Field({
         defaultValue={defaultValue}
         min={min}
         max={max}
-        className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+        className="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
       />
     </label>
   );

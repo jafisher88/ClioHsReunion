@@ -6,10 +6,15 @@ interface Props {
 const { icon, title } = Astro.props;
 ---
 
-<div class="rounded-2xl border-2 border-cream-300 bg-white/70 p-6 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-brand-300">
-  {icon && <div class="text-3xl">{icon}</div>}
-  <h3 class="mt-3 font-heading text-xl uppercase tracking-wider text-brand-800">{title}</h3>
-  <div class="mt-2 text-brand-700 leading-relaxed">
+<div class="group/card relative overflow-hidden rounded-2xl border border-cream-300 bg-white/80 p-6 sm:p-7 shadow-soft transition-all duration-300 hover:shadow-soft-hover hover:-translate-y-0.5 hover:border-cream-400">
+  {/* Hover highlight bar */}
+  <span class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-300 to-transparent opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" aria-hidden="true"></span>
+
+  {icon && (
+    <div class="icon-chip group-hover/card:bg-accent-200" aria-hidden="true">{icon}</div>
+  )}
+  <h3 class="mt-4 font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-800 sm:text-xl">{title}</h3>
+  <div class="mt-2 text-[0.95rem] leading-relaxed text-brand-700">
     <slot />
   </div>
 </div>

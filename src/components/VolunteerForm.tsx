@@ -47,15 +47,16 @@ export default function VolunteerForm() {
 
   if (status.kind === 'success') {
     return (
-      <div className="rounded-2xl border border-accent-300 bg-accent-50 p-8 text-center shadow-sm">
-        <h2 className="font-heading text-2xl uppercase tracking-wider text-brand-800">Thanks!</h2>
-        <p className="mt-3 text-brand-700">
+      <div className="rounded-2xl border-2 border-accent-300 bg-gradient-to-br from-accent-50 via-cream-50 to-cream-50 p-8 text-center shadow-soft">
+        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-100 text-2xl">✓</div>
+        <h2 className="font-heading text-2xl font-semibold uppercase tracking-[0.06em] text-brand-900">Thanks!</h2>
+        <p className="mx-auto mt-3 max-w-md text-brand-700">
           You're on the volunteer list. We'll be in touch closer to the date with timing
           and what to bring.
         </p>
         <button
           onClick={() => setStatus({ kind: 'idle' })}
-          className="mt-6 rounded-full border-2 border-brand-300 bg-white px-6 py-2 text-sm font-medium text-brand-700 hover:border-brand-500"
+          className="mt-6 rounded-full border-2 border-brand-300 bg-white px-6 py-2 text-sm font-semibold text-brand-700 transition-all duration-200 hover:border-brand-500 hover:bg-brand-50 hover:-translate-y-0.5"
         >
           Sign up someone else
         </button>
@@ -69,10 +70,12 @@ export default function VolunteerForm() {
     <form onSubmit={onSubmit} className="space-y-5">
       <Field label="Full name" name="fullName" required placeholder="Jane Mustang" />
       <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
-      <Field label="Phone (optional)" name="phone" type="tel" placeholder="(810) 555-0123" />
+      <Field label="Phone" name="phone" type="tel" optional placeholder="(810) 555-0123" />
 
       <fieldset>
-        <legend className="block text-sm font-semibold text-brand-800">Which day(s) can you help?</legend>
+        <legend className="block text-sm font-semibold text-brand-900">
+          Which day(s) can you help? <span className="text-brand-500">*</span>
+        </legend>
         <p className="mt-1 text-xs text-cream-700">Pick at least one.</p>
         <div className="mt-3 space-y-2">
           <RoleCheckbox name="roleSetup" title="Setup & decorate — day before" body="Friday-ish: arrive at the ranch, set up tables, hang decorations, prep the space." />
@@ -81,11 +84,11 @@ export default function VolunteerForm() {
       </fieldset>
 
       <label className="block">
-        <span className="block text-sm font-semibold text-brand-800">Anything else? (truck access, time of day, etc.)</span>
+        <span className="block text-sm font-semibold text-brand-900">Anything else? <span className="font-normal text-cream-700">(truck access, time of day, etc.)</span></span>
         <textarea
           name="notes"
           rows={3}
-          className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 focus:border-brand-500 focus:outline-none"
+          className="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
         />
       </label>
 
@@ -96,9 +99,14 @@ export default function VolunteerForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-lg shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-60"
+        className="group/submit inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_12px_24px_-8px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
       >
-        {submitting ? 'Sending…' : 'Sign me up'}
+        {submitting ? 'Sending…' : (
+          <>
+            Sign me up
+            <span className="transition-transform duration-200 group-hover/submit:translate-x-0.5" aria-hidden="true">→</span>
+          </>
+        )}
       </button>
     </form>
   );
@@ -106,11 +114,11 @@ export default function VolunteerForm() {
 
 function RoleCheckbox({ name, title, body }: { name: string; title: string; body: string }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-lg border-2 border-cream-300 bg-white p-4 hover:border-brand-300 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
-      <input type="checkbox" name={name} className="mt-1 h-5 w-5 accent-brand-500" />
+    <label className="group/r flex cursor-pointer items-start gap-3 rounded-xl border-2 border-cream-300 bg-white p-4 transition-all duration-150 hover:border-brand-300 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:shadow-[inset_0_0_0_1px_var(--color-brand-500)]">
+      <input type="checkbox" name={name} className="peer mt-1 h-5 w-5 accent-brand-500" />
       <span>
-        <span className="block font-semibold text-brand-800">{title}</span>
-        <span className="mt-0.5 block text-sm text-brand-700">{body}</span>
+        <span className="block font-semibold text-brand-900">{title}</span>
+        <span className="mt-0.5 block text-sm leading-relaxed text-brand-700">{body}</span>
       </span>
     </label>
   );
@@ -121,26 +129,29 @@ function Field({
   name,
   type = 'text',
   required = false,
+  optional = false,
   placeholder,
 }: {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
+  optional?: boolean;
   placeholder?: string;
 }) {
   return (
     <label className="block">
-      <span className="block text-sm font-semibold text-brand-800">
+      <span className="block text-sm font-semibold text-brand-900">
         {label}
-        {required && <span className="text-brand-600"> *</span>}
+        {required && <span className="text-brand-500"> *</span>}
+        {optional && <span className="font-normal text-cream-700"> (optional)</span>}
       </span>
       <input
         name={name}
         type={type}
         required={required}
         placeholder={placeholder}
-        className="mt-1 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-brand-900 placeholder-cream-500 focus:border-brand-500 focus:outline-none"
+        className="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
       />
     </label>
   );

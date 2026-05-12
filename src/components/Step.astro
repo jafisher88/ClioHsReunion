@@ -6,9 +6,12 @@ interface Props {
 const { time, title } = Astro.props;
 ---
 
-<li class="relative">
-  <span class="absolute -left-[1.625rem] mt-1.5 inline-block h-3 w-3 rounded-full bg-accent-500 ring-4 ring-cream-50"></span>
-  <div class="font-heading text-sm uppercase tracking-wider text-accent-700">{time}</div>
-  <div class="mt-1 font-display text-lg text-brand-800">{title}</div>
-  <p class="mt-1 text-sm text-brand-700"><slot /></p>
+<li class="group/step relative pl-8 sm:pl-10">
+  <span class="absolute left-0 top-1.5 inline-flex h-3 w-3 items-center justify-center" aria-hidden="true">
+    <span class="absolute inline-flex h-3 w-3 rounded-full bg-accent-300/70 opacity-0 transition-opacity duration-300 group-hover/step:opacity-100 group-hover/step:animate-ping"></span>
+    <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent-500 ring-4 ring-cream-50 transition-colors duration-200 group-hover/step:bg-brand-500"></span>
+  </span>
+  <div class="font-heading text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-accent-700">{time}</div>
+  <div class="mt-1 font-display text-lg italic text-brand-900">{title}</div>
+  <p class="mt-1.5 text-sm leading-relaxed text-brand-700"><slot /></p>
 </li>

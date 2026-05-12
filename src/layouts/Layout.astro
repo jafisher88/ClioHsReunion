@@ -17,27 +17,31 @@ const {
 const pageTitle = title === 'Home' ? "Clio High School Class of 2006 — 20-Year Reunion" : `${title} | Clio High School Class of 2006`;
 const ogImage = image || 'https://cliohsreunion.com/og.png';
 const canonicalUrl = new URL(Astro.url.pathname, 'https://cliohsreunion.com').href;
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 
 const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/event', label: 'Event' },
-  { href: '/rsvp', label: 'RSVP', cta: true },
-  { href: '/volunteer', label: 'Volunteer' },
-  { href: '/gallery', label: 'Gallery' },
+  { href: '/',           label: 'Home' },
+  { href: '/event',      label: 'Event' },
+  { href: '/rsvp',       label: 'RSVP', cta: true },
+  { href: '/volunteer',  label: 'Volunteer' },
+  { href: '/gallery',    label: 'Gallery' },
   { href: '/classmates', label: 'Classmates' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/contact',    label: 'Contact' },
 ];
+
+const isActive = (href: string) =>
+  href === '/' ? currentPath === '/' : currentPath === href || currentPath.startsWith(href + '/');
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="no-js">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300..700&family=Oswald:wght@500;700&family=Dancing+Script:wght@600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300..700&family=Oswald:wght@500;600;700&family=Dancing+Script:wght@600;700&display=swap"
       rel="stylesheet"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -58,30 +62,49 @@ const navLinks = [
     <meta name="twitter:image" content={ogImage} />
 
     <title>{pageTitle}</title>
+
+    <script is:inline>
+      // No-flash: strip .no-js immediately so JS-only enhancements (scroll reveals) activate.
+      document.documentElement.classList.remove('no-js');
+    </script>
   </head>
   <body class="grain min-h-screen bg-cream-50 font-body text-brand-900 antialiased">
+    <a href="#main" class="skip-link">Skip to content</a>
+
     <header
-      class="sticky top-0 border-b border-cream-300/60 bg-cream-50/95 backdrop-blur-md"
+      id="site-header"
+      class="sticky top-0 border-b border-cream-300/40 bg-cream-50/90 backdrop-blur-md transition-colors duration-200"
       style="z-index: 100; -webkit-backdrop-filter: blur(12px);"
     >
       <nav class="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-        <a href="/" class="transition-opacity hover:opacity-80">
+        <a href="/" class="brand-link transition-opacity hover:opacity-80" aria-label="Home">
           <Logo size="md" />
         </a>
-        <ul class="hidden items-center gap-6 text-sm font-medium md:flex">
-          {navLinks.map(l => (
+        <ul class="hidden items-center gap-1 text-sm font-medium md:flex">
+          {navLinks.map((l) => (
             <li>
               {l.cta ? (
                 <a
                   href={l.href}
-                  class="rounded-full bg-brand-500 px-4 py-1.5 font-semibold text-cream-50 transition-colors hover:bg-brand-600"
+                  class:list={[
+                    'ml-2 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 font-semibold text-cream-50 transition-all duration-150',
+                    'bg-brand-500 hover:bg-brand-600 hover:-translate-y-px',
+                    'shadow-[0_1px_0_rgba(13,11,10,0.04),0_4px_12px_-4px_rgba(242,105,1,0.4)]',
+                    isActive(l.href) && 'bg-brand-600',
+                  ]}
                 >
                   {l.label}
+                  <span class="text-cream-50/70 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true">→</span>
                 </a>
               ) : (
                 <a
                   href={l.href}
-                  class="relative text-brand-700 transition-colors hover:text-brand-900 after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 after:bg-accent-500 after:transition-all hover:after:w-full"
+                  class:list={[
+                    'relative px-3 py-1.5 transition-colors duration-150',
+                    'after:absolute after:bottom-0 after:left-3 after:right-3 after:h-[2px] after:origin-center after:scale-x-0 after:bg-accent-500 after:transition-transform after:duration-200',
+                    'hover:text-brand-900 hover:after:scale-x-100',
+                    isActive(l.href) ? 'text-brand-900 after:scale-x-100' : 'text-brand-700',
+                  ]}
                 >
                   {l.label}
                 </a>
@@ -93,56 +116,72 @@ const navLinks = [
       </nav>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 relative" style="z-index: 2;">
+    <main id="main" class="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14" style="z-index: 2;">
       <slot />
     </main>
 
-    <footer class="border-t border-cream-300/60 bg-brand-900">
-      <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-        <div class="grid gap-8 md:grid-cols-3">
-          <div>
+    <footer class="relative border-t border-cream-300/60 bg-brand-900 text-cream-100">
+      <div
+        class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-500/40 to-transparent"
+        aria-hidden="true"
+      ></div>
+
+      <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
+        <div class="grid gap-10 md:grid-cols-12">
+          <div class="md:col-span-5">
             <Logo size="md" variant="dark" />
-            <p class="mt-4 text-sm leading-relaxed text-cream-300">
+            <p class="mt-5 max-w-sm text-sm leading-relaxed text-cream-300/90">
               Clio High School Class of 2006 — celebrating 20 years since graduation.
-              Once a Mustang, always a Mustang.
+              <span class="block mt-1 font-display italic text-cream-200">Once a Mustang, always a Mustang.</span>
             </p>
           </div>
-          <div>
-            <h3 class="font-heading text-sm font-bold uppercase tracking-wider text-cream-200">Quick Links</h3>
-            <ul class="mt-3 space-y-2">
-              {navLinks.map(l => (
+
+          <div class="md:col-span-3">
+            <h3 class="font-heading text-xs font-bold uppercase tracking-[0.18em] text-cream-200/80">Quick Links</h3>
+            <ul class="mt-4 space-y-2.5">
+              {navLinks.map((l) => (
                 <li>
-                  <a href={l.href} class="text-sm text-cream-300 transition-colors hover:text-accent-300">
-                    {l.label}
+                  <a href={l.href} class="group/foot inline-flex items-baseline gap-2 text-sm text-cream-300 transition-colors duration-150 hover:text-accent-300">
+                    <span>{l.label}</span>
+                    <span class="text-cream-500 opacity-0 transition-all duration-150 group-hover/foot:translate-x-0.5 group-hover/foot:opacity-100" aria-hidden="true">→</span>
                   </a>
                 </li>
               ))}
             </ul>
           </div>
-          <div>
-            <h3 class="font-heading text-sm font-bold uppercase tracking-wider text-cream-200">Stay Connected</h3>
-            <ul class="mt-3 space-y-2 text-sm text-cream-300">
+
+          <div class="md:col-span-4">
+            <h3 class="font-heading text-xs font-bold uppercase tracking-[0.18em] text-cream-200/80">Stay Connected</h3>
+            <ul class="mt-4 space-y-2.5 text-sm text-cream-300">
               <li>
-                <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="hover:text-accent-300">
-                  Class Facebook group →
+                <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="group/foot inline-flex items-baseline gap-2 hover:text-accent-300 transition-colors duration-150">
+                  <span>Class Facebook group</span>
+                  <span class="text-cream-500 transition-all duration-150 group-hover/foot:translate-x-0.5 group-hover/foot:text-accent-300" aria-hidden="true">↗</span>
                 </a>
               </li>
               <li>
-                <a href="https://cliohighschool.net/class-of-2006.html" target="_blank" rel="noopener noreferrer" class="hover:text-accent-300">
-                  cliohighschool.net →
+                <a href="https://cliohighschool.net/class-of-2006.html" target="_blank" rel="noopener noreferrer" class="group/foot inline-flex items-baseline gap-2 hover:text-accent-300 transition-colors duration-150">
+                  <span>cliohighschool.net</span>
+                  <span class="text-cream-500 transition-all duration-150 group-hover/foot:translate-x-0.5 group-hover/foot:text-accent-300" aria-hidden="true">↗</span>
                 </a>
               </li>
               <li>
-                <a href="/contact" class="hover:text-accent-300">Contact the planning crew →</a>
+                <a href="/contact" class="group/foot inline-flex items-baseline gap-2 hover:text-accent-300 transition-colors duration-150">
+                  <span>Contact the planning crew</span>
+                  <span class="text-cream-500 opacity-0 transition-all duration-150 group-hover/foot:translate-x-0.5 group-hover/foot:opacity-100" aria-hidden="true">→</span>
+                </a>
               </li>
             </ul>
           </div>
         </div>
-        <div class="mt-10 border-t border-cream-800/40 pt-6 text-center space-y-2">
-          <p class="text-xs text-cream-400">&copy; {new Date().getFullYear()} Clio High School Class of 2006 Reunion.</p>
+
+        <div class="mt-12 flex flex-col items-center gap-2 border-t border-cream-800/50 pt-6 text-center sm:flex-row sm:justify-between sm:text-left">
+          <p class="text-xs uppercase tracking-[0.18em] text-cream-400/80">
+            &copy; {new Date().getFullYear()} Clio High School Class of 2006 Reunion.
+          </p>
           <p class="text-sm text-cream-400">
             Site designed &amp; built by
-            <span class="font-semibold text-cream-200">Fisher Computer Solutions L.L.C.</span>
+            <span class="font-display italic text-cream-200">Fisher Computer Solutions L.L.C.</span>
           </p>
         </div>
       </div>
@@ -150,6 +189,52 @@ const navLinks = [
 
     <style is:global>
       @import "../styles/global.css";
+
+      /* Skip link — keyboard accessibility */
+      .skip-link {
+        position: absolute;
+        left: 1rem;
+        top: -3rem;
+        z-index: 200;
+        padding: 0.5rem 0.85rem;
+        background: var(--color-brand-900);
+        color: var(--color-cream-50);
+        border-radius: 0.5rem;
+        font-family: var(--font-heading);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-weight: 600;
+        text-decoration: none;
+        transition: top 0.2s ease;
+      }
+      .skip-link:focus { top: 0.75rem; }
+
+      /* Header elevation on scroll */
+      .header-scrolled {
+        background: rgba(253, 251, 246, 0.95);
+        border-bottom-color: var(--color-cream-300) !important;
+        box-shadow: 0 6px 20px -12px rgba(13, 11, 10, 0.18);
+      }
     </style>
+
+    <script is:inline>
+      // ---- Header elevation on scroll ----
+      (function () {
+        const header = document.getElementById('site-header');
+        if (!header) return;
+        let scrolled = false;
+        const update = () => {
+          const shouldScroll = window.scrollY > 8;
+          if (shouldScroll !== scrolled) {
+            scrolled = shouldScroll;
+            header.classList.toggle('header-scrolled', scrolled);
+          }
+        };
+        update();
+        window.addEventListener('scroll', update, { passive: true });
+      })();
+
+    </script>
   </body>
 </html>

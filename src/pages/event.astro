@@ -5,33 +5,38 @@ import Step from '../components/Step.astro';
 ---
 
 <Layout title="Event">
-  <header class="animate-fade-in">
-    <p class="font-script text-2xl text-accent-600">The reunion</p>
-    <h1 class="mt-2 font-heading text-4xl uppercase tracking-wider text-brand-800 sm:text-5xl">Event Details</h1>
-    <p class="mt-4 max-w-2xl text-lg text-brand-700">
+  <header class="reveal max-w-3xl">
+    <span class="section-kicker">The reunion</span>
+    <h1 class="mt-2 font-heading text-4xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-5xl">
+      Event details
+    </h1>
+    <p class="mt-5 text-lg leading-relaxed text-brand-700">
       We're putting the final touches on the schedule. Here's what we know so far — check back
       as details firm up, and follow the Facebook group for live updates.
     </p>
   </header>
 
-  <section class="mt-12 grid gap-6 animate-fade-up sm:grid-cols-2">
+  <section class="reveal mt-12 grid gap-4 sm:grid-cols-2 sm:gap-5">
     <Card icon="📅" title="Date">
-      <p class="text-lg">November 2026</p>
-      <p class="mt-1 text-sm text-cream-700">
-        The exact date is being voted on in the
-        <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="text-brand-700 underline hover:text-brand-900">Class of 2006 Facebook group</a>.
+      <p class="font-display italic text-lg text-brand-900">November 2026</p>
+      <p class="mt-1.5 text-sm text-cream-700">
+        Exact date being voted on in the
+        <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="text-brand-700 underline decoration-accent-400 decoration-2 underline-offset-4 hover:text-brand-900">Class of 2006 Facebook group</a>.
       </p>
     </Card>
     <a
       href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"
       target="_blank"
       rel="noopener noreferrer"
-      class="block no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 rounded-2xl"
+      class="block no-underline rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
     >
       <Card icon="📍" title="Venue">
-        <p class="text-lg">Round Em Up Ranch</p>
-        <p class="mt-1 text-sm text-cream-700">Clio, Michigan.</p>
-        <p class="mt-3 text-sm font-medium text-accent-700">Open in Google Maps →</p>
+        <p class="font-display italic text-lg text-brand-900">Round Em Up Ranch</p>
+        <p class="mt-1.5 text-sm text-cream-700">Clio, Michigan.</p>
+        <p class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600">
+          Open in Google Maps
+          <span aria-hidden="true">↗</span>
+        </p>
       </Card>
     </a>
     <Card icon="🍽️" title="Food & Drink">
@@ -44,15 +49,20 @@ import Step from '../components/Step.astro';
       </p>
       <p class="mt-2 text-sm text-cream-700">
         Donate via Venmo to
-        <a href="https://venmo.com/u/Jafisher88" target="_blank" rel="noopener noreferrer" class="font-semibold text-brand-700 underline">@Jafisher88</a>
+        <a href="https://venmo.com/u/Jafisher88" target="_blank" rel="noopener noreferrer" class="rounded bg-cream-100 px-1.5 py-0.5 font-mono text-[0.85rem] font-semibold text-brand-900 hover:bg-cream-200">@Jafisher88</a>
         (friends &amp; family, please).
       </p>
     </Card>
   </section>
 
-  <section class="mt-16 animate-fade-up">
-    <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Tentative schedule</h2>
-    <ol class="mt-6 space-y-4 border-l-2 border-accent-300 pl-6">
+  <section class="reveal mt-16 sm:mt-20">
+    <header class="mb-7 flex items-center justify-between gap-4">
+      <h2 class="font-heading text-2xl font-semibold uppercase tracking-[0.05em] text-brand-900 sm:text-3xl">
+        Tentative schedule
+      </h2>
+      <span class="hidden font-mono text-xs uppercase tracking-[0.22em] text-cream-700 sm:inline-flex">subject to change</span>
+    </header>
+    <ol class="schedule-rail relative ml-1 space-y-6 border-l border-dashed border-cream-300 pl-0">
       <Step time="6:00 PM" title="Doors open">
         Sign in, grab a name tag (yes, you'll need one — 20 years is 20 years), say hi.
       </Step>
@@ -75,17 +85,33 @@ import Step from '../components/Step.astro';
     </ol>
   </section>
 
-  <section class="mt-16 animate-fade-up">
-    <div class="rounded-3xl bg-gradient-to-br from-accent-100 via-accent-200/60 to-cream-100 p-8 shadow-sm sm:p-12">
-      <h2 class="font-heading text-2xl uppercase tracking-wider text-brand-800 sm:text-3xl">Ready to RSVP?</h2>
-      <p class="mt-3 max-w-2xl text-brand-700">
-        Even a tentative "maybe" helps us plan headcount with the venue. Takes about a minute.
-      </p>
-      <a href="/rsvp" class="mt-6 inline-flex rounded-full bg-brand-500 px-8 py-3.5 text-base font-semibold text-cream-50 hover:bg-brand-600">
-        RSVP →
-      </a>
+  <section class="reveal mt-16 sm:mt-20">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-accent-100 via-accent-50 to-cream-100 p-8 shadow-soft sm:p-12">
+      <div
+        class="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-accent-300/30 blur-3xl"
+        aria-hidden="true"
+      ></div>
+      <div class="relative">
+        <span class="section-kicker">Lock it in</span>
+        <h2 class="mt-2 font-heading text-2xl font-semibold uppercase tracking-[0.05em] text-brand-900 sm:text-3xl">
+          Ready to RSVP?
+        </h2>
+        <p class="mt-3 max-w-2xl text-brand-700 leading-relaxed">
+          Even a tentative "maybe" helps us plan headcount with the venue. Takes about a minute.
+        </p>
+        <a
+          href="/rsvp"
+          class="group/cta mt-6 inline-flex items-center gap-2 rounded-full bg-brand-500 px-8 py-3.5 text-base font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_12px_24px_-8px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5"
+        >
+          RSVP
+          <span class="transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+        </a>
+      </div>
     </div>
   </section>
 </Layout>
 
-<style></style>
+<style>
+  .schedule-rail { padding-left: 1.75rem; }
+  .schedule-rail :global(li) { margin-left: -1.75rem; padding-left: 2.5rem; }
+</style>

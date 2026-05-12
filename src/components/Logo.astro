@@ -4,13 +4,21 @@ interface Props {
   variant?: 'light' | 'dark';
 }
 const { size = 'md', variant = 'light' } = Astro.props;
-const sizes = { sm: 'text-base', md: 'text-xl', lg: 'text-3xl' } as const;
-const yearSizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' } as const;
-const primary = variant === 'dark' ? 'text-cream-100' : 'text-brand-700';
+
+const sizes = {
+  sm: { school: 'text-[0.95rem]', year: 'text-xs', gap: 'gap-1.5' },
+  md: { school: 'text-[1.15rem]', year: 'text-sm', gap: 'gap-2' },
+  lg: { school: 'text-[1.6rem]', year: 'text-base', gap: 'gap-2.5' },
+} as const;
+
+const s = sizes[size];
+const primary = variant === 'dark' ? 'text-cream-100' : 'text-brand-900';
 const secondary = variant === 'dark' ? 'text-accent-300' : 'text-accent-600';
+const sepColor = variant === 'dark' ? 'text-cream-500/60' : 'text-cream-500/80';
 ---
 
-<span class={`inline-flex items-baseline gap-2 leading-none ${sizes[size]} font-heading uppercase tracking-wider`}>
-  <span class={primary}>Clio High School</span>
-  <span class={`${secondary} ${yearSizes[size]} font-display italic normal-case tracking-normal`}>· Class of '06</span>
+<span class={`inline-flex items-baseline ${s.gap} font-heading uppercase`}>
+  <span class={`${primary} ${s.school} font-semibold tracking-[0.05em] leading-none`}>Clio High School</span>
+  <span class={`${sepColor} ${s.year} leading-none`} aria-hidden="true">·</span>
+  <span class={`${secondary} ${s.year} font-display italic normal-case tracking-normal leading-none`}>Class of '06</span>
 </span>
