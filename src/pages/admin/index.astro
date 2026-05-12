@@ -12,6 +12,7 @@ interface RsvpRow {
   Id: number;
   FullName: string;
   PreferredFirstName: string | null;
+  GraduationName: string | null;
   Email: string;
   Attending: 'yes' | 'no' | 'maybe';
   GuestCount: number;
@@ -173,7 +174,7 @@ function fmtDate(iso: string): string {
             <th>Email</th>
             <th>Status</th>
             <th class="num">Guests</th>
-            <th>Maiden</th>
+            <th>Graduation</th>
             <th>Notes</th>
             <th>Logged</th>
           </tr>
@@ -195,7 +196,7 @@ function fmtDate(iso: string): string {
               <td class="mono dim"><a href={`mailto:${r.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.Email}</a></td>
               <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
               <td class="num">{r.GuestCount}</td>
-              <td class="dim">{r.MaidenName ?? '—'}</td>
+              <td class="dim">{r.GraduationName ?? r.MaidenName ?? '—'}</td>
               <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
               <td class="mono dim whitespace-nowrap">{fmtDate(r.CreatedAt)}</td>
             </tr>

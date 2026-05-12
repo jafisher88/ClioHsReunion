@@ -2,28 +2,40 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 
 interface RsvpPayload {
-  fullName: string;
+  fullName: string;          // current name (what they go by today)
+  graduationName?: string;   // yearbook name
   preferredFirstName?: string;
   email: string;
   attending: 'yes' | 'no' | 'maybe';
   guestCount: string | number;
-  maidenName?: string;
   notes?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function firstWord(value: string): string {
+  return (value ?? '').trim().split(/\s+/)[0] ?? '';
+}
 
 function validate(body: unknown): { ok: true; value: RsvpPayload } | { ok: false; error: string } {
   if (!body || typeof body !== 'object') return { ok: false, error: 'Invalid request body.' };
   const b = body as Record<string, unknown>;
 
   const fullName = typeof b.fullName === 'string' ? b.fullName.trim() : '';
-  if (!fullName) return { ok: false, error: 'Please enter your name.' };
+  if (!fullName) return { ok: false, error: 'Please enter your current name.' };
   if (fullName.length > 200) return { ok: false, error: 'Name is too long.' };
 
-  const preferredFirstName = typeof b.preferredFirstName === 'string'
+  const graduationName = typeof b.graduationName === 'string'
+    ? b.graduationName.trim().slice(0, 200)
+    : '';
+
+  // PreferredFirstName: if the form sent one (legacy), respect it; otherwise
+  // derive from the current name's first word so admins / emails have something
+  // friendly to use.
+  let preferredFirstName = typeof b.preferredFirstName === 'string'
     ? b.preferredFirstName.trim().slice(0, 100)
-    : undefined;
+    : '';
+  if (!preferredFirstName) preferredFirstName = firstWord(fullName).slice(0, 100);
 
   const email = typeof b.email === 'string' ? b.email.trim().toLowerCase() : '';
   if (!email || !EMAIL_RE.test(email)) return { ok: false, error: 'Please enter a valid email.' };
@@ -40,12 +52,11 @@ function validate(body: unknown): { ok: true; value: RsvpPayload } | { ok: false
     return { ok: false, error: 'Guest count must be between 0 and 10.' };
   }
 
-  const maidenName = typeof b.maidenName === 'string' ? b.maidenName.trim().slice(0, 200) : undefined;
   const notes = typeof b.notes === 'string' ? b.notes.trim().slice(0, 2000) : undefined;
 
   return {
     ok: true,
-    value: { fullName, preferredFirstName, email, attending, guestCount, maidenName, notes },
+    value: { fullName, graduationName, preferredFirstName, email, attending, guestCount, notes },
   };
 }
 
@@ -72,16 +83,16 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     await db
       .prepare(
-        `INSERT INTO Rsvps (FullName, PreferredFirstName, Email, Attending, GuestCount, MaidenName, Notes)
-         VALUES (?1, NULLIF(?2, ''), ?3, ?4, ?5, NULLIF(?6, ''), NULLIF(?7, ''))`
+        `INSERT INTO Rsvps (FullName, PreferredFirstName, GraduationName, Email, Attending, GuestCount, Notes)
+         VALUES (?1, NULLIF(?2, ''), NULLIF(?3, ''), ?4, ?5, ?6, NULLIF(?7, ''))`
       )
       .bind(
         result.value.fullName,
         result.value.preferredFirstName ?? '',
+        result.value.graduationName ?? '',
         result.value.email,
         result.value.attending,
         result.value.guestCount,
-        result.value.maidenName ?? '',
         result.value.notes ?? '',
       )
       .run();

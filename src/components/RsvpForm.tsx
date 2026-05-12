@@ -16,12 +16,12 @@ export default function RsvpForm() {
     const form = e.currentTarget;
     const fd = new FormData(form);
     const data = {
-      fullName: String(fd.get('fullName') ?? ''),
-      preferredFirstName: String(fd.get('preferredFirstName') ?? ''),
-      maidenName: String(fd.get('maidenName') ?? ''),
+      graduationName: String(fd.get('graduationName') ?? ''),
+      // The form labels this "Current name"; the API still receives it as
+      // fullName since that's the canonical identity field on Rsvps.
+      fullName: String(fd.get('currentName') ?? ''),
       email: String(fd.get('email') ?? ''),
       attending: String(fd.get('attending') ?? ''),
-      // No party-size field — a checked "+1" means 2 guests, otherwise just 1.
       guestCount: fd.get('plusOne') === 'on' ? 2 : 1,
       notes: String(fd.get('notes') ?? ''),
     };
@@ -67,14 +67,20 @@ export default function RsvpForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <Field label="Full name" name="fullName" required placeholder="Jane Mustang" />
       <Field
-        label="Preferred first name (optional)"
-        name="preferredFirstName"
-        placeholder="What we should call you"
-        hint="If you go by a different name than the yearbook (e.g. Becky for Rebecca)."
+        label="Name at graduation"
+        name="graduationName"
+        required
+        placeholder="Rebecca Kirby"
+        hint="As it appeared in the 2006 yearbook."
       />
-      <Field label="Maiden name (optional)" name="maidenName" placeholder="If different from above" />
+      <Field
+        label="Current name"
+        name="currentName"
+        required
+        placeholder="Becky Frey"
+        hint="What we should call you and put on your name tag. We'll use your first name here as your preferred name."
+      />
       <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
 
       <fieldset>

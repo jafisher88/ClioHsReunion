@@ -20,20 +20,22 @@ interface RosterRow {
   RsvpEmail: string | null;
 }
 
-// Match RSVPs to classmates on:
-//   1. exact case-insensitive full-name match, OR
-//   2. {PreferredFirstName + last-name-portion-of-FullName} match
-//      where the "last-name portion" is everything after the first space.
+// Match RSVPs to classmates on three OR-paths:
+//   1. exact case-insensitive full-name match (current name ↔ roster current)
+//   2. Classmate.PreferredFirstName + last-of-FullName ↔ RSVP.FullName
+//      (handles "Becky Frey" RSVP against "Rebecca Frey" roster + Becky pref)
+//   3. RSVP.GraduationName ↔ Classmate's first-name + Classmate.MaidenName
+//      (handles "Rebecca Kirby" graduation entry vs "Rebecca Frey" / maiden Kirby)
 // One classmate can match multiple RSVPs; ROW_NUMBER picks the latest.
 const rosterResult = await env.DB
   .prepare(
     `SELECT c.Id, c.FullName, c.MaidenName, c.PreferredFirstName, c.Notes, c.IsDeceased,
-            r.Attending  AS RsvpAttending,
-            r.GuestCount AS RsvpGuests,
-            r.Email      AS RsvpEmail
+            r.Attending      AS RsvpAttending,
+            r.GuestCount     AS RsvpGuests,
+            r.Email          AS RsvpEmail
        FROM Classmates c
        LEFT JOIN (
-         SELECT FullName, Attending, GuestCount, Email,
+         SELECT FullName, GraduationName, Attending, GuestCount, Email,
                 ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(FullName)) ORDER BY CreatedAt DESC) AS rn
          FROM Rsvps
        ) r
@@ -41,6 +43,9 @@ const rosterResult = await env.DB
               LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.FullName))
               OR (c.PreferredFirstName IS NOT NULL AND c.PreferredFirstName <> ''
                   AND LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.PreferredFirstName || ' ' || substr(c.FullName, instr(c.FullName, ' ') + 1))))
+              OR (c.MaidenName IS NOT NULL AND c.MaidenName <> ''
+                  AND r.GraduationName IS NOT NULL AND r.GraduationName <> ''
+                  AND LOWER(TRIM(r.GraduationName)) = LOWER(TRIM(substr(c.FullName, 1, instr(c.FullName, ' ') - 1) || ' ' || c.MaidenName)))
             )
    ORDER BY c.FullName COLLATE NOCASE ASC`
   )
@@ -54,19 +59,22 @@ const rsvpMaybe = roster.filter((r) => r.RsvpAttending === 'maybe').length;
 const deceased = roster.filter((r) => r.IsDeceased === 1).length;
 const notYet = total - rsvped - deceased;
 
-// Unmatched RSVPs — same alternate-name match as above, inverted.
+// Unmatched RSVPs — same three OR-paths inverted.
 const unmatchedResult = await env.DB
   .prepare(
-    `SELECT DISTINCT r.FullName, r.Email, r.Attending
+    `SELECT DISTINCT r.FullName, r.Email, r.Attending, r.GraduationName
        FROM Rsvps r
        LEFT JOIN Classmates c
          ON LOWER(TRIM(c.FullName)) = LOWER(TRIM(r.FullName))
          OR (c.PreferredFirstName IS NOT NULL AND c.PreferredFirstName <> ''
              AND LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.PreferredFirstName || ' ' || substr(c.FullName, instr(c.FullName, ' ') + 1))))
+         OR (c.MaidenName IS NOT NULL AND c.MaidenName <> ''
+             AND r.GraduationName IS NOT NULL AND r.GraduationName <> ''
+             AND LOWER(TRIM(r.GraduationName)) = LOWER(TRIM(substr(c.FullName, 1, instr(c.FullName, ' ') - 1) || ' ' || c.MaidenName)))
       WHERE c.Id IS NULL
    ORDER BY r.FullName COLLATE NOCASE ASC`
   )
-  .all<{ FullName: string; Email: string; Attending: string }>();
+  .all<{ FullName: string; Email: string; Attending: string; GraduationName: string | null }>();
 const unmatched = unmatchedResult.results ?? [];
 ---
 
