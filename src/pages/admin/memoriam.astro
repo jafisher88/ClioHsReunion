@@ -1,0 +1,310 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { env } from 'cloudflare:workers';
+import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return Astro.redirect(loginUrlFor(Astro.request));
+}
+
+interface MemoriamRow {
+  Id: number;
+  FullName: string;
+  MaidenName: string | null;
+  BirthYear: number | null;
+  PassingYear: number | null;
+  Tribute: string | null;
+  PhotoUrl: string | null;
+  CreatedBy: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+}
+
+const result = await env.DB
+  .prepare(
+    `SELECT Id, FullName, MaidenName, BirthYear, PassingYear, Tribute, PhotoUrl, CreatedBy, UpdatedAt
+       FROM MemoriamEntries
+       ORDER BY FullName ASC`
+  )
+  .all<MemoriamRow>();
+const entries = result.results ?? [];
+---
+
+<AdminLayout title="In Memoriam" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">Class we lost</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">In memoriam</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        Honoring classmates who've passed. Entries are public on
+        <a href="/memoriam" class="text-brand-700 underline hover:text-brand-900">cliohsreunion.com/memoriam</a>.
+      </p>
+    </div>
+  </header>
+
+  <!-- ADD ENTRY FORM -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Add an entry</h2>
+      <span id="form-mode-label" class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">adding</span>
+    </header>
+
+    <div class="rounded-2xl border border-cream-300 bg-white/80 p-6 shadow-soft sm:p-8">
+      <form id="entry-form" class="grid grid-cols-1 gap-5 sm:grid-cols-6">
+        <input type="hidden" name="id" value="" />
+
+        <label class="block sm:col-span-3">
+          <span class="block text-sm font-semibold text-brand-900">Full name <span class="text-brand-500">*</span></span>
+          <input
+            type="text"
+            name="fullName"
+            required
+            placeholder="Jane Mustang"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-3">
+          <span class="block text-sm font-semibold text-brand-900">Maiden name <span class="font-normal text-cream-700">(if applicable)</span></span>
+          <input
+            type="text"
+            name="maidenName"
+            placeholder=""
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-2">
+          <span class="block text-sm font-semibold text-brand-900">Birth year <span class="font-normal text-cream-700">(optional)</span></span>
+          <input
+            type="number"
+            name="birthYear"
+            min="1900"
+            max="2100"
+            placeholder="1988"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 tabular-nums transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-2">
+          <span class="block text-sm font-semibold text-brand-900">Passing year <span class="font-normal text-cream-700">(optional)</span></span>
+          <input
+            type="number"
+            name="passingYear"
+            min="1900"
+            max="2100"
+            placeholder="2023"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 tabular-nums transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-2">
+          <span class="block text-sm font-semibold text-brand-900">Photo URL <span class="font-normal text-cream-700">(optional)</span></span>
+          <input
+            type="url"
+            name="photoUrl"
+            placeholder="https://…"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-6">
+          <span class="block text-sm font-semibold text-brand-900">Tribute <span class="font-normal text-cream-700">(optional)</span></span>
+          <textarea
+            name="tribute"
+            rows="4"
+            placeholder="A short remembrance — anything you'd like classmates to know."
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          ></textarea>
+        </label>
+
+        <div class="sm:col-span-6 flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            id="form-submit"
+            class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5"
+          >
+            Save entry
+            <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+          </button>
+          <button
+            type="button"
+            id="form-cancel"
+            class="hidden rounded-full border border-cream-400 bg-white px-4 py-2 text-sm font-medium text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+          >
+            Cancel edit
+          </button>
+          <p id="form-message" class="hidden text-sm"></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ROSTER -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Entries</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">{entries.length} on the page</span>
+    </header>
+
+    {entries.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-10 text-center">
+        <p class="font-script text-2xl text-cream-700">No entries yet.</p>
+        <p class="mt-2 text-sm text-cream-700">Add the first remembrance above.</p>
+      </div>
+    ) : (
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {entries.map(e => (
+          <article
+            class="rounded-2xl border border-cream-300 bg-white/85 p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-soft-hover"
+            data-entry-id={e.Id}
+            data-entry={JSON.stringify({
+              id: e.Id,
+              fullName: e.FullName,
+              maidenName: e.MaidenName ?? '',
+              birthYear: e.BirthYear ?? '',
+              passingYear: e.PassingYear ?? '',
+              tribute: e.Tribute ?? '',
+              photoUrl: e.PhotoUrl ?? '',
+            })}
+          >
+            <div class="flex items-start gap-4">
+              {e.PhotoUrl ? (
+                <img src={e.PhotoUrl} alt={e.FullName} class="h-16 w-16 shrink-0 rounded-lg object-cover" loading="lazy" />
+              ) : (
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-accent-100 font-heading text-xl text-brand-700">
+                  {e.FullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div class="flex-1 min-w-0">
+                <h3 class="font-display italic text-lg text-brand-900 leading-tight">
+                  {e.FullName}
+                  {e.MaidenName && <span class="ml-1 text-sm text-cream-700">({e.MaidenName})</span>}
+                </h3>
+                {(e.BirthYear || e.PassingYear) && (
+                  <p class="mt-0.5 font-mono text-xs text-accent-700">
+                    {e.BirthYear ?? '?'} – {e.PassingYear ?? '?'}
+                  </p>
+                )}
+                {e.Tribute && <p class="mt-2 text-sm leading-relaxed text-brand-800 whitespace-pre-line">{e.Tribute}</p>}
+              </div>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                class="edit-btn rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                class="delete-btn rounded-full border border-rose-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-rose-700 transition-colors hover:border-rose-500 hover:bg-rose-50"
+                data-id={e.Id}
+                data-name={e.FullName}
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+  </section>
+</AdminLayout>
+
+<script is:inline>
+  const form = document.getElementById('entry-form');
+  const message = document.getElementById('form-message');
+  const submitBtn = document.getElementById('form-submit');
+  const cancelBtn = document.getElementById('form-cancel');
+  const modeLabel = document.getElementById('form-mode-label');
+
+  function setMessage(text, tone) {
+    message.textContent = text;
+    message.classList.remove('hidden', 'text-brand-700', 'text-rose-700', 'text-emerald-700');
+    message.classList.add(
+      tone === 'error' ? 'text-rose-700' : tone === 'ok' ? 'text-emerald-700' : 'text-brand-700',
+    );
+  }
+
+  function clearMessage() {
+    message.classList.add('hidden');
+    message.textContent = '';
+  }
+
+  function setEditMode(entry) {
+    form.elements.id.value = entry.id;
+    form.elements.fullName.value = entry.fullName ?? '';
+    form.elements.maidenName.value = entry.maidenName ?? '';
+    form.elements.birthYear.value = entry.birthYear ?? '';
+    form.elements.passingYear.value = entry.passingYear ?? '';
+    form.elements.photoUrl.value = entry.photoUrl ?? '';
+    form.elements.tribute.value = entry.tribute ?? '';
+    submitBtn.querySelector('span').textContent = 'Update entry';
+    cancelBtn.classList.remove('hidden');
+    modeLabel.textContent = `editing #${entry.id}`;
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function resetForm() {
+    form.reset();
+    form.elements.id.value = '';
+    submitBtn.querySelector('span').textContent = 'Save entry';
+    cancelBtn.classList.add('hidden');
+    modeLabel.textContent = 'adding';
+    clearMessage();
+  }
+
+  cancelBtn.addEventListener('click', resetForm);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const id = fd.get('id');
+    const payload = {
+      ...(id ? { id: Number(id) } : {}),
+      fullName: fd.get('fullName'),
+      maidenName: fd.get('maidenName'),
+      birthYear: fd.get('birthYear') ? Number(fd.get('birthYear')) : null,
+      passingYear: fd.get('passingYear') ? Number(fd.get('passingYear')) : null,
+      tribute: fd.get('tribute'),
+      photoUrl: fd.get('photoUrl'),
+    };
+    setMessage('Saving…', 'info');
+    try {
+      const res = await fetch('/api/admin/memoriam', {
+        method: id ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage((body && body.error) || `Failed (${res.status})`, 'error');
+        return;
+      }
+      setMessage('Saved · reloading', 'ok');
+      setTimeout(() => location.reload(), 400);
+    } catch {
+      setMessage('Network error.', 'error');
+    }
+  });
+
+  document.querySelectorAll('article[data-entry-id]').forEach((card) => {
+    const data = JSON.parse(card.getAttribute('data-entry') || '{}');
+    card.querySelector('.edit-btn')?.addEventListener('click', () => setEditMode(data));
+    card.querySelector('.delete-btn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const id = btn.getAttribute('data-id');
+      const name = btn.getAttribute('data-name');
+      if (!id) return;
+      if (!confirm(`Remove ${name} from the In Memoriam page? This can be undone by re-adding.`)) return;
+      const res = await fetch(`/api/admin/memoriam?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (res.ok) location.reload();
+      else {
+        const body = await res.json().catch(() => ({}));
+        alert(body && body.error ? body.error : `Failed (${res.status})`);
+      }
+    });
+  });
+</script>

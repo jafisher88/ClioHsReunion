@@ -1,0 +1,97 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { env } from 'cloudflare:workers';
+
+interface MemoriamRow {
+  Id: number;
+  FullName: string;
+  MaidenName: string | null;
+  BirthYear: number | null;
+  PassingYear: number | null;
+  Tribute: string | null;
+  PhotoUrl: string | null;
+}
+
+const result = await env.DB
+  .prepare(
+    `SELECT Id, FullName, MaidenName, BirthYear, PassingYear, Tribute, PhotoUrl
+       FROM MemoriamEntries
+       ORDER BY FullName ASC`
+  )
+  .all<MemoriamRow>();
+const entries = result.results ?? [];
+---
+
+<Layout title="In Memoriam">
+  <div class="mx-auto max-w-4xl">
+    <header class="reveal mb-12 text-center">
+      <p class="font-script text-2xl text-accent-600">In loving memory</p>
+      <h1 class="mt-2 font-heading text-4xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-5xl">
+        Classmates we remember
+      </h1>
+      <p class="mx-auto mt-5 max-w-2xl text-brand-700 leading-relaxed">
+        Honoring members of the Class of 2006 who are no longer with us.
+        Once a Mustang, always a Mustang.
+      </p>
+    </header>
+
+    {entries.length === 0 ? (
+      <div class="reveal rounded-2xl border border-cream-300 bg-white/70 p-10 text-center shadow-soft">
+        <p class="font-display italic text-lg text-brand-800">
+          Quietly held. Always remembered.
+        </p>
+        <p class="mt-3 text-sm text-cream-700">
+          This page is being prepared. If there's someone you'd like us to add,
+          please reach out through the
+          <a href="/contact" class="text-brand-700 underline decoration-accent-400 decoration-2 underline-offset-4 hover:text-brand-900">contact page</a>.
+        </p>
+      </div>
+    ) : (
+      <ul class="reveal space-y-5">
+        {entries.map(e => (
+          <li class="rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8">
+            <div class="flex flex-col items-start gap-5 sm:flex-row">
+              {e.PhotoUrl ? (
+                <img
+                  src={e.PhotoUrl}
+                  alt={e.FullName}
+                  loading="lazy"
+                  class="h-32 w-32 shrink-0 rounded-2xl object-cover ring-1 ring-cream-300 sm:h-36 sm:w-36"
+                />
+              ) : (
+                <div
+                  class="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl bg-accent-100 font-heading text-3xl text-brand-700 ring-1 ring-cream-300 sm:h-36 sm:w-36"
+                  aria-hidden="true"
+                >
+                  {e.FullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+              )}
+
+              <div class="flex-1 min-w-0">
+                <h2 class="font-display italic text-2xl text-brand-900 leading-tight sm:text-3xl">
+                  {e.FullName}
+                  {e.MaidenName && (
+                    <span class="ml-2 font-display italic text-base text-cream-700">({e.MaidenName})</span>
+                  )}
+                </h2>
+                {(e.BirthYear || e.PassingYear) && (
+                  <p class="mt-1 font-heading text-sm uppercase tracking-[0.18em] text-accent-700">
+                    {e.BirthYear ?? '—'} <span class="opacity-50 mx-1">—</span> {e.PassingYear ?? '—'}
+                  </p>
+                )}
+                {e.Tribute && (
+                  <p class="mt-4 text-brand-800 leading-relaxed whitespace-pre-line">{e.Tribute}</p>
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+
+    <p class="reveal mt-12 text-center text-sm italic text-cream-700">
+      If there's someone you'd like us to add or update, please reach out via
+      <a href="/contact" class="text-brand-700 underline decoration-accent-400 decoration-2 underline-offset-4 hover:text-brand-900">the contact page</a>.
+    </p>
+  </div>
+</Layout>

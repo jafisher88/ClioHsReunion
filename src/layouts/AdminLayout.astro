@@ -8,9 +8,10 @@ const { title, adminEmail } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/admin';
 
 const navItems = [
-  { label: 'Dashboard', href: '/admin/' },
-  { label: 'Ledger',    href: '/admin/ledger' },
-  { label: 'Admins',    href: '/admin/admins' },
+  { label: 'Dashboard',    href: '/admin/' },
+  { label: 'Ledger',       href: '/admin/ledger' },
+  { label: 'In Memoriam',  href: '/admin/memoriam' },
+  { label: 'Admins',       href: '/admin/admins' },
 ];
 
 const isActive = (href: string) => {
