@@ -15,5 +15,7 @@ declare namespace Cloudflare {
     // Optional comms
     RESEND_API_KEY?: string;
     ORGANIZER_EMAIL?: string;
+    // Shared secret protecting POST /api/cron/run-reminders
+    CRON_SECRET?: string;
   }
 }
