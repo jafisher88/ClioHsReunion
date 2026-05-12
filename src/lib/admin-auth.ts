@@ -48,16 +48,14 @@ export async function getAdmin(request: Request, env: AdminEnv): Promise<AdminCo
 }
 
 /**
- * Build a 302 redirect response that sends the visitor to /admin/login,
+ * Build the URL path string to send an unauthenticated visitor to,
  * preserving the original path as `?next=…` so they land back where they
- * were after authenticating.
+ * were after authenticating. Pass to `Astro.redirect(...)` from a page.
  */
-export function redirectToLogin(request: Request): Response {
+export function loginUrlFor(request: Request): string {
   const url = new URL(request.url);
   const next = url.pathname + url.search;
-  const loginUrl = new URL('/admin/login', url);
-  loginUrl.searchParams.set('next', next);
-  return Response.redirect(loginUrl.href, 302);
+  return `/admin/login?next=${encodeURIComponent(next)}`;
 }
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;

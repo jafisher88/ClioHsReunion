@@ -1,11 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
-import { getAdmin, redirectToLogin } from '../../lib/admin-auth';
+import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
-  return redirectToLogin(Astro.request);
+  return Astro.redirect(loginUrlFor(Astro.request));
 }
 
 interface RsvpRow {
