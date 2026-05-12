@@ -95,6 +95,34 @@ function fmtDate(iso: string): string {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
 }
+
+function eqi(a: string | null | undefined, b: string | null | undefined): boolean {
+  return (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
+}
+
+function firstWord(value: string | null | undefined): string {
+  return (value ?? '').trim().split(/\s+/)[0] ?? '';
+}
+
+function lastWord(value: string | null | undefined): string {
+  const parts = (value ?? '').trim().split(/\s+/);
+  return parts[parts.length - 1] ?? '';
+}
+
+/**
+ * Derive the "yearbook identity" string from whatever fields we have:
+ *  - GraduationName wins when present.
+ *  - Otherwise fall back to "<first> <MaidenName>" if the maiden surname
+ *    looks different from the current last name (otherwise it's redundant).
+ *  - Returns null when there's nothing meaningful to show.
+ */
+function yearbookIdentity(r: { FullName: string; GraduationName: string | null; MaidenName: string | null }): string | null {
+  if (r.GraduationName && r.GraduationName.trim()) return r.GraduationName.trim();
+  if (r.MaidenName && r.MaidenName.trim() && !eqi(r.MaidenName, lastWord(r.FullName))) {
+    return `${firstWord(r.FullName)} ${r.MaidenName.trim()}`.trim();
+  }
+  return null;
+}
 ---
 
 <AdminLayout title="Dashboard" adminEmail={admin.email}>
@@ -209,33 +237,42 @@ function fmtDate(iso: string): string {
             <th>Email</th>
             <th>Status</th>
             <th class="num">Guests</th>
-            <th>Graduation</th>
             <th>Notes</th>
             <th>Logged</th>
           </tr>
         </thead>
         <tbody>
           {rsvps.length === 0 && (
-            <tr class="empty-row"><td colspan="7">— no RSVPs logged yet —</td></tr>
+            <tr class="empty-row"><td colspan="6">— no RSVPs logged yet —</td></tr>
           )}
-          {rsvps.map(r => (
-            <tr>
-              <td>
-                <span class="font-semibold">{r.FullName}</span>
-                {r.PreferredFirstName && (
-                  <span class="ml-2 inline-flex items-center rounded-full bg-accent-100 px-2 py-0.5 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent-700">
-                    {r.PreferredFirstName}
-                  </span>
-                )}
-              </td>
-              <td class="mono dim"><a href={`mailto:${r.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.Email}</a></td>
-              <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
-              <td class="num">{r.GuestCount}</td>
-              <td class="dim">{r.GraduationName ?? r.MaidenName ?? '—'}</td>
-              <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
-              <td class="mono dim whitespace-nowrap">{fmtDate(r.CreatedAt)}</td>
-            </tr>
-          ))}
+          {rsvps.map(r => {
+            const preferred = (r.PreferredFirstName ?? '').trim();
+            const showPreferred = preferred.length > 0 && !eqi(preferred, firstWord(r.FullName));
+            const yearbook = yearbookIdentity(r);
+            return (
+              <tr>
+                <td>
+                  <div class="font-semibold">{r.FullName}</div>
+                  {(showPreferred || yearbook) && (
+                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.72rem] text-cream-700">
+                      {showPreferred && (
+                        <span>goes by <span class="font-semibold text-accent-700">{preferred}</span></span>
+                      )}
+                      {showPreferred && yearbook && <span class="text-cream-400" aria-hidden="true">·</span>}
+                      {yearbook && (
+                        <span>née <span class="italic text-brand-800">{yearbook}</span></span>
+                      )}
+                    </div>
+                  )}
+                </td>
+                <td class="mono dim"><a href={`mailto:${r.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.Email}</a></td>
+                <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
+                <td class="num">{r.GuestCount}</td>
+                <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
+                <td class="mono dim whitespace-nowrap">{fmtDate(r.CreatedAt)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
