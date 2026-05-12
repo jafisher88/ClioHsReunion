@@ -234,7 +234,6 @@ function yearbookIdentity(r: { FullName: string; GraduationName: string | null; 
         <thead>
           <tr>
             <th>Name</th>
-            <th>Goes by</th>
             <th>Yearbook name</th>
             <th>Email</th>
             <th>Status</th>
@@ -245,16 +244,13 @@ function yearbookIdentity(r: { FullName: string; GraduationName: string | null; 
         </thead>
         <tbody>
           {rsvps.length === 0 && (
-            <tr class="empty-row"><td colspan="8">— no RSVPs logged yet —</td></tr>
+            <tr class="empty-row"><td colspan="7">— no RSVPs logged yet —</td></tr>
           )}
           {rsvps.map(r => {
-            const preferred = (r.PreferredFirstName ?? '').trim();
-            const showPreferred = preferred.length > 0 && !eqi(preferred, firstWord(r.FullName));
             const yearbook = yearbookIdentity(r);
             return (
               <tr>
                 <td class="font-semibold">{r.FullName}</td>
-                <td class="dim">{showPreferred ? <span class="text-accent-700 font-semibold">{preferred}</span> : '—'}</td>
                 <td class="dim">{yearbook ? <span class="italic text-brand-800">{yearbook}</span> : '—'}</td>
                 <td class="mono dim"><a href={`mailto:${r.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.Email}</a></td>
                 <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
