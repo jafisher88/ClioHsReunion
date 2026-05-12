@@ -1,21 +1,18 @@
 name = "cliohsreunion"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
-# TODO: fill in once you `gh repo` / Cloudflare account is connected
-# account_id = ""
+account_id = "d59429498ad974927786e2712f9fcb1b"
 
 routes = [
   { pattern = "cliohsreunion.com", custom_domain = true },
   { pattern = "www.cliohsreunion.com", custom_domain = true }
 ]
 
-# RSVP storage. Create with:
-#   npx wrangler d1 create cliohsreunion-db
-# then paste the returned database_id below.
+# RSVP storage — provisioned 2026-05-12 (ENAM).
 [[d1_databases]]
 binding = "DB"
 database_name = "cliohsreunion-db"
-database_id = "REPLACE_AFTER_WRANGLER_D1_CREATE"
+database_id = "30c71e1a-eb1d-4cc3-9050-e5dff7594a38"
 migrations_dir = "migrations"
 
 [vars]
