@@ -111,6 +111,19 @@ const isActive = (href: string) =>
               )}
             </li>
           ))}
+          <li class="ml-2 border-l border-cream-300/70 pl-2">
+            <a
+              href="/admin/"
+              title="Admin dashboard (sign-in required)"
+              class="group/admin inline-flex items-center gap-1.5 rounded-full border border-cream-300 bg-white/60 px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-all duration-150 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-900"
+            >
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+              </svg>
+              <span>Admin</span>
+            </a>
+          </li>
         </ul>
         <MobileMenu client:load />
       </nav>
