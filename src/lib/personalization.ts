@@ -3,11 +3,11 @@
  * them in an outgoing email.
  *
  * Resolution order, per email:
- *   1. Classmate.PreferredFirstName (matched via Rsvps/Volunteers full-name
- *      match against Classmates — exact or "preferred + last name").
- *   2. First word of the matched Classmate.FullName (the yearbook entry).
- *   3. First word of whatever the recipient submitted in the form.
- *   4. "Mustang" as a friendly catch-all.
+ *   1. RSVP.PreferredFirstName — they told us themselves on the form.
+ *   2. Classmate.PreferredFirstName (admin-curated on the roster).
+ *   3. First word of the matched Classmate.FullName (the yearbook entry).
+ *   4. First word of whatever the recipient submitted in the form.
+ *   5. "Mustang" as a friendly catch-all.
  */
 
 export const DEFAULT_FALLBACK = 'Mustang';
@@ -32,6 +32,7 @@ export async function resolveFirstNames(
   );
 
   const byEmail = new Map<string, string>();
+  const byEmailTier = new Map<string, number>();
   if (normalized.length === 0) return { byEmail, fallback: DEFAULT_FALLBACK };
 
   // Build a parameterized IN-list. D1 supports up to ~100 bind params per
@@ -45,14 +46,15 @@ export async function resolveFirstNames(
     const placeholders = chunk.map((_, i) => `?${i + 1}`).join(', ');
     const sql = `
       WITH submissions AS (
-        SELECT Email, FullName FROM Rsvps
+        SELECT Email, FullName, PreferredFirstName AS rsvpPreferred FROM Rsvps
         UNION ALL
-        SELECT Email, FullName FROM Volunteers
+        SELECT Email, FullName, NULL                AS rsvpPreferred FROM Volunteers
       )
       SELECT
         LOWER(TRIM(s.Email))               AS email,
         s.FullName                         AS submittedName,
-        c.PreferredFirstName               AS preferred,
+        s.rsvpPreferred                    AS rsvpPreferred,
+        c.PreferredFirstName               AS classmatePreferred,
         c.FullName                         AS classmateFullName
       FROM submissions s
       LEFT JOIN Classmates c
@@ -66,24 +68,36 @@ export async function resolveFirstNames(
     const res = await db.prepare(sql).bind(...chunk).all<{
       email: string;
       submittedName: string | null;
-      preferred: string | null;
+      rsvpPreferred: string | null;
+      classmatePreferred: string | null;
       classmateFullName: string | null;
     }>();
 
     for (const row of res.results ?? []) {
-      // Only set the entry if we haven't found a better one yet. A "better"
-      // entry is one with a non-null preferred name.
+      // Resolution priority (best → fallback):
+      //   1. RSVP preferred (self-reported)
+      //   2. Classmate preferred (admin-curated)
+      //   3. Yearbook first word
+      //   4. Submitted first word
       const candidate =
-        (row.preferred && row.preferred.trim()) ||
+        (row.rsvpPreferred && row.rsvpPreferred.trim()) ||
+        (row.classmatePreferred && row.classmatePreferred.trim()) ||
         firstWord(row.classmateFullName) ||
         firstWord(row.submittedName) ||
         '';
       if (!candidate) continue;
+
       const existing = byEmail.get(row.email);
-      // If existing is a generic-first-word but this row carries a preferred
-      // name, upgrade. Otherwise first match wins.
-      if (!existing || (row.preferred && row.preferred.trim())) {
+      // A "stronger" source upgrades a weaker one (RSVP preferred always wins,
+      // classmate preferred beats any first-word fallback).
+      const tier =
+        (row.rsvpPreferred && row.rsvpPreferred.trim()) ? 3
+        : (row.classmatePreferred && row.classmatePreferred.trim()) ? 2
+        : 1;
+      const existingTier = existing ? (byEmailTier.get(row.email) ?? 0) : 0;
+      if (!existing || tier > existingTier) {
         byEmail.set(row.email, candidate);
+        byEmailTier.set(row.email, tier);
       }
     }
   }

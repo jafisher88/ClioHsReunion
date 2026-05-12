@@ -11,6 +11,7 @@ if (!admin) {
 interface RsvpRow {
   Id: number;
   FullName: string;
+  PreferredFirstName: string | null;
   Email: string;
   Attending: 'yes' | 'no' | 'maybe';
   GuestCount: number;
@@ -183,7 +184,14 @@ function fmtDate(iso: string): string {
           )}
           {rsvps.map(r => (
             <tr>
-              <td><span class="font-semibold">{r.FullName}</span></td>
+              <td>
+                <span class="font-semibold">{r.FullName}</span>
+                {r.PreferredFirstName && (
+                  <span class="ml-2 inline-flex items-center rounded-full bg-accent-100 px-2 py-0.5 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent-700">
+                    {r.PreferredFirstName}
+                  </span>
+                )}
+              </td>
               <td class="mono dim"><a href={`mailto:${r.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.Email}</a></td>
               <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
               <td class="num">{r.GuestCount}</td>

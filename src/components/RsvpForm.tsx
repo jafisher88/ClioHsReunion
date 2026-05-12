@@ -17,6 +17,7 @@ export default function RsvpForm() {
     const fd = new FormData(form);
     const data = {
       fullName: String(fd.get('fullName') ?? ''),
+      preferredFirstName: String(fd.get('preferredFirstName') ?? ''),
       maidenName: String(fd.get('maidenName') ?? ''),
       email: String(fd.get('email') ?? ''),
       attending: String(fd.get('attending') ?? ''),
@@ -67,6 +68,12 @@ export default function RsvpForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <Field label="Full name" name="fullName" required placeholder="Jane Mustang" />
+      <Field
+        label="Preferred first name (optional)"
+        name="preferredFirstName"
+        placeholder="What we should call you"
+        hint="If you go by a different name than the yearbook (e.g. Becky for Rebecca)."
+      />
       <Field label="Maiden name (optional)" name="maidenName" placeholder="If different from above" />
       <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
 
@@ -132,6 +139,7 @@ function Field({
   type = 'text',
   required = false,
   placeholder,
+  hint,
   defaultValue,
   min,
   max,
@@ -141,6 +149,7 @@ function Field({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  hint?: string;
   defaultValue?: string;
   min?: number;
   max?: number;
@@ -151,6 +160,7 @@ function Field({
         {label}
         {required && <span className="text-brand-500"> *</span>}
       </span>
+      {hint && <p className="mt-0.5 text-xs text-cream-700">{hint}</p>}
       <input
         name={name}
         type={type}

@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 
 interface RsvpPayload {
   fullName: string;
+  preferredFirstName?: string;
   email: string;
   attending: 'yes' | 'no' | 'maybe';
   guestCount: string | number;
@@ -19,6 +20,10 @@ function validate(body: unknown): { ok: true; value: RsvpPayload } | { ok: false
   const fullName = typeof b.fullName === 'string' ? b.fullName.trim() : '';
   if (!fullName) return { ok: false, error: 'Please enter your name.' };
   if (fullName.length > 200) return { ok: false, error: 'Name is too long.' };
+
+  const preferredFirstName = typeof b.preferredFirstName === 'string'
+    ? b.preferredFirstName.trim().slice(0, 100)
+    : undefined;
 
   const email = typeof b.email === 'string' ? b.email.trim().toLowerCase() : '';
   if (!email || !EMAIL_RE.test(email)) return { ok: false, error: 'Please enter a valid email.' };
@@ -40,7 +45,7 @@ function validate(body: unknown): { ok: true; value: RsvpPayload } | { ok: false
 
   return {
     ok: true,
-    value: { fullName, email, attending, guestCount, maidenName, notes },
+    value: { fullName, preferredFirstName, email, attending, guestCount, maidenName, notes },
   };
 }
 
@@ -60,7 +65,6 @@ export const POST: APIRoute = async ({ request }) => {
   const db = env.DB;
 
   if (!db) {
-    // D1 not yet wired up — log so the organizer can still see submissions during local dev.
     console.log('[rsvp] D1 binding missing; submission:', result.value);
     return Response.json({ ok: true, persisted: false }, { status: 200 });
   }
@@ -68,11 +72,12 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     await db
       .prepare(
-        `INSERT INTO Rsvps (FullName, Email, Attending, GuestCount, MaidenName, Notes)
-         VALUES (?1, ?2, ?3, ?4, NULLIF(?5, ''), NULLIF(?6, ''))`
+        `INSERT INTO Rsvps (FullName, PreferredFirstName, Email, Attending, GuestCount, MaidenName, Notes)
+         VALUES (?1, NULLIF(?2, ''), ?3, ?4, ?5, NULLIF(?6, ''), NULLIF(?7, ''))`
       )
       .bind(
         result.value.fullName,
+        result.value.preferredFirstName ?? '',
         result.value.email,
         result.value.attending,
         result.value.guestCount,
