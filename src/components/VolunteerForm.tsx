@@ -68,9 +68,9 @@ export default function VolunteerForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <Field label="Full name" name="fullName" required placeholder="Jane Mustang" />
+      <Field label="Full name" name="fullName" required />
       <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
-      <Field label="Phone" name="phone" type="tel" optional placeholder="(810) 555-0123" />
+      <Field label="Phone" name="phone" type="tel" optional />
 
       <fieldset>
         <legend className="block text-sm font-semibold text-brand-900">
