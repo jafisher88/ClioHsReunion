@@ -69,15 +69,15 @@ export const POST: APIRoute = async ({ request }) => {
     await db
       .prepare(
         `INSERT INTO Rsvps (FullName, Email, Attending, GuestCount, MaidenName, Notes)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+         VALUES (?1, ?2, ?3, ?4, NULLIF(?5, ''), NULLIF(?6, ''))`
       )
       .bind(
         result.value.fullName,
         result.value.email,
         result.value.attending,
         result.value.guestCount,
-        result.value.maidenName ?? null,
-        result.value.notes ?? null,
+        result.value.maidenName ?? '',
+        result.value.notes ?? '',
       )
       .run();
   } catch (err) {
