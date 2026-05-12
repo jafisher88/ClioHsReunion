@@ -234,6 +234,8 @@ function yearbookIdentity(r: { FullName: string; GraduationName: string | null; 
         <thead>
           <tr>
             <th>Name</th>
+            <th>Goes by</th>
+            <th>Yearbook name</th>
             <th>Email</th>
             <th>Status</th>
             <th class="num">Guests</th>
@@ -243,7 +245,7 @@ function yearbookIdentity(r: { FullName: string; GraduationName: string | null; 
         </thead>
         <tbody>
           {rsvps.length === 0 && (
-            <tr class="empty-row"><td colspan="6">— no RSVPs logged yet —</td></tr>
+            <tr class="empty-row"><td colspan="8">— no RSVPs logged yet —</td></tr>
           )}
           {rsvps.map(r => {
             const preferred = (r.PreferredFirstName ?? '').trim();
@@ -251,20 +253,9 @@ function yearbookIdentity(r: { FullName: string; GraduationName: string | null; 
             const yearbook = yearbookIdentity(r);
             return (
               <tr>
-                <td>
-                  <div class="font-semibold">{r.FullName}</div>
-                  {(showPreferred || yearbook) && (
-                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.72rem] text-cream-700">
-                      {showPreferred && (
-                        <span>goes by <span class="font-semibold text-accent-700">{preferred}</span></span>
-                      )}
-                      {showPreferred && yearbook && <span class="text-cream-400" aria-hidden="true">·</span>}
-                      {yearbook && (
-                        <span>yearbook: <span class="italic text-brand-800">{yearbook}</span></span>
-                      )}
-                    </div>
-                  )}
-                </td>
+                <td class="font-semibold">{r.FullName}</td>
+                <td class="dim">{showPreferred ? <span class="text-accent-700 font-semibold">{preferred}</span> : '—'}</td>
+                <td class="dim">{yearbook ? <span class="italic text-brand-800">{yearbook}</span> : '—'}</td>
                 <td class="mono dim"><a href={`mailto:${r.Email}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.Email}</a></td>
                 <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
                 <td class="num">{r.GuestCount}</td>
