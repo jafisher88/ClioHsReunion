@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
+import VolunteerForm from '../components/VolunteerForm.tsx';
 ---
 
 <Layout title="Home">
@@ -63,6 +64,44 @@ import Card from '../components/Card.astro';
     <Card icon="🎉" title="What">
       <p>One night of catching up — drinks, food, music, and twenty years of stories.</p>
     </Card>
+  </section>
+
+  <section class="mt-16 animate-fade-up sm:mt-24">
+    <div class="rounded-3xl bg-gradient-to-br from-brand-50 via-cream-50 to-accent-50 p-8 shadow-sm sm:p-12">
+      <div class="grid gap-10 lg:grid-cols-5">
+        <div class="lg:col-span-2">
+          <p class="font-script text-2xl text-accent-600">We need a few hands</p>
+          <h2 class="mt-2 font-heading text-3xl uppercase tracking-wider text-brand-800 sm:text-4xl">
+            Seeking volunteers
+          </h2>
+          <p class="mt-4 text-brand-700 leading-relaxed">
+            A reunion this good doesn't run itself. We're looking for classmates
+            who can lend a hand either the <span class="font-semibold text-brand-800">day before</span>
+            (setup &amp; decorate) or the <span class="font-semibold text-brand-800">day after</span>
+            (cleanup). One day, both — totally up to you.
+          </p>
+          <ul class="mt-6 space-y-3 text-brand-700">
+            <li class="flex gap-3">
+              <span class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-brand-500"></span>
+              <span><span class="font-semibold text-brand-800">Day before</span> — set up tables, hang decorations, prep the space.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-brand-500"></span>
+              <span><span class="font-semibold text-brand-800">Day after</span> — tear-down, trash, pack up decorations.</span>
+            </li>
+          </ul>
+          <p class="mt-6 text-sm text-cream-700">
+            Already RSVP'd? Cool — volunteering is separate from attending.
+          </p>
+        </div>
+
+        <div class="lg:col-span-3">
+          <div class="rounded-2xl border-2 border-cream-300 bg-white/90 p-6 shadow-sm sm:p-8">
+            <VolunteerForm client:load />
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="mt-16 animate-fade-up sm:mt-24">
