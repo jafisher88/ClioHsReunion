@@ -1,0 +1,465 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { env } from 'cloudflare:workers';
+import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return Astro.redirect(loginUrlFor(Astro.request));
+}
+
+interface RosterRow {
+  Id: number;
+  FullName: string;
+  MaidenName: string | null;
+  Notes: string | null;
+  IsDeceased: number;
+  RsvpAttending: 'yes' | 'no' | 'maybe' | null;
+  RsvpGuests: number | null;
+  RsvpEmail: string | null;
+}
+
+// LEFT JOIN classmates → rsvps on case-insensitive trimmed full name match.
+// One classmate can have multiple RSVPs in theory (e.g. somebody resubmits);
+// we pick the latest by CreatedAt.
+const rosterResult = await env.DB
+  .prepare(
+    `SELECT c.Id, c.FullName, c.MaidenName, c.Notes, c.IsDeceased,
+            r.Attending  AS RsvpAttending,
+            r.GuestCount AS RsvpGuests,
+            r.Email      AS RsvpEmail
+       FROM Classmates c
+       LEFT JOIN (
+         SELECT FullName, Attending, GuestCount, Email,
+                ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(FullName)) ORDER BY CreatedAt DESC) AS rn
+         FROM Rsvps
+       ) r
+         ON LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.FullName)) AND r.rn = 1
+   ORDER BY c.FullName COLLATE NOCASE ASC`
+  )
+  .all<RosterRow>();
+const roster = rosterResult.results ?? [];
+
+// Aggregate stats
+const total = roster.length;
+const rsvped = roster.filter((r) => r.RsvpAttending !== null).length;
+const rsvpYes = roster.filter((r) => r.RsvpAttending === 'yes').length;
+const rsvpMaybe = roster.filter((r) => r.RsvpAttending === 'maybe').length;
+const rsvpNo = roster.filter((r) => r.RsvpAttending === 'no').length;
+const deceased = roster.filter((r) => r.IsDeceased === 1).length;
+const notYet = total - rsvped - deceased;
+
+// Unmatched RSVPs (people who RSVPed but aren't in the roster) — useful audit.
+const unmatchedResult = await env.DB
+  .prepare(
+    `SELECT DISTINCT r.FullName, r.Email, r.Attending
+       FROM Rsvps r
+       LEFT JOIN Classmates c
+         ON LOWER(TRIM(c.FullName)) = LOWER(TRIM(r.FullName))
+      WHERE c.Id IS NULL
+   ORDER BY r.FullName COLLATE NOCASE ASC`
+  )
+  .all<{ FullName: string; Email: string; Attending: string }>();
+const unmatched = unmatchedResult.results ?? [];
+---
+
+<AdminLayout title="Classmates" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">Class of 2006</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Classmates roster</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        The canonical list of '06 graduates (from the yearbook). RSVP submissions are
+        auto-matched against this list by full name (case-insensitive).
+      </p>
+    </div>
+  </header>
+
+  <!-- STAT TILES -->
+  <section class="mb-10">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div class="admin-tile">
+        <div class="admin-tile-label">Total</div>
+        <div class="admin-tile-value">{total}</div>
+        <div class="admin-tile-sub">on the roster</div>
+      </div>
+      <div class="admin-tile is-emerald">
+        <div class="admin-tile-label">RSVP'd Yes</div>
+        <div class="admin-tile-value">{rsvpYes}</div>
+        <div class="admin-tile-sub">confirmed</div>
+      </div>
+      <div class="admin-tile is-brand">
+        <div class="admin-tile-label">Maybes</div>
+        <div class="admin-tile-value">{rsvpMaybe}</div>
+        <div class="admin-tile-sub">tentative</div>
+      </div>
+      <div class="admin-tile">
+        <div class="admin-tile-label">Not yet</div>
+        <div class="admin-tile-value">{notYet}</div>
+        <div class="admin-tile-sub">no reply</div>
+      </div>
+      <div class="admin-tile">
+        <div class="admin-tile-label">Remembered</div>
+        <div class="admin-tile-value">{deceased}</div>
+        <div class="admin-tile-sub">in memoriam</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BULK IMPORT -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Bulk import</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">paste from yearbook</span>
+    </header>
+    <div class="rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8">
+      <form id="bulk-form" class="space-y-4">
+        <label class="block">
+          <span class="block text-sm font-semibold text-brand-900">Paste classmate list</span>
+          <p class="text-xs text-cream-700">
+            One name per line. Optionally use <code class="rounded bg-cream-100 px-1.5 py-0.5 font-mono text-brand-700">Full Name | Maiden Name</code>
+            on a line to record a maiden name. Duplicates create separate rows; clean them up via Edit / Delete after.
+          </p>
+          <textarea
+            name="bulk"
+            rows="8"
+            placeholder="Aaron Smith&#10;Allison Brown | Garcia&#10;Ben Carter&#10;Brandon Davis&#10;…"
+            class="mt-2 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 font-mono text-sm text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          ></textarea>
+        </label>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5"
+          >
+            Import all
+            <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+          </button>
+          <p id="bulk-message" class="hidden text-sm"></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- SINGLE ADD / EDIT -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Add or edit one</h2>
+      <span id="single-mode-label" class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">adding</span>
+    </header>
+    <div class="rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8">
+      <form id="single-form" class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <input type="hidden" name="id" value="" />
+
+        <label class="block sm:col-span-1">
+          <span class="block text-sm font-semibold text-brand-900">Full name <span class="text-brand-500">*</span></span>
+          <input
+            type="text"
+            name="fullName"
+            required
+            placeholder="Jane Doe"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-1">
+          <span class="block text-sm font-semibold text-brand-900">Maiden name <span class="font-normal text-cream-700">(optional)</span></span>
+          <input
+            type="text"
+            name="maidenName"
+            placeholder="Smith"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block sm:col-span-2">
+          <span class="block text-sm font-semibold text-brand-900">Notes <span class="font-normal text-cream-700">(optional — lives in CA, lost contact, etc.)</span></span>
+          <textarea
+            name="notes"
+            rows="2"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          ></textarea>
+        </label>
+
+        <label class="flex items-center gap-2 sm:col-span-2">
+          <input type="checkbox" name="isDeceased" class="h-4 w-4 accent-brand-500" />
+          <span class="text-sm text-brand-900">Mark as deceased (also add a tribute on the In Memoriam page if you'd like.)</span>
+        </label>
+
+        <div class="sm:col-span-2 flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            id="single-submit"
+            class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5"
+          >
+            <span id="single-submit-label">Save classmate</span>
+            <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+          </button>
+          <button
+            type="button"
+            id="single-cancel"
+            class="hidden rounded-full border border-cream-400 bg-white px-4 py-2 text-sm font-medium text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+          >
+            Cancel edit
+          </button>
+          <p id="single-message" class="hidden text-sm"></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ROSTER TABLE -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Roster</h2>
+      <input
+        type="text"
+        id="roster-filter"
+        placeholder="Filter by name…"
+        class="rounded-full border-2 border-cream-300 bg-white px-4 py-1.5 text-sm text-brand-900 placeholder-cream-500 transition-colors duration-150 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+      />
+    </header>
+
+    {roster.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-12 text-center">
+        <p class="font-script text-2xl text-cream-700">No classmates yet.</p>
+        <p class="mt-2 text-sm text-cream-700">Bulk import above to load everyone from the yearbook.</p>
+      </div>
+    ) : (
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="roster-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Name</th>
+              <th>Maiden</th>
+              <th>RSVP</th>
+              <th>Email</th>
+              <th>Notes</th>
+              <th class="num">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {roster.map((r, idx) => {
+              const data = JSON.stringify({
+                id: r.Id,
+                fullName: r.FullName,
+                maidenName: r.MaidenName ?? '',
+                notes: r.Notes ?? '',
+                isDeceased: r.IsDeceased === 1,
+              });
+              return (
+                <tr
+                  data-classmate-id={r.Id}
+                  data-classmate={data}
+                  data-search={`${r.FullName} ${r.MaidenName ?? ''}`.toLowerCase()}
+                >
+                  <td class="num mono dim">{String(idx + 1).padStart(3, '0')}</td>
+                  <td>
+                    <span class="font-semibold">{r.FullName}</span>
+                    {r.IsDeceased === 1 && (
+                      <span class="ml-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">remembered</span>
+                    )}
+                  </td>
+                  <td class="dim">{r.MaidenName ?? '—'}</td>
+                  <td>
+                    {r.IsDeceased === 1 ? (
+                      <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">in memoriam</span>
+                    ) : r.RsvpAttending === 'yes'   ? <span class="pill yes">✓ Yes{r.RsvpGuests && r.RsvpGuests > 1 ? ' +1' : ''}</span>
+                    : r.RsvpAttending === 'maybe' ? <span class="pill maybe">? Maybe</span>
+                    : r.RsvpAttending === 'no'    ? <span class="pill no">✗ No</span>
+                    : <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">not yet</span>}
+                  </td>
+                  <td class="mono dim">
+                    {r.RsvpEmail ? (
+                      <a href={`mailto:${r.RsvpEmail}`} class="underline decoration-cream-400 underline-offset-2 hover:text-brand-700">{r.RsvpEmail}</a>
+                    ) : '—'}
+                  </td>
+                  <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
+                  <td class="num">
+                    <div class="inline-flex gap-2">
+                      <button
+                        type="button"
+                        class="edit-btn rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="delete-btn rounded-full border border-rose-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-rose-700 transition-colors hover:border-rose-500 hover:bg-rose-50"
+                        data-name={r.FullName}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <!-- UNMATCHED RSVPS -->
+  {unmatched.length > 0 && (
+    <section class="mb-12">
+      <header class="mb-4 flex items-baseline justify-between gap-3">
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Unmatched RSVPs</h2>
+        <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">{unmatched.length} mismatch{unmatched.length === 1 ? '' : 'es'}</span>
+      </header>
+      <p class="mb-3 text-sm text-cream-700">
+        These RSVP submissions don't match any roster name. Add the classmate above (or
+        fix the roster name) so they're tracked.
+      </p>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>RSVP name</th>
+              <th>Status</th>
+              <th>Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {unmatched.map((u) => (
+              <tr>
+                <td><span class="font-semibold">{u.FullName}</span></td>
+                <td>
+                  {u.Attending === 'yes'   ? <span class="pill yes">✓ Yes</span>
+                  : u.Attending === 'maybe' ? <span class="pill maybe">? Maybe</span>
+                  : <span class="pill no">✗ No</span>}
+                </td>
+                <td class="mono dim">{u.Email}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+</AdminLayout>
+
+<script is:inline>
+  (function () {
+    const bulkForm = document.getElementById('bulk-form');
+    const bulkMessage = document.getElementById('bulk-message');
+    const singleForm = document.getElementById('single-form');
+    const singleMessage = document.getElementById('single-message');
+    const singleSubmit = document.getElementById('single-submit');
+    const singleSubmitLabel = document.getElementById('single-submit-label');
+    const singleCancel = document.getElementById('single-cancel');
+    const modeLabel = document.getElementById('single-mode-label');
+    const filter = document.getElementById('roster-filter');
+
+    function setMessage(el, text, tone) {
+      el.textContent = text;
+      el.classList.remove('hidden', 'text-brand-700', 'text-rose-700', 'text-emerald-700');
+      el.classList.add(
+        tone === 'error' ? 'text-rose-700' :
+        tone === 'ok'    ? 'text-emerald-700' :
+                           'text-brand-700',
+      );
+    }
+
+    function resetSingle() {
+      singleForm.reset();
+      singleForm.elements.id.value = '';
+      singleSubmitLabel.textContent = 'Save classmate';
+      singleCancel.classList.add('hidden');
+      modeLabel.textContent = 'adding';
+      singleMessage.classList.add('hidden');
+    }
+    singleCancel.addEventListener('click', resetSingle);
+
+    bulkForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(bulkForm);
+      const bulk = String(fd.get('bulk') ?? '');
+      if (!bulk.trim()) { setMessage(bulkMessage, 'Paste some names first.', 'error'); return; }
+      setMessage(bulkMessage, 'Importing…', 'info');
+      try {
+        const res = await fetch('/api/admin/classmates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bulk }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessage(bulkMessage, body && body.error ? body.error : `Failed (${res.status})`, 'error');
+          return;
+        }
+        setMessage(bulkMessage, `Imported ${body.added} of ${body.total}. Reloading…`, 'ok');
+        setTimeout(() => location.reload(), 700);
+      } catch {
+        setMessage(bulkMessage, 'Network error.', 'error');
+      }
+    });
+
+    singleForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(singleForm);
+      const id = fd.get('id');
+      const payload = {
+        ...(id ? { id: Number(id) } : {}),
+        fullName: fd.get('fullName'),
+        maidenName: fd.get('maidenName'),
+        notes: fd.get('notes'),
+        isDeceased: fd.get('isDeceased') === 'on',
+      };
+      setMessage(singleMessage, 'Saving…', 'info');
+      try {
+        const res = await fetch('/api/admin/classmates', {
+          method: id ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessage(singleMessage, body && body.error ? body.error : `Failed (${res.status})`, 'error');
+          return;
+        }
+        setMessage(singleMessage, 'Saved · reloading', 'ok');
+        setTimeout(() => location.reload(), 400);
+      } catch {
+        setMessage(singleMessage, 'Network error.', 'error');
+      }
+    });
+
+    document.querySelectorAll('tr[data-classmate-id]').forEach((row) => {
+      const data = JSON.parse(row.getAttribute('data-classmate') || '{}');
+      row.querySelector('.edit-btn')?.addEventListener('click', () => {
+        singleForm.elements.id.value = data.id;
+        singleForm.elements.fullName.value = data.fullName ?? '';
+        singleForm.elements.maidenName.value = data.maidenName ?? '';
+        singleForm.elements.notes.value = data.notes ?? '';
+        singleForm.elements.isDeceased.checked = !!data.isDeceased;
+        singleSubmitLabel.textContent = 'Update classmate';
+        singleCancel.classList.remove('hidden');
+        modeLabel.textContent = `editing #${data.id}`;
+        singleForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      row.querySelector('.delete-btn')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const name = btn.getAttribute('data-name');
+        if (!confirm(`Remove ${name} from the roster?`)) return;
+        const res = await fetch(`/api/admin/classmates?id=${encodeURIComponent(data.id)}`, { method: 'DELETE' });
+        if (res.ok) location.reload();
+        else {
+          const body = await res.json().catch(() => ({}));
+          alert(body && body.error ? body.error : `Failed (${res.status})`);
+        }
+      });
+    });
+
+    // Filter
+    filter.addEventListener('input', () => {
+      const q = filter.value.trim().toLowerCase();
+      document.querySelectorAll('tr[data-search]').forEach((row) => {
+        const hay = row.getAttribute('data-search') || '';
+        row.style.display = !q || hay.includes(q) ? '' : 'none';
+      });
+    });
+  })();
+</script>
