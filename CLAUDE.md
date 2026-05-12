@@ -62,9 +62,10 @@ the developer is wiring things up.
 ## Contact list / mailing
 
 The canonical contact list for the Class of 2006 lives in a Google Sheet that
-classmates have been adding themselves to:
+classmates have been adding themselves to. **The sheet URL is intentionally not
+stored in this repo** — ask Jason if you need it for an organizer-side workflow.
 
-Sheet is currently set to "anyone with link can view." Columns:
+Sheet is "anyone with link can view." Columns:
 `First Name, Last Name, Name at time of graduation if different, Email Address,
 Physical Address, Phone Number`.
 
