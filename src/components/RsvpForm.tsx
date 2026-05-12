@@ -77,7 +77,6 @@ export default function RsvpForm() {
         label="Current name"
         name="currentName"
         required
-        hint="What we should call you and put on your name tag. We'll use your first name here as your preferred name."
       />
       <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
 
