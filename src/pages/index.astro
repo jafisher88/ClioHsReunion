@@ -40,12 +40,20 @@ import Card from '../components/Card.astro';
     <Card icon="📅" title="When">
       <p>November 2026 — the exact date is being voted on in the Facebook group.</p>
     </Card>
-    <Card icon="📍" title="Where">
-      <p>
-        <span class="font-semibold text-brand-800">Round Em Up Ranch</span> in Clio, Michigan.
-        Hosted by our own classmate Amber, the ranch's owner.
-      </p>
-    </Card>
+    <a
+      href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="block no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 rounded-2xl"
+    >
+      <Card icon="📍" title="Where">
+        <p>
+          <span class="font-semibold text-brand-800">Round Em Up Ranch</span> in Clio, Michigan.
+          Hosted by our own classmate Amber, the ranch's owner.
+        </p>
+        <p class="mt-3 text-sm font-medium text-accent-700">Open in Google Maps →</p>
+      </Card>
+    </a>
     <Card icon="🎉" title="What">
       <p>One night of catching up — drinks, food, music, and twenty years of stories.</p>
     </Card>
