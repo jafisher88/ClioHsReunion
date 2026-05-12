@@ -1,0 +1,180 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { env } from 'cloudflare:workers';
+import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return Astro.redirect(loginUrlFor(Astro.request));
+}
+
+interface PhotoRow {
+  Id: number;
+  R2Key: string;
+  OriginalName: string | null;
+  ContentType: string;
+  Bytes: number;
+  Caption: string | null;
+  PeopleInPhoto: string | null;
+  SubmitterName: string | null;
+  SubmitterEmail: string | null;
+  CreatedAt: string;
+}
+
+const [listResult, countResult] = await Promise.all([
+  env.DB
+    .prepare(
+      `SELECT Id, R2Key, OriginalName, ContentType, Bytes, Caption, PeopleInPhoto,
+              SubmitterName, SubmitterEmail, CreatedAt
+         FROM PhotoSubmissions ORDER BY CreatedAt DESC`
+    )
+    .all<PhotoRow>(),
+  env.DB
+    .prepare('SELECT COUNT(*) AS Total, COALESCE(SUM(Bytes), 0) AS TotalBytes FROM PhotoSubmissions')
+    .first<{ Total: number; TotalBytes: number }>(),
+]);
+
+const photos = listResult.results ?? [];
+const totals = countResult ?? { Total: 0, TotalBytes: 0 };
+
+function fmtBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fmtDate(iso: string): string {
+  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
+}
+---
+
+<AdminLayout title="Photos" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">From the class</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Submitted photos</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        Classmate submissions stored privately for the planning crew.
+        Share the submission link with the class:
+        <a href="/share-a-photo" class="font-mono text-brand-700 underline hover:text-brand-900">cliohsreunion.com/share-a-photo</a>.
+      </p>
+    </div>
+    <div class="text-right">
+      <div class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cream-700">{totals.Total} photos · {fmtBytes(totals.TotalBytes)}</div>
+    </div>
+  </header>
+
+  {photos.length === 0 ? (
+    <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-12 text-center">
+      <p class="font-script text-2xl text-cream-700">No submissions yet.</p>
+      <p class="mt-2 text-sm text-cream-700">Share <span class="font-mono">/share-a-photo</span> with classmates to start collecting.</p>
+    </div>
+  ) : (
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {photos.map(p => (
+        <article class="group/photo rounded-2xl border border-cream-300 bg-white overflow-hidden shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-soft-hover" data-photo-id={p.Id}>
+          <a
+            href={`/api/admin/photo/${p.Id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="block aspect-[4/3] overflow-hidden bg-cream-100"
+          >
+            {p.ContentType === 'image/heic' || p.ContentType === 'image/heif' ? (
+              <div class="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-cream-100 to-accent-50 px-4 text-center">
+                <svg class="h-10 w-10 text-cream-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <path d="m3 17 5-5 4 4 3-3 6 6" />
+                  <circle cx="9" cy="10" r="1.5" />
+                </svg>
+                <div class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-cream-700">HEIC preview not supported</div>
+                <div class="text-xs text-cream-700">Click to download / open</div>
+              </div>
+            ) : (
+              <img
+                src={`/api/admin/photo/${p.Id}`}
+                alt={p.Caption ?? `Photo #${p.Id}`}
+                loading="lazy"
+                class="h-full w-full object-cover transition-transform duration-300 group-hover/photo:scale-105"
+              />
+            )}
+          </a>
+
+          <div class="p-4 space-y-2 text-sm">
+            <div class="flex items-baseline justify-between gap-2">
+              <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">#{p.Id}</span>
+              <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">{fmtDate(p.CreatedAt)}</span>
+            </div>
+
+            {p.Caption && (
+              <p class="font-display italic text-brand-900 leading-snug">{p.Caption}</p>
+            )}
+
+            {p.PeopleInPhoto && (
+              <p class="text-brand-800">
+                <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">People · </span>
+                {p.PeopleInPhoto}
+              </p>
+            )}
+
+            <div class="flex items-baseline justify-between gap-2 pt-1">
+              <span class="text-xs text-cream-700">
+                {p.SubmitterName ? (
+                  <>
+                    From <span class="text-brand-800 font-semibold">{p.SubmitterName}</span>
+                    {p.SubmitterEmail && (
+                      <> · <a href={`mailto:${p.SubmitterEmail}`} class="text-brand-700 underline hover:text-brand-900">{p.SubmitterEmail}</a></>
+                    )}
+                  </>
+                ) : (
+                  <>From <span class="italic">anonymous</span></>
+                )}
+              </span>
+              <span class="font-mono text-[0.6rem] text-cream-700">{fmtBytes(p.Bytes)}</span>
+            </div>
+
+            <div class="flex justify-between gap-2 pt-2">
+              <a
+                href={`/api/admin/photo/${p.Id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+              >
+                Open full
+              </a>
+              <button
+                type="button"
+                class="delete-btn rounded-full border border-rose-300 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-rose-700 transition-colors hover:border-rose-500 hover:bg-rose-50"
+                data-id={p.Id}
+                data-caption={p.Caption ?? `#${p.Id}`}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  )}
+</AdminLayout>
+
+<script is:inline>
+  document.querySelectorAll('.delete-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      const caption = btn.getAttribute('data-caption');
+      if (!id) return;
+      if (!confirm(`Permanently delete photo ${caption}? This removes it from R2 and the database.`)) return;
+      const res = await fetch(`/api/admin/photos?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (res.ok) {
+        const card = document.querySelector(`article[data-photo-id="${id}"]`);
+        if (card) card.remove();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(body && body.error ? body.error : `Failed (${res.status})`);
+      }
+    });
+  });
+</script>

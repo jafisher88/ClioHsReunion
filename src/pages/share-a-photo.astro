@@ -1,0 +1,210 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Share a Photo">
+  <div class="mx-auto max-w-2xl">
+    <header class="reveal text-center">
+      <span class="section-kicker mx-auto">From your archives</span>
+      <h1 class="mt-2 font-heading text-4xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-5xl">
+        Share a photo
+      </h1>
+      <p class="mx-auto mt-5 max-w-xl leading-relaxed text-brand-700">
+        Dig out a yearbook spread, a Friday-night-football snapshot, a prom-night
+        gem — anything from the Class of 2006 era. We're collecting them privately
+        for the planning crew to put together something special at the reunion.
+      </p>
+      <p class="mt-3 text-sm italic text-cream-700">
+        Submissions stay private — we won't post them publicly without your OK.
+      </p>
+    </header>
+
+    <div class="reveal mt-10 rounded-2xl border border-cream-300 bg-white p-6 shadow-soft sm:p-10">
+      <form id="photo-form" class="space-y-5">
+        <div>
+          <label for="photo-file" class="block text-sm font-semibold text-brand-900">
+            Photo <span class="text-brand-500">*</span>
+          </label>
+          <label for="photo-file" id="photo-drop" class="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-cream-300 bg-cream-50 px-4 py-8 text-center transition-all duration-150 hover:border-brand-300 hover:bg-brand-50/40">
+            <svg class="h-8 w-8 text-cream-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5V19.5a1.5 1.5 0 0 0 1.5 1.5h15a1.5 1.5 0 0 0 1.5-1.5V16.5M16.5 8.25 12 3.75 7.5 8.25M12 3.75V15.75" />
+            </svg>
+            <span class="font-semibold text-brand-800">Tap to choose a photo</span>
+            <span id="photo-filename" class="text-xs text-cream-700">JPG, PNG, HEIC, WebP, or GIF · up to 15 MB</span>
+          </label>
+          <input
+            type="file"
+            id="photo-file"
+            name="photo"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
+            required
+            class="sr-only"
+          />
+          <img id="photo-preview" class="mt-3 hidden rounded-xl border border-cream-300 max-h-96 mx-auto" alt="Preview of your selected photo" />
+        </div>
+
+        <label class="block">
+          <span class="block text-sm font-semibold text-brand-900">Caption <span class="font-normal text-cream-700">(optional)</span></span>
+          <input
+            type="text"
+            name="caption"
+            placeholder="e.g. Homecoming float, fall 2005"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <label class="block">
+          <span class="block text-sm font-semibold text-brand-900">Who's in the photo? <span class="font-normal text-cream-700">(optional)</span></span>
+          <input
+            type="text"
+            name="peopleInPhoto"
+            placeholder="e.g. Jamie M., Jason F., Coach Lewis"
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
+        </label>
+
+        <div class="grid gap-5 sm:grid-cols-2">
+          <label class="block">
+            <span class="block text-sm font-semibold text-brand-900">Your name <span class="font-normal text-cream-700">(optional)</span></span>
+            <input
+              type="text"
+              name="submitterName"
+              placeholder="So we can thank you"
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            />
+          </label>
+          <label class="block">
+            <span class="block text-sm font-semibold text-brand-900">Email <span class="font-normal text-cream-700">(optional)</span></span>
+            <input
+              type="email"
+              name="submitterEmail"
+              placeholder="In case we have a question"
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            />
+          </label>
+        </div>
+
+        <p id="photo-error" class="hidden rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800"></p>
+
+        <button
+          type="submit"
+          id="photo-submit"
+          class="group/cta inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_12px_24px_-8px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+        >
+          <span id="photo-submit-label">Send photo</span>
+          <span class="transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+        </button>
+      </form>
+
+      <div id="photo-success" class="hidden text-center">
+        <div class="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-100 text-2xl">✓</div>
+        <h2 class="font-heading text-2xl font-semibold uppercase tracking-[0.06em] text-brand-900">Got it — thanks!</h2>
+        <p class="mx-auto mt-3 max-w-md text-brand-700">
+          Your photo is in. We'll be in touch if we have questions or want to use it
+          for something specific at the reunion.
+        </p>
+        <button
+          id="photo-again"
+          type="button"
+          class="mt-6 inline-flex items-center gap-2 rounded-full border-2 border-brand-300 bg-white px-6 py-2.5 text-sm font-semibold text-brand-700 transition-all duration-200 hover:border-brand-500 hover:bg-brand-50 hover:-translate-y-0.5"
+        >
+          Send another
+        </button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script is:inline>
+  (function () {
+    const form = document.getElementById('photo-form');
+    const fileInput = document.getElementById('photo-file');
+    const filename = document.getElementById('photo-filename');
+    const preview = document.getElementById('photo-preview');
+    const errorEl = document.getElementById('photo-error');
+    const submitBtn = document.getElementById('photo-submit');
+    const submitLabel = document.getElementById('photo-submit-label');
+    const successEl = document.getElementById('photo-success');
+    const againBtn = document.getElementById('photo-again');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.classList.remove('hidden');
+    }
+
+    function clearError() {
+      errorEl.classList.add('hidden');
+      errorEl.textContent = '';
+    }
+
+    fileInput.addEventListener('change', () => {
+      clearError();
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        filename.textContent = 'JPG, PNG, HEIC, WebP, or GIF · up to 15 MB';
+        preview.classList.add('hidden');
+        preview.src = '';
+        return;
+      }
+      const mb = (file.size / 1024 / 1024).toFixed(1);
+      filename.textContent = `${file.name} · ${mb} MB`;
+      if (file.size > 15 * 1024 * 1024) {
+        showError(`Photo is ${mb} MB — please pick one under 15 MB.`);
+        preview.classList.add('hidden');
+        preview.src = '';
+        return;
+      }
+      if (file.type.startsWith('image/') && file.type !== 'image/heic' && file.type !== 'image/heif') {
+        const url = URL.createObjectURL(file);
+        preview.src = url;
+        preview.classList.remove('hidden');
+        preview.onload = () => URL.revokeObjectURL(url);
+      } else {
+        // HEIC/HEIF can't be previewed in most browsers; show filename only
+        preview.classList.add('hidden');
+        preview.src = '';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        showError('Please attach a photo first.');
+        return;
+      }
+      submitBtn.disabled = true;
+      submitLabel.textContent = 'Uploading…';
+      const fd = new FormData(form);
+      try {
+        const res = await fetch('/api/submit-photo', { method: 'POST', body: fd });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showError(body && body.error ? body.error : `Upload failed (${res.status}).`);
+          submitBtn.disabled = false;
+          submitLabel.textContent = 'Send photo';
+          return;
+        }
+        form.classList.add('hidden');
+        successEl.classList.remove('hidden');
+      } catch {
+        showError('Network error — please try again.');
+        submitBtn.disabled = false;
+        submitLabel.textContent = 'Send photo';
+      }
+    });
+
+    againBtn.addEventListener('click', () => {
+      form.reset();
+      preview.classList.add('hidden');
+      preview.src = '';
+      filename.textContent = 'JPG, PNG, HEIC, WebP, or GIF · up to 15 MB';
+      submitBtn.disabled = false;
+      submitLabel.textContent = 'Send photo';
+      successEl.classList.add('hidden');
+      form.classList.remove('hidden');
+      clearError();
+    });
+  })();
+</script>

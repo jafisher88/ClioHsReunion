@@ -15,6 +15,11 @@ database_name = "cliohsreunion-db"
 database_id = "30c71e1a-eb1d-4cc3-9050-e5dff7594a38"
 migrations_dir = "migrations"
 
+# Photo submissions — admin-only collection of classmate-submitted photos.
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "cliohsreunion-photos"
+
 [vars]
 EVENT_NAME = "Clio High School Class of 2006 — 20 Year Reunion"
 VENUE = "Round Em Up Ranch, Clio, Michigan"
