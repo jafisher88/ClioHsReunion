@@ -2,6 +2,32 @@
 import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
 import VolunteerForm from '../components/VolunteerForm.tsx';
+import { env } from 'cloudflare:workers';
+
+interface MemoriamPreviewRow {
+  FullName: string;
+  MaidenName: string | null;
+  BirthYear: number | null;
+  PassingYear: number | null;
+  PhotoUrl: string | null;
+}
+
+let memoriam: MemoriamPreviewRow[] = [];
+try {
+  if (env.DB) {
+    const res = await env.DB
+      .prepare(
+        `SELECT FullName, MaidenName, BirthYear, PassingYear, PhotoUrl
+           FROM Classmates
+          WHERE IsDeceased = 1
+          ORDER BY FullName COLLATE NOCASE ASC`
+      )
+      .all<MemoriamPreviewRow>();
+    memoriam = res.results ?? [];
+  }
+} catch (err) {
+  console.error('[home] memoriam preview query failed', err);
+}
 ---
 
 <Layout title="Home">
@@ -241,6 +267,78 @@ import VolunteerForm from '../components/VolunteerForm.tsx';
       </div>
     </div>
   </section>
+
+  {/* ---------- IN MEMORIAM ---------- */}
+  {memoriam.length > 0 ? (
+    <section class="reveal mt-16 sm:mt-24">
+      <div class="relative overflow-hidden rounded-3xl border border-cream-300/80 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-900 px-8 py-12 shadow-2xl sm:px-12 sm:py-14">
+        <div
+          class="pointer-events-none absolute inset-0 opacity-20"
+          style="background-image: radial-gradient(circle at 50% 0%, var(--color-accent-400) 0, transparent 55%);"
+          aria-hidden="true"
+        ></div>
+
+        <header class="relative text-center">
+          <p class="font-script text-2xl text-accent-300 sm:text-3xl">In loving memory</p>
+          <h2 class="mt-2 font-heading text-3xl font-semibold uppercase tracking-[0.06em] text-cream-50 sm:text-4xl">
+            Classmates we remember
+          </h2>
+          <div class="mx-auto mt-5 h-px w-16 bg-cream-200/30" aria-hidden="true"></div>
+          <p class="relative mx-auto mt-5 max-w-2xl text-base leading-relaxed text-cream-200/85">
+            Carrying them with us this November.
+          </p>
+        </header>
+
+        <ul class:list={[
+          'relative mt-10 grid gap-5',
+          memoriam.length === 1 ? 'sm:grid-cols-1 sm:max-w-md sm:mx-auto'
+            : memoriam.length === 2 ? 'sm:grid-cols-2'
+            : 'sm:grid-cols-2 lg:grid-cols-3',
+        ]}>
+          {memoriam.slice(0, 6).map((e) => (
+            <li class="flex items-center gap-4 rounded-2xl border border-cream-200/15 bg-cream-50/5 p-4 backdrop-blur-sm transition-all hover:border-accent-400/40 hover:bg-cream-50/10">
+              {e.PhotoUrl ? (
+                <img
+                  src={e.PhotoUrl}
+                  alt={e.FullName}
+                  loading="lazy"
+                  class="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-cream-200/30"
+                />
+              ) : (
+                <div
+                  class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-accent-500/20 font-heading text-xl text-accent-200 ring-1 ring-cream-200/30"
+                  aria-hidden="true"
+                >
+                  {e.FullName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div class="min-w-0">
+                <p class="font-display italic text-lg text-cream-50 leading-tight">
+                  {e.FullName}
+                  {e.MaidenName ? <span class="ml-1 text-sm text-cream-300/80">({e.MaidenName})</span> : null}
+                </p>
+                {(e.BirthYear || e.PassingYear) ? (
+                  <p class="mt-0.5 font-mono text-[0.7rem] uppercase tracking-[0.18em] text-accent-300/90">
+                    {e.BirthYear ?? '—'} <span class="opacity-60 mx-1">—</span> {e.PassingYear ?? '—'}
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div class="relative mt-10 flex justify-center">
+          <a
+            href="/memoriam"
+            class="group/cta inline-flex items-center gap-2 rounded-full border-2 border-cream-200/40 px-6 py-2.5 text-sm font-medium text-cream-100 transition-all duration-200 hover:border-accent-400 hover:bg-cream-50/10 hover:-translate-y-0.5"
+          >
+            {memoriam.length > 6 ? `View all ${memoriam.length} tributes` : 'View full tributes'}
+            <span class="transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  ) : null}
 
   {/* ---------- STAY IN THE LOOP ---------- */}
   <section class="reveal mt-16 sm:mt-24">
