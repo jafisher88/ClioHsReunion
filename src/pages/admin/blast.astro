@@ -24,11 +24,15 @@ interface UnsubRow {
   SyncedAt: string;
 }
 
-// Precompute recipient counts. Recipient totals subtract unsubscribed addresses
-// via a single NOT IN (...) filter rather than per-query joins so each prepare
-// stays simple. Wrapped in try/catch so a query hiccup never blanks the page.
+// Build marker — bump on every deploy so we can confirm the live page is fresh.
+const BUILD_MARKER = '2026-05-12T21:05Z';
+
 let yesN = 0, maybeN = 0, allN = 0, volsN = 0, everyN = 0, optedOutCount = 0;
 let blastHistory: BlastRow[] = [];
+let unsubs: UnsubRow[] = [];
+let audienceConfigured = false;
+let pageError: string | null = null;
+
 try {
   const [yes, maybe, all, vols, every, history, optedOut] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'yes' AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
@@ -52,10 +56,9 @@ try {
   blastHistory = history.results ?? [];
 } catch (err) {
   console.error('[blast page] count queries failed', err);
+  pageError = `count queries: ${(err as Error)?.message ?? String(err)}`;
 }
 
-let unsubs: UnsubRow[] = [];
-let audienceConfigured = false;
 try {
   const unsubsResult = await env.DB
     .prepare(`SELECT Email, Source, UnsubscribedAt, SyncedAt FROM Unsubscribes ORDER BY SyncedAt DESC`)
@@ -67,6 +70,7 @@ try {
   audienceConfigured = !!audienceRow?.Value;
 } catch (err) {
   console.error('[blast page] unsubs queries failed', err);
+  pageError = (pageError ? pageError + ' | ' : '') + `unsubs queries: ${(err as Error)?.message ?? String(err)}`;
 }
 
 const counts = {
@@ -104,6 +108,11 @@ const audienceLabel: Record<string, string> = {
 ---
 
 <AdminLayout title="Email blast" adminEmail={admin.email}>
+  <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-family: ui-monospace, monospace; font-size: 11px; color: #92400e;">
+    DEBUG · build {BUILD_MARKER} · counts: yes={yesN} maybe={maybeN} all={allN} vols={volsN} every={everyN} unsub={optedOutCount} · history={blastHistory.length} · unsubs={unsubs.length} · audience={audienceConfigured ? 'set' : 'unset'}
+    {pageError && <span style="color:#9f1239;"> · ERROR: {pageError}</span>}
+  </div>
+
   <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="font-script text-2xl text-accent-600">Announcements</p>
@@ -114,12 +123,12 @@ const audienceLabel: Record<string, string> = {
         replies route back to <span class="font-mono text-brand-700">{admin.email}</span>.
       </p>
     </div>
-    {optedOutCount > 0 && (
+    {optedOutCount > 0 ? (
       <a href="#unsubscribes" class="inline-flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-300 hover:bg-brand-50 hover:ring-brand-300">
         <span class="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true"></span>
         {optedOutCount} unsubscribed · auto-excluded
       </a>
-    )}
+    ) : null}
   </header>
 
   <section class="mb-12">
@@ -271,7 +280,7 @@ const audienceLabel: Record<string, string> = {
     )}
   </section>
 
-  {blastHistory.length > 0 && (
+  {blastHistory.length > 0 ? (
     <section class="mb-12">
       <header class="mb-4 flex items-baseline justify-between gap-3">
         <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Recent sends</h2>
@@ -304,7 +313,7 @@ const audienceLabel: Record<string, string> = {
         </table>
       </div>
     </section>
-  )}
+  ) : null}
 </AdminLayout>
 
 <script is:inline>
