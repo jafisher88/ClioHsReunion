@@ -24,8 +24,6 @@ interface UnsubRow {
   SyncedAt: string;
 }
 
-const BUILD_MARKER = '2026-05-12T21:35Z';
-
 const audienceLabel: Record<string, string> = {
   'rsvp-yes':   'RSVPs · Yes',
   'rsvp-maybe': 'RSVPs · Maybe',
@@ -55,7 +53,6 @@ let yesN = 0, maybeN = 0, allN = 0, volsN = 0, everyN = 0, optedOutCount = 0;
 let blastHistory: BlastRow[] = [];
 let unsubs: UnsubRow[] = [];
 let audienceConfigured = false;
-let pageError: string | null = null;
 
 try {
   const [yes, maybe, all, vols, every, history, optedOut] = await Promise.all([
@@ -80,7 +77,6 @@ try {
   blastHistory = history.results ?? [];
 } catch (err) {
   console.error('[blast page] count queries failed', err);
-  pageError = `count queries: ${(err as Error)?.message ?? String(err)}`;
 }
 
 try {
@@ -94,24 +90,26 @@ try {
   audienceConfigured = !!audienceRow?.Value;
 } catch (err) {
   console.error('[blast page] unsubs queries failed', err);
-  pageError = (pageError ? pageError + ' | ' : '') + `unsubs queries: ${(err as Error)?.message ?? String(err)}`;
 }
 ---
 
 <AdminLayout title="Email blast" adminEmail={admin.email}>
-  <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-family: ui-monospace, monospace; font-size: 11px; color: #92400e;">
-    DEBUG · build {BUILD_MARKER} · counts: yes={yesN} maybe={maybeN} all={allN} vols={volsN} every={everyN} unsub={optedOutCount} · history={blastHistory.length} · unsubs={unsubs.length} · audience={audienceConfigured ? 'set' : 'unset'}
-    {pageError ? <span style="color:#9f1239;"> · ERROR: {pageError}</span> : null}
-  </div>
-
   <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="font-script text-2xl text-accent-600">Announcements</p>
       <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Email blast</h1>
       <p class="mt-2 max-w-2xl text-sm text-cream-700">
-        Send a broadcast to classmates. Replies route to <span class="font-mono text-brand-700">{admin.email}</span>.
+        Send a broadcast to classmates. Emails come from
+        <span class="font-mono text-brand-700">noreply@cliohsreunion.com</span>;
+        replies route back to <span class="font-mono text-brand-700">{admin.email}</span>.
       </p>
     </div>
+    {optedOutCount > 0 ? (
+      <a href="#unsubscribes" class="inline-flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-300 hover:bg-brand-50 hover:ring-brand-300">
+        <span class="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true"></span>
+        {optedOutCount} unsubscribed · auto-excluded
+      </a>
+    ) : null}
   </header>
 
   <section class="mb-12">
@@ -303,9 +301,6 @@ try {
     </section>
   ) : null}
 
-  <p style="margin-top:32px; padding:16px; background:#dcfce7; border-radius:8px; font-family:monospace;">
-    STAGE 4 OK · history section added + client JS. Will remove debug banner next.
-  </p>
 </AdminLayout>
 
 <script is:inline>
