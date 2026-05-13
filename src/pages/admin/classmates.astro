@@ -122,150 +122,21 @@ const unmatched = unmatchedResult.results ?? [];
     </div>
   </section>
 
-  <!-- MERGE MODE BANNER (hidden until activated) -->
-  <div id="merge-banner" class="hidden mb-8 rounded-2xl border-2 border-brand-500 bg-brand-50 p-4 sm:p-5">
-    <div class="flex flex-wrap items-center gap-3">
-      <span class="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-brand-700">Merge mode</span>
-      <span class="text-sm text-brand-900">
-        Keeping <strong id="merge-primary-name">—</strong>.
-        Click <em>"Merge into this"</em> on the duplicate row to merge it in.
-      </span>
-      <button
-        type="button"
-        id="merge-cancel"
-        class="ml-auto rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
-      >
-        Cancel merge
-      </button>
-    </div>
-  </div>
-
-  <!-- BULK IMPORT -->
-  <section class="mb-12">
-    <header class="mb-4 flex items-baseline justify-between gap-3">
-      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Bulk import</h2>
-      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">paste from yearbook</span>
-    </header>
-    <div class="rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8">
-      <form id="bulk-form" class="space-y-4">
-        <label class="block">
-          <span class="block text-sm font-semibold text-brand-900">Paste classmate list</span>
-          <p class="text-xs text-cream-700">
-            One name per line. Optionally use <code class="rounded bg-cream-100 px-1.5 py-0.5 font-mono text-brand-700">Full Name | Maiden Name</code>
-            on a line. Preferred name is set per row via the edit form below.
-          </p>
-          <textarea
-            name="bulk"
-            rows="8"
-            class="mt-2 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 font-mono text-sm text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-          ></textarea>
-        </label>
-        <div class="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5"
-          >
-            Import all
-            <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
-          </button>
-          <p id="bulk-message" class="hidden text-sm"></p>
-        </div>
-      </form>
-    </div>
-  </section>
-
-  <!-- SINGLE ADD / EDIT -->
-  <section class="mb-12">
-    <header class="mb-4 flex items-baseline justify-between gap-3">
-      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Add or edit one</h2>
-      <span id="single-mode-label" class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">adding</span>
-    </header>
-    <div class="rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8">
-      <form id="single-form" class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <input type="hidden" name="id" value="" />
-
-        <label class="block sm:col-span-1">
-          <span class="block text-sm font-semibold text-brand-900">Full name <span class="text-brand-500">*</span></span>
-          <p class="text-xs text-cream-700">As it appears in the yearbook.</p>
-          <input
-            type="text"
-            name="fullName"
-            required
-            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-          />
-        </label>
-
-        <label class="block sm:col-span-1">
-          <span class="block text-sm font-semibold text-brand-900">Preferred first name <span class="font-normal text-cream-700">(optional)</span></span>
-          <p class="text-xs text-cream-700">What they go by. e.g. "Becky" for Rebecca.</p>
-          <input
-            type="text"
-            name="preferredFirstName"
-            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-          />
-        </label>
-
-        <label class="block sm:col-span-1">
-          <span class="block text-sm font-semibold text-brand-900">Maiden name <span class="font-normal text-cream-700">(last name only, optional)</span></span>
-          <p class="text-xs text-cream-700">Just the surname they had in the yearbook — e.g. "Kirby" for Rebecca Frey, not "Rebecca Kirby".</p>
-          <input
-            type="text"
-            name="maidenName"
-            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-          />
-        </label>
-
-        <label class="block sm:col-span-1">
-          <span class="block text-sm font-semibold text-brand-900">Email <span class="font-normal text-cream-700">(optional)</span></span>
-          <p class="text-xs text-cream-700">Used as fallback contact if they haven't RSVP'd yet.</p>
-          <input
-            type="email"
-            name="email"
-            autocomplete="off"
-            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-          />
-        </label>
-
-        <label class="block sm:col-span-2">
-          <span class="block text-sm font-semibold text-brand-900">Notes <span class="font-normal text-cream-700">(optional — lives in CA, lost contact, etc.)</span></span>
-          <textarea
-            name="notes"
-            rows="2"
-            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-          ></textarea>
-        </label>
-
-        <label class="flex items-center gap-2 sm:col-span-2">
-          <input type="checkbox" name="isDeceased" class="h-4 w-4 accent-brand-500" />
-          <span class="text-sm text-brand-900">Mark as deceased (and add a tribute on the In Memoriam page if you'd like).</span>
-        </label>
-
-        <div class="sm:col-span-2 flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            id="single-submit"
-            class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5"
-          >
-            <span id="single-submit-label">Save classmate</span>
-            <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
-          </button>
-          <button
-            type="button"
-            id="single-cancel"
-            class="hidden rounded-full border border-cream-400 bg-white px-4 py-2 text-sm font-medium text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
-          >
-            Cancel edit
-          </button>
-          <p id="single-message" class="hidden text-sm"></p>
-        </div>
-      </form>
-    </div>
-  </section>
-
   <!-- ROSTER TABLE -->
   <section class="mb-12">
-    <header class="mb-4 flex items-baseline justify-between gap-3">
-      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Roster</h2>
+    <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Roster</h2>
+        <button
+          type="button"
+          id="classmate-add-btn"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-500 bg-white text-lg font-semibold leading-none text-brand-700 transition-all duration-150 hover:bg-brand-500 hover:text-cream-50 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-brand-500/25"
+          title="Add a classmate"
+          aria-label="Add a classmate"
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+      </div>
       <input
         type="text"
         id="roster-filter"
@@ -277,7 +148,7 @@ const unmatched = unmatchedResult.results ?? [];
     {roster.length === 0 ? (
       <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-12 text-center">
         <p class="font-script text-2xl text-cream-700">No classmates yet.</p>
-        <p class="mt-2 text-sm text-cream-700">Bulk import above to load everyone from the yearbook.</p>
+        <p class="mt-2 text-sm text-cream-700">Use the <strong>+</strong> button above to add the first classmate.</p>
       </div>
     ) : (
       <div class="admin-table-wrap">
@@ -349,8 +220,7 @@ const unmatched = unmatchedResult.results ?? [];
                   </td>
                   <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
                   <td class="num">
-                    {/* Normal action buttons */}
-                    <div class="actions-normal inline-flex gap-2">
+                    <div class="inline-flex gap-2">
                       <button
                         type="button"
                         class="edit-btn rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
@@ -359,7 +229,7 @@ const unmatched = unmatchedResult.results ?? [];
                       </button>
                       <button
                         type="button"
-                        class="merge-start-btn rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+                        class="merge-btn rounded-full border border-cream-400 bg-white px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
                       >
                         Merge
                       </button>
@@ -370,20 +240,6 @@ const unmatched = unmatchedResult.results ?? [];
                       >
                         Delete
                       </button>
-                    </div>
-                    {/* Merge-mode actions (hidden by default) */}
-                    <div class="actions-merge hidden inline-flex">
-                      <button
-                        type="button"
-                        class="merge-target-btn rounded-full border-2 border-brand-500 bg-brand-50 px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-brand-700 transition-colors hover:bg-brand-100"
-                      >
-                        ← Merge into this
-                      </button>
-                    </div>
-                    <div class="actions-merge-primary hidden inline-flex">
-                      <span class="rounded-full bg-brand-500 px-3 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-cream-50">
-                        Keeping this row
-                      </span>
                     </div>
                   </td>
                 </tr>
@@ -396,6 +252,145 @@ const unmatched = unmatchedResult.results ?? [];
   </section>
 
   <!-- UNMATCHED RSVPS -->
+  <!-- ADD/EDIT MODAL -->
+  <div
+    id="classmate-modal"
+    class="hidden fixed inset-0 items-center justify-center p-4"
+    style="z-index: 200;"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="classmate-modal-title"
+  >
+    <div id="classmate-modal-backdrop" class="absolute inset-0 bg-brand-900/55"></div>
+    <div class="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-cream-300 bg-cream-50 shadow-2xl">
+      <header class="border-b border-cream-300 px-6 py-4">
+        <p id="classmate-modal-kicker" class="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-brand-700">Roster</p>
+        <h2 id="classmate-modal-title" class="mt-1 font-heading text-xl font-semibold text-brand-900">Add classmate</h2>
+      </header>
+      <form id="classmate-modal-form" class="flex-1 overflow-y-auto px-6 py-5">
+        <input type="hidden" name="id" value="" />
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <label class="block sm:col-span-1">
+            <span class="block text-sm font-semibold text-brand-900">Full name <span class="text-brand-500">*</span></span>
+            <p class="text-xs text-cream-700">As it appears in the yearbook.</p>
+            <input
+              type="text"
+              name="fullName"
+              required
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            />
+          </label>
+
+          <label class="block sm:col-span-1">
+            <span class="block text-sm font-semibold text-brand-900">Preferred first name <span class="font-normal text-cream-700">(optional)</span></span>
+            <p class="text-xs text-cream-700">What they go by. e.g. "Becky" for Rebecca.</p>
+            <input
+              type="text"
+              name="preferredFirstName"
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            />
+          </label>
+
+          <label class="block sm:col-span-1">
+            <span class="block text-sm font-semibold text-brand-900">Maiden name <span class="font-normal text-cream-700">(last name only, optional)</span></span>
+            <p class="text-xs text-cream-700">Just the surname they had in the yearbook — e.g. "Kirby" for Rebecca Frey, not "Rebecca Kirby".</p>
+            <input
+              type="text"
+              name="maidenName"
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            />
+          </label>
+
+          <label class="block sm:col-span-1">
+            <span class="block text-sm font-semibold text-brand-900">Email <span class="font-normal text-cream-700">(optional)</span></span>
+            <p class="text-xs text-cream-700">Used as fallback contact if they haven't RSVP'd yet.</p>
+            <input
+              type="email"
+              name="email"
+              autocomplete="off"
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            />
+          </label>
+
+          <label class="block sm:col-span-2">
+            <span class="block text-sm font-semibold text-brand-900">Notes <span class="font-normal text-cream-700">(optional — lives in CA, lost contact, etc.)</span></span>
+            <textarea
+              name="notes"
+              rows="2"
+              class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            ></textarea>
+          </label>
+
+          <label class="flex items-center gap-2 sm:col-span-2">
+            <input type="checkbox" name="isDeceased" class="h-4 w-4 accent-brand-500" />
+            <span class="text-sm text-brand-900">Mark as deceased (and add a tribute on the In Memoriam page if you'd like).</span>
+          </label>
+        </div>
+      </form>
+      <footer class="flex items-center justify-end gap-3 border-t border-cream-300 bg-cream-100/50 px-6 py-3">
+        <p id="classmate-modal-message" class="mr-auto hidden text-sm"></p>
+        <button
+          type="button"
+          id="classmate-modal-cancel"
+          class="rounded-full border border-cream-400 bg-white px-4 py-1.5 text-sm font-medium text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="classmate-modal-form"
+          id="classmate-modal-submit"
+          class="inline-flex items-center gap-2 rounded-full bg-brand-500 px-5 py-1.5 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_6px_14px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5"
+        >
+          <span id="classmate-modal-submit-label">Save classmate</span>
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- MERGE MODAL -->
+  <div
+    id="merge-modal"
+    class="hidden fixed inset-0 items-center justify-center p-4"
+    style="z-index: 200;"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="merge-modal-title"
+  >
+    <div id="merge-modal-backdrop" class="absolute inset-0 bg-brand-900/55"></div>
+    <div class="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-cream-300 bg-cream-50 shadow-2xl">
+      <header class="border-b border-cream-300 px-6 py-4">
+        <p class="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-brand-700">Merge into</p>
+        <h2 id="merge-modal-title" class="mt-1 font-heading text-xl font-semibold text-brand-900">—</h2>
+        <p class="mt-1 text-xs text-cream-700">Pick the duplicate record to fold into this one.</p>
+      </header>
+      <div class="border-b border-rose-200 bg-rose-50 px-6 py-3 text-sm text-rose-800">
+        <strong>Warning:</strong> the record you pick below will be permanently deleted.
+        Any field on both records keeps <strong id="merge-modal-keep-name">the original</strong>'s value;
+        missing fields and notes are copied over from the deleted one.
+      </div>
+      <div class="px-6 py-4">
+        <input
+          type="text"
+          id="merge-modal-filter"
+          placeholder="Filter by name…"
+          class="block w-full rounded-full border-2 border-cream-300 bg-white px-4 py-2 text-sm text-brand-900 placeholder-cream-500 transition-colors duration-150 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+        />
+      </div>
+      <div id="merge-modal-list" class="flex-1 overflow-y-auto border-t border-cream-200"></div>
+      <footer class="flex items-center justify-between gap-3 border-t border-cream-300 bg-cream-100/50 px-6 py-3">
+        <span id="merge-modal-count" class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cream-700"></span>
+        <button
+          type="button"
+          id="merge-modal-close"
+          class="rounded-full border border-cream-400 bg-white px-4 py-1.5 text-sm font-medium text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+        >
+          Cancel
+        </button>
+      </footer>
+    </div>
+  </div>
+
   {unmatched.length > 0 && (
     <section class="mb-12">
       <header class="mb-4 flex items-baseline justify-between gap-3">
@@ -436,18 +431,28 @@ const unmatched = unmatchedResult.results ?? [];
 
 <script is:inline>
   (function () {
-    const bulkForm = document.getElementById('bulk-form');
-    const bulkMessage = document.getElementById('bulk-message');
-    const singleForm = document.getElementById('single-form');
-    const singleMessage = document.getElementById('single-message');
-    const singleSubmitLabel = document.getElementById('single-submit-label');
-    const singleCancel = document.getElementById('single-cancel');
-    const modeLabel = document.getElementById('single-mode-label');
     const filter = document.getElementById('roster-filter');
 
-    const mergeBanner = document.getElementById('merge-banner');
-    const mergePrimaryName = document.getElementById('merge-primary-name');
-    const mergeCancelBtn = document.getElementById('merge-cancel');
+    // Add/edit modal
+    const cmModal = document.getElementById('classmate-modal');
+    const cmBackdrop = document.getElementById('classmate-modal-backdrop');
+    const cmCancel = document.getElementById('classmate-modal-cancel');
+    const cmForm = document.getElementById('classmate-modal-form');
+    const cmTitle = document.getElementById('classmate-modal-title');
+    const cmKicker = document.getElementById('classmate-modal-kicker');
+    const cmSubmitLabel = document.getElementById('classmate-modal-submit-label');
+    const cmMessage = document.getElementById('classmate-modal-message');
+    const cmAddBtn = document.getElementById('classmate-add-btn');
+
+    // Merge modal
+    const mergeModal = document.getElementById('merge-modal');
+    const mergeModalBackdrop = document.getElementById('merge-modal-backdrop');
+    const mergeModalClose = document.getElementById('merge-modal-close');
+    const mergeModalTitle = document.getElementById('merge-modal-title');
+    const mergeModalKeepName = document.getElementById('merge-modal-keep-name');
+    const mergeModalFilter = document.getElementById('merge-modal-filter');
+    const mergeModalList = document.getElementById('merge-modal-list');
+    const mergeModalCount = document.getElementById('merge-modal-count');
 
     let mergePrimaryId = null;
 
@@ -461,43 +466,44 @@ const unmatched = unmatchedResult.results ?? [];
       );
     }
 
-    function resetSingle() {
-      singleForm.reset();
-      singleForm.elements.id.value = '';
-      singleSubmitLabel.textContent = 'Save classmate';
-      singleCancel.classList.add('hidden');
-      modeLabel.textContent = 'adding';
-      singleMessage.classList.add('hidden');
-    }
-    singleCancel.addEventListener('click', resetSingle);
-
-    bulkForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(bulkForm);
-      const bulk = String(fd.get('bulk') ?? '');
-      if (!bulk.trim()) { setMessage(bulkMessage, 'Paste some names first.', 'error'); return; }
-      setMessage(bulkMessage, 'Importing…', 'info');
-      try {
-        const res = await fetch('/api/admin/classmates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bulk }),
-        });
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMessage(bulkMessage, body && body.error ? body.error : `Failed (${res.status})`, 'error');
-          return;
-        }
-        setMessage(bulkMessage, `Imported ${body.added} of ${body.total}. Reloading…`, 'ok');
-        setTimeout(() => location.reload(), 700);
-      } catch {
-        setMessage(bulkMessage, 'Network error.', 'error');
+    // -------- Add/Edit modal --------
+    function openClassmateModal(data) {
+      cmForm.reset();
+      cmMessage.classList.add('hidden');
+      if (data) {
+        cmKicker.textContent = `Editing #${data.id}`;
+        cmTitle.textContent = data.fullName || 'Edit classmate';
+        cmSubmitLabel.textContent = 'Update classmate';
+        cmForm.elements.id.value = data.id;
+        cmForm.elements.fullName.value = data.fullName ?? '';
+        cmForm.elements.maidenName.value = data.maidenName ?? '';
+        cmForm.elements.preferredFirstName.value = data.preferredFirstName ?? '';
+        cmForm.elements.email.value = data.email ?? '';
+        cmForm.elements.notes.value = data.notes ?? '';
+        cmForm.elements.isDeceased.checked = !!data.isDeceased;
+      } else {
+        cmKicker.textContent = 'Roster';
+        cmTitle.textContent = 'Add classmate';
+        cmSubmitLabel.textContent = 'Save classmate';
+        cmForm.elements.id.value = '';
       }
-    });
+      cmModal.classList.remove('hidden');
+      cmModal.classList.add('flex');
+      setTimeout(() => cmForm.elements.fullName.focus(), 0);
+    }
 
-    singleForm.addEventListener('submit', async (e) => {
+    function closeClassmateModal() {
+      cmModal.classList.add('hidden');
+      cmModal.classList.remove('flex');
+    }
+
+    cmAddBtn?.addEventListener('click', () => openClassmateModal(null));
+    cmCancel.addEventListener('click', closeClassmateModal);
+    cmBackdrop.addEventListener('click', closeClassmateModal);
+
+    cmForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fd = new FormData(singleForm);
+      const fd = new FormData(cmForm);
       const id = fd.get('id');
       const payload = {
         ...(id ? { id: Number(id) } : {}),
@@ -508,7 +514,7 @@ const unmatched = unmatchedResult.results ?? [];
         notes: fd.get('notes'),
         isDeceased: fd.get('isDeceased') === 'on',
       };
-      setMessage(singleMessage, 'Saving…', 'info');
+      setMessage(cmMessage, 'Saving…', 'info');
       try {
         const res = await fetch('/api/admin/classmates', {
           method: id ? 'PATCH' : 'POST',
@@ -517,70 +523,123 @@ const unmatched = unmatchedResult.results ?? [];
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setMessage(singleMessage, body && body.error ? body.error : `Failed (${res.status})`, 'error');
+          setMessage(cmMessage, body && body.error ? body.error : `Failed (${res.status})`, 'error');
           return;
         }
-        setMessage(singleMessage, 'Saved · reloading', 'ok');
+        setMessage(cmMessage, 'Saved · reloading', 'ok');
         setTimeout(() => location.reload(), 400);
       } catch {
-        setMessage(singleMessage, 'Network error.', 'error');
+        setMessage(cmMessage, 'Network error.', 'error');
       }
     });
 
-    // -------- Merge mode --------
-    function enterMergeMode(primaryId, primaryName) {
-      mergePrimaryId = primaryId;
-      mergePrimaryName.textContent = primaryName;
-      mergeBanner.classList.remove('hidden');
+    // -------- Merge modal --------
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
 
+    function openMergeModal(primaryId, primaryName) {
+      mergePrimaryId = primaryId;
+      mergeModalTitle.textContent = primaryName;
+      mergeModalKeepName.textContent = primaryName;
+      mergeModalFilter.value = '';
+
+      // Build the candidate list from every other row in the table.
+      const items = [];
       document.querySelectorAll('tr[data-classmate-id]').forEach((row) => {
         const id = Number(row.getAttribute('data-classmate-id'));
-        const normal = row.querySelector('.actions-normal');
-        const targetUi = row.querySelector('.actions-merge');
-        const primaryUi = row.querySelector('.actions-merge-primary');
-        normal.classList.add('hidden');
-        if (id === primaryId) {
-          targetUi.classList.add('hidden');
-          primaryUi.classList.remove('hidden');
-          row.classList.add('bg-brand-50');
-        } else {
-          targetUi.classList.remove('hidden');
-          primaryUi.classList.add('hidden');
-        }
+        if (id === primaryId) return;
+        const data = JSON.parse(row.getAttribute('data-classmate') || '{}');
+        const yearbook = data.maidenName ? `${(data.fullName || '').split(/\s+/)[0]} ${data.maidenName}` : '';
+        const meta = [yearbook && yearbook.toLowerCase() !== (data.fullName || '').toLowerCase() ? `yearbook: ${yearbook}` : '',
+                      data.email,
+                      data.notes ? data.notes.replace(/\s+/g, ' ').slice(0, 80) : '']
+                     .filter(Boolean).join(' · ');
+        items.push({ id, name: data.fullName, meta, hay: `${data.fullName} ${data.maidenName ?? ''} ${data.preferredFirstName ?? ''} ${data.email ?? ''}`.toLowerCase() });
       });
 
-      // Smoothly scroll to top so they see the banner.
-      mergeBanner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      mergeModalList.innerHTML = items.map((it) => `
+        <button
+          type="button"
+          class="merge-pick-btn flex w-full flex-col items-start gap-0.5 border-b border-cream-200 px-6 py-3 text-left transition-colors hover:bg-brand-50/70 focus:bg-brand-50 focus:outline-none"
+          data-merge-id="${it.id}"
+          data-merge-name="${escapeHtml(it.name)}"
+          data-hay="${escapeHtml(it.hay)}"
+        >
+          <span class="font-semibold text-brand-900">${escapeHtml(it.name)}</span>
+          ${it.meta ? `<span class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-cream-700">${escapeHtml(it.meta)}</span>` : ''}
+        </button>
+      `).join('') || `<p class="px-6 py-8 text-center text-sm text-cream-700">No other classmates to merge.</p>`;
+      mergeModalCount.textContent = items.length === 1 ? '1 candidate' : `${items.length} candidates`;
+
+      mergeModalList.querySelectorAll('.merge-pick-btn').forEach((btn) => {
+        btn.addEventListener('click', () => pickMergeTarget(
+          Number(btn.getAttribute('data-merge-id')),
+          btn.getAttribute('data-merge-name') || ''
+        ));
+      });
+
+      mergeModal.classList.remove('hidden');
+      mergeModal.classList.add('flex');
+      // Focus the filter so admins can immediately type.
+      setTimeout(() => mergeModalFilter.focus(), 0);
     }
 
-    function exitMergeMode() {
+    function closeMergeModal() {
       mergePrimaryId = null;
-      mergeBanner.classList.add('hidden');
-      document.querySelectorAll('tr[data-classmate-id]').forEach((row) => {
-        row.querySelector('.actions-normal')?.classList.remove('hidden');
-        row.querySelector('.actions-merge')?.classList.add('hidden');
-        row.querySelector('.actions-merge-primary')?.classList.add('hidden');
-        row.classList.remove('bg-brand-50');
-      });
+      mergeModal.classList.add('hidden');
+      mergeModal.classList.remove('flex');
+      mergeModalList.innerHTML = '';
     }
 
-    mergeCancelBtn.addEventListener('click', exitMergeMode);
+    async function pickMergeTarget(mergeId, mergeName) {
+      if (mergePrimaryId === null) return;
+      const keepName = mergeModalTitle.textContent || 'the kept record';
+      if (!confirm(`Merge "${mergeName}" into "${keepName}"?\n\n` +
+                   `"${mergeName}" will be permanently deleted.\n` +
+                   `Field conflicts keep "${keepName}"'s values; missing fields and notes are copied over.\n\n` +
+                   `This can't be undone.`)) {
+        return;
+      }
+      const res = await fetch('/api/admin/classmates/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryId: mergePrimaryId, mergeId }),
+      });
+      if (res.ok) {
+        location.reload();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(body && body.error ? body.error : `Merge failed (${res.status})`);
+      }
+    }
+
+    mergeModalClose.addEventListener('click', closeMergeModal);
+    mergeModalBackdrop.addEventListener('click', closeMergeModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!mergeModal.classList.contains('hidden')) closeMergeModal();
+      else if (!cmModal.classList.contains('hidden')) closeClassmateModal();
+    });
+    mergeModalFilter.addEventListener('input', () => {
+      const q = mergeModalFilter.value.trim().toLowerCase();
+      let shown = 0;
+      mergeModalList.querySelectorAll('.merge-pick-btn').forEach((btn) => {
+        const hay = btn.getAttribute('data-hay') || '';
+        const match = !q || hay.includes(q);
+        btn.style.display = match ? '' : 'none';
+        if (match) shown += 1;
+      });
+      mergeModalCount.textContent = q
+        ? `${shown} of ${mergeModalList.querySelectorAll('.merge-pick-btn').length} matching`
+        : `${shown} candidate${shown === 1 ? '' : 's'}`;
+    });
 
     document.querySelectorAll('tr[data-classmate-id]').forEach((row) => {
       const data = JSON.parse(row.getAttribute('data-classmate') || '{}');
-      row.querySelector('.edit-btn')?.addEventListener('click', () => {
-        singleForm.elements.id.value = data.id;
-        singleForm.elements.fullName.value = data.fullName ?? '';
-        singleForm.elements.maidenName.value = data.maidenName ?? '';
-        singleForm.elements.preferredFirstName.value = data.preferredFirstName ?? '';
-        singleForm.elements.email.value = data.email ?? '';
-        singleForm.elements.notes.value = data.notes ?? '';
-        singleForm.elements.isDeceased.checked = !!data.isDeceased;
-        singleSubmitLabel.textContent = 'Update classmate';
-        singleCancel.classList.remove('hidden');
-        modeLabel.textContent = `editing #${data.id}`;
-        singleForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      row.querySelector('.edit-btn')?.addEventListener('click', () => openClassmateModal(data));
 
       row.querySelector('.delete-btn')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
@@ -594,27 +653,8 @@ const unmatched = unmatchedResult.results ?? [];
         }
       });
 
-      row.querySelector('.merge-start-btn')?.addEventListener('click', () => {
-        enterMergeMode(data.id, data.fullName);
-      });
-
-      row.querySelector('.merge-target-btn')?.addEventListener('click', async () => {
-        if (mergePrimaryId === null) return;
-        if (!confirm(`Merge "${data.fullName}" INTO the kept row, then delete this row?\n\n` +
-                     `The kept row's fields win on conflict; missing fields will be filled from this one.\n` +
-                     `Notes are combined. This can't be undone.`)) {
-          return;
-        }
-        const res = await fetch('/api/admin/classmates/merge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ primaryId: mergePrimaryId, mergeId: data.id }),
-        });
-        if (res.ok) location.reload();
-        else {
-          const body = await res.json().catch(() => ({}));
-          alert(body && body.error ? body.error : `Merge failed (${res.status})`);
-        }
+      row.querySelector('.merge-btn')?.addEventListener('click', () => {
+        openMergeModal(data.id, data.fullName);
       });
     });
 

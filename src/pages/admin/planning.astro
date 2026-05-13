@@ -1,0 +1,215 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { env } from 'cloudflare:workers';
+import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return Astro.redirect(loginUrlFor(Astro.request));
+}
+
+interface PlanningRow {
+  Id: number;
+  Sort: number;
+  Label: string;
+  IsDone: number;
+  Notes: string | null;
+  UpdatedBy: string | null;
+  UpdatedAt: string;
+}
+
+const result = await env.DB
+  .prepare(`SELECT Id, Sort, Label, IsDone, Notes, UpdatedBy, UpdatedAt FROM PlanningItems ORDER BY Sort ASC, Id ASC`)
+  .all<PlanningRow>();
+const items = result.results ?? [];
+
+const total = items.length;
+const done = items.filter((i) => i.IsDone === 1).length;
+const remaining = total - done;
+const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+---
+
+<AdminLayout title="Planning" adminEmail={admin.email}>
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">Behind the scenes</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Event planning</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        The reunion checklist. Tick items off as they're locked in and capture <em>how</em>
+        they got solved in the notes so the rest of the crew can pick up where you left off.
+      </p>
+    </div>
+  </header>
+
+  <!-- PROGRESS TILES -->
+  <section class="mb-10">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="admin-tile">
+        <div class="admin-tile-label">Items</div>
+        <div class="admin-tile-value">{total}</div>
+        <div class="admin-tile-sub">on the checklist</div>
+      </div>
+      <div class="admin-tile is-emerald">
+        <div class="admin-tile-label">Done</div>
+        <div class="admin-tile-value">{done}</div>
+        <div class="admin-tile-sub">solved</div>
+      </div>
+      <div class="admin-tile is-brand">
+        <div class="admin-tile-label">Remaining</div>
+        <div class="admin-tile-value">{remaining}</div>
+        <div class="admin-tile-sub">to nail down</div>
+      </div>
+      <div class="admin-tile">
+        <div class="admin-tile-label">Progress</div>
+        <div class="admin-tile-value">{percent}<span class="text-xl">%</span></div>
+        <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-cream-200">
+          <div class="h-full bg-brand-500 transition-[width] duration-300" style={`width:${percent}%`}></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKLIST -->
+  <section class="mb-12">
+    <header class="mb-4 flex items-baseline justify-between gap-3">
+      <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Checklist</h2>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">click to toggle · type to save</span>
+    </header>
+
+    {items.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-12 text-center">
+        <p class="font-script text-2xl text-cream-700">No items yet.</p>
+        <p class="mt-2 text-sm text-cream-700">Run the latest D1 migration to seed the default list.</p>
+      </div>
+    ) : (
+      <ul class="space-y-3">
+        {items.map((item) => {
+          const updatedLabel = item.UpdatedBy && item.UpdatedAt
+            ? `Last updated by ${item.UpdatedBy.split('@')[0]} · ${new Date(item.UpdatedAt + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+            : '';
+          return (
+            <li
+              class:list={[
+                'planning-row rounded-2xl border bg-white/90 px-4 py-4 shadow-soft transition-colors duration-150 sm:px-5',
+                item.IsDone === 1 ? 'border-emerald-300 bg-emerald-50/40' : 'border-cream-300',
+              ]}
+              data-item-id={item.Id}
+            >
+              <div class="flex flex-wrap items-start gap-3 sm:flex-nowrap">
+                <label class="flex items-center gap-3 pt-0.5">
+                  <input
+                    type="checkbox"
+                    class="done-cb h-5 w-5 cursor-pointer accent-emerald-600"
+                    checked={item.IsDone === 1}
+                  />
+                </label>
+                <div class="flex-1 min-w-0">
+                  <p
+                    class:list={[
+                      'font-heading text-base font-semibold tracking-[0.01em] sm:text-lg',
+                      item.IsDone === 1 ? 'text-brand-700 line-through decoration-emerald-500/60 decoration-2' : 'text-brand-900',
+                    ]}
+                  >
+                    {item.Label}
+                  </p>
+                  <textarea
+                    class="notes-input mt-2 block w-full resize-y rounded-lg border-2 border-cream-300 bg-white px-3 py-2 text-sm text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                    rows="2"
+                    placeholder="How is this being handled? (vendor, contact, status…)"
+                    data-initial={item.Notes ?? ''}
+                  >{item.Notes ?? ''}</textarea>
+                  <div class="mt-1.5 flex items-center justify-between gap-2 text-xs">
+                    <span class="status-label font-mono uppercase tracking-[0.18em] text-cream-700">{updatedLabel}</span>
+                    <span class="save-flag hidden font-mono uppercase tracking-[0.18em]"></span>
+                  </div>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </section>
+</AdminLayout>
+
+<script is:inline>
+  (function () {
+    const rows = document.querySelectorAll('.planning-row');
+
+    function flag(row, text, tone) {
+      const el = row.querySelector('.save-flag');
+      if (!el) return;
+      el.textContent = text;
+      el.classList.remove('hidden', 'text-brand-700', 'text-emerald-700', 'text-rose-700');
+      el.classList.add(
+        tone === 'ok'    ? 'text-emerald-700' :
+        tone === 'error' ? 'text-rose-700'    :
+                           'text-brand-700',
+      );
+    }
+    function clearFlag(row) {
+      row.querySelector('.save-flag')?.classList.add('hidden');
+    }
+
+    async function patch(id, payload) {
+      const res = await fetch('/api/admin/planning', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...payload }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body && body.error ? body.error : `Failed (${res.status})`);
+      }
+      return res.json();
+    }
+
+    rows.forEach((row) => {
+      const id = Number(row.getAttribute('data-item-id'));
+      const checkbox = row.querySelector('.done-cb');
+      const notes = row.querySelector('.notes-input');
+
+      checkbox?.addEventListener('change', async () => {
+        const isDone = checkbox.checked;
+        flag(row, 'saving…', 'info');
+        try {
+          await patch(id, { isDone });
+          // Apply visual state immediately without a full reload.
+          row.classList.toggle('border-emerald-300', isDone);
+          row.classList.toggle('bg-emerald-50/40', isDone);
+          row.classList.toggle('border-cream-300', !isDone);
+          const label = row.querySelector('p.font-heading');
+          if (label) {
+            label.classList.toggle('line-through', isDone);
+            label.classList.toggle('decoration-emerald-500/60', isDone);
+            label.classList.toggle('decoration-2', isDone);
+            label.classList.toggle('text-brand-700', isDone);
+            label.classList.toggle('text-brand-900', !isDone);
+          }
+          flag(row, isDone ? 'done ✓' : 'reopened', 'ok');
+          setTimeout(() => clearFlag(row), 1400);
+        } catch (err) {
+          checkbox.checked = !isDone; // revert
+          flag(row, err.message || 'save failed', 'error');
+        }
+      });
+
+      let timer = null;
+      notes?.addEventListener('input', () => {
+        if (timer) clearTimeout(timer);
+        flag(row, 'typing…', 'info');
+        timer = setTimeout(async () => {
+          const value = notes.value;
+          try {
+            await patch(id, { notes: value });
+            notes.setAttribute('data-initial', value);
+            flag(row, 'saved', 'ok');
+            setTimeout(() => clearFlag(row), 1200);
+          } catch (err) {
+            flag(row, err.message || 'save failed', 'error');
+          }
+        }, 600);
+      });
+    });
+  })();
+</script>
