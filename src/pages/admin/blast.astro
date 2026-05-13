@@ -24,7 +24,14 @@ interface UnsubRow {
   SyncedAt: string;
 }
 
-const BUILD_MARKER = '2026-05-12T21:25Z';
+const BUILD_MARKER = '2026-05-12T21:30Z';
+
+function fmtDate(iso: string): string {
+  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
+}
 
 const audienceOptions = [
   { value: 'rsvp-yes',   label: 'RSVPs · Yes only',     desc: 'Confirmed attendees.' },
@@ -198,7 +205,61 @@ try {
     </div>
   </section>
 
+  <section id="unsubscribes" class="mb-12">
+    <header class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+      <div>
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">
+          Unsubscribes
+          <span class="ml-1 font-mono text-xs font-bold text-brand-700">·{unsubs.length}</span>
+        </h2>
+        <p class="mt-1 max-w-2xl text-xs text-cream-700">
+          Mirrored from the Resend audience. These addresses are auto-excluded from every send.
+        </p>
+        {!audienceConfigured ? (
+          <p class="mt-1 text-xs text-rose-700">Audience not created in Resend yet — click sync once to create it.</p>
+        ) : null}
+      </div>
+      <button
+        id="unsubs-sync-btn"
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-400 transition-all hover:bg-brand-50 hover:ring-brand-300"
+      >
+        <span id="unsubs-sync-label">Sync from Resend</span>
+        <span aria-hidden="true">⟳</span>
+      </button>
+    </header>
+    <p id="unsubs-sync-message" class="mb-3 hidden rounded-lg border px-4 py-2 text-sm"></p>
+    {unsubs.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-6 text-center">
+        <p class="text-sm text-cream-700">No opt-outs yet. Unsubscribe clicks from reunion emails will appear here after the next sync.</p>
+      </div>
+    ) : (
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Source</th>
+              <th>Unsubscribed</th>
+              <th>Last synced</th>
+            </tr>
+          </thead>
+          <tbody>
+            {unsubs.map((u) => (
+              <tr>
+                <td class="mono">{u.Email}</td>
+                <td><span class="pill self">{u.Source}</span></td>
+                <td class="mono dim whitespace-nowrap">{fmtDate(u.UnsubscribedAt ?? '') || '—'}</td>
+                <td class="mono dim whitespace-nowrap">{fmtDate(u.SyncedAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
   <p style="margin-top:32px; padding:16px; background:#dcfce7; border-radius:8px; font-family:monospace;">
-    STAGE 2 OK · compose section added. Will add Unsubs/History next.
+    STAGE 3 OK · unsubs section added. Will add History next.
   </p>
 </AdminLayout>
