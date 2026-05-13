@@ -7,13 +7,89 @@ const admin = await getAdmin(Astro.request, env);
 if (!admin) {
   return Astro.redirect(loginUrlFor(Astro.request));
 }
+
+interface BlastRow {
+  Id: number;
+  Subject: string;
+  Audience: string;
+  RecipientCount: number;
+  SentBy: string;
+  SentAt: string;
+}
+
+interface UnsubRow {
+  Email: string;
+  Source: string;
+  UnsubscribedAt: string | null;
+  SyncedAt: string;
+}
+
+const BUILD_MARKER = '2026-05-12T21:20Z';
+
+let yesN = 0, maybeN = 0, allN = 0, volsN = 0, everyN = 0, optedOutCount = 0;
+let blastHistory: BlastRow[] = [];
+let unsubs: UnsubRow[] = [];
+let audienceConfigured = false;
+let pageError: string | null = null;
+
+try {
+  const [yes, maybe, all, vols, every, history, optedOut] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'yes' AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'maybe' AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Volunteers WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM (
+      SELECT DISTINCT LOWER(Email) AS e FROM Rsvps WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)
+      UNION
+      SELECT DISTINCT LOWER(Email) AS e FROM Volunteers WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)
+    )`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt FROM EmailBlasts ORDER BY SentAt DESC LIMIT 10`).all<BlastRow>(),
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM Unsubscribes`).first<{ n: number }>(),
+  ]);
+  yesN = yes?.n ?? 0;
+  maybeN = maybe?.n ?? 0;
+  allN = all?.n ?? 0;
+  volsN = vols?.n ?? 0;
+  everyN = every?.n ?? 0;
+  optedOutCount = optedOut?.n ?? 0;
+  blastHistory = history.results ?? [];
+} catch (err) {
+  console.error('[blast page] count queries failed', err);
+  pageError = `count queries: ${(err as Error)?.message ?? String(err)}`;
+}
+
+try {
+  const unsubsResult = await env.DB
+    .prepare(`SELECT Email, Source, UnsubscribedAt, SyncedAt FROM Unsubscribes ORDER BY SyncedAt DESC`)
+    .all<UnsubRow>();
+  unsubs = unsubsResult.results ?? [];
+  const audienceRow = await env.DB
+    .prepare(`SELECT Value FROM Settings WHERE Key = 'resend_audience_id'`)
+    .first<{ Value: string }>();
+  audienceConfigured = !!audienceRow?.Value;
+} catch (err) {
+  console.error('[blast page] unsubs queries failed', err);
+  pageError = (pageError ? pageError + ' | ' : '') + `unsubs queries: ${(err as Error)?.message ?? String(err)}`;
+}
 ---
 
 <AdminLayout title="Email blast" adminEmail={admin.email}>
-  <div style="background: red; color: white; padding: 40px; font-size: 32px; font-weight: bold; text-align: center; border: 4px solid black;">
-    TEST CONTENT · BUILD 2026-05-12T21:15Z · IF YOU SEE THIS, THE PAGE RENDERS
+  <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-family: ui-monospace, monospace; font-size: 11px; color: #92400e;">
+    DEBUG · build {BUILD_MARKER} · counts: yes={yesN} maybe={maybeN} all={allN} vols={volsN} every={everyN} unsub={optedOutCount} · history={blastHistory.length} · unsubs={unsubs.length} · audience={audienceConfigured ? 'set' : 'unset'}
+    {pageError ? <span style="color:#9f1239;"> · ERROR: {pageError}</span> : null}
   </div>
-  <p style="margin-top: 20px; font-family: monospace;">
-    Authed as: {admin.email}
+
+  <header class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-script text-2xl text-accent-600">Announcements</p>
+      <h1 class="mt-1 font-heading text-3xl font-bold uppercase tracking-[0.05em] text-brand-900 sm:text-4xl">Email blast</h1>
+      <p class="mt-2 max-w-2xl text-sm text-cream-700">
+        Send a broadcast to classmates. Replies route to <span class="font-mono text-brand-700">{admin.email}</span>.
+      </p>
+    </div>
+  </header>
+
+  <p style="margin-top:32px; padding:16px; background:#dcfce7; border-radius:8px; font-family:monospace;">
+    STAGE 1 OK · auth + queries + header rendered. Will add Compose/Unsubs/History next.
   </p>
 </AdminLayout>
