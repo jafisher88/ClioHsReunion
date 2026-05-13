@@ -26,12 +26,13 @@ interface UnsubRow {
 }
 
 const audienceLabel: Record<string, string> = {
-  'rsvp-yes':   'RSVPs · Yes',
-  'rsvp-maybe': 'RSVPs · Maybe',
-  'rsvp-all':   'All RSVPs',
-  'volunteers': 'Volunteers',
-  'everyone':   'Everyone',
-  'custom':     'Custom list',
+  'rsvp-yes':       'RSVPs · Yes',
+  'rsvp-maybe':     'RSVPs · Maybe',
+  'rsvp-all':       'All RSVPs',
+  'volunteers':     'Volunteers',
+  'everyone':       'Everyone',
+  'roster-no-rsvp': 'Roster · not RSVP\'d',
+  'custom':         'Custom list',
 };
 
 function fmtDate(iso: string): string {
@@ -42,21 +43,22 @@ function fmtDate(iso: string): string {
 }
 
 const audienceOptions = [
-  { value: 'rsvp-yes',   label: 'RSVPs · Yes only',     desc: 'Confirmed attendees.' },
-  { value: 'rsvp-maybe', label: 'RSVPs · Maybe only',   desc: 'Tentative replies.' },
-  { value: 'rsvp-all',   label: 'RSVPs · All',           desc: 'Yes / maybe / no.' },
-  { value: 'volunteers', label: 'Volunteers',            desc: 'Day-before & day-after helpers.' },
-  { value: 'everyone',   label: 'Everyone',              desc: 'RSVPs ∪ volunteers, deduped.' },
-  { value: 'custom',     label: 'Custom list',           desc: 'Type emails by hand.' },
+  { value: 'rsvp-yes',       label: 'RSVPs · Yes only',     desc: 'Confirmed attendees.' },
+  { value: 'rsvp-maybe',     label: 'RSVPs · Maybe only',   desc: 'Tentative replies.' },
+  { value: 'rsvp-all',       label: 'RSVPs · All',           desc: 'Yes / maybe / no.' },
+  { value: 'volunteers',     label: 'Volunteers',            desc: 'Day-before & day-after helpers.' },
+  { value: 'everyone',       label: 'Everyone',              desc: 'RSVPs ∪ volunteers, deduped.' },
+  { value: 'roster-no-rsvp', label: 'Roster · not RSVP\'d',  desc: 'Classmates with email on file who haven\'t replied yet.' },
+  { value: 'custom',         label: 'Custom list',           desc: 'Type emails by hand.' },
 ];
 
-let yesN = 0, maybeN = 0, allN = 0, volsN = 0, everyN = 0, optedOutCount = 0;
+let yesN = 0, maybeN = 0, allN = 0, volsN = 0, everyN = 0, rosterNoRsvpN = 0, optedOutCount = 0;
 let blastHistory: BlastRow[] = [];
 let unsubs: UnsubRow[] = [];
 let audienceConfigured = false;
 
 try {
-  const [yes, maybe, all, vols, every, history, optedOut] = await Promise.all([
+  const [yes, maybe, all, vols, every, rosterNoRsvp, history, optedOut] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'yes' AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'maybe' AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
@@ -66,6 +68,11 @@ try {
       UNION
       SELECT DISTINCT LOWER(Email) AS e FROM Volunteers WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)
     )`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Classmates
+                     WHERE IsDeceased = 0
+                       AND Email IS NOT NULL AND TRIM(Email) <> ''
+                       AND LOWER(Email) NOT IN (SELECT LOWER(Email) FROM Rsvps WHERE Email IS NOT NULL)
+                       AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
     env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt FROM EmailBlasts ORDER BY SentAt DESC LIMIT 10`).all<BlastRow>(),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM Unsubscribes`).first<{ n: number }>(),
   ]);
@@ -74,6 +81,7 @@ try {
   allN = all?.n ?? 0;
   volsN = vols?.n ?? 0;
   everyN = every?.n ?? 0;
+  rosterNoRsvpN = rosterNoRsvp?.n ?? 0;
   optedOutCount = optedOut?.n ?? 0;
   blastHistory = history.results ?? [];
 } catch (err) {
@@ -126,11 +134,12 @@ try {
           </legend>
           <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {audienceOptions.map((opt) => {
-              const count = opt.value === 'rsvp-yes'   ? yesN
-                          : opt.value === 'rsvp-maybe' ? maybeN
-                          : opt.value === 'rsvp-all'   ? allN
-                          : opt.value === 'volunteers' ? volsN
-                          : opt.value === 'everyone'   ? everyN
+              const count = opt.value === 'rsvp-yes'       ? yesN
+                          : opt.value === 'rsvp-maybe'     ? maybeN
+                          : opt.value === 'rsvp-all'       ? allN
+                          : opt.value === 'volunteers'     ? volsN
+                          : opt.value === 'everyone'       ? everyN
+                          : opt.value === 'roster-no-rsvp' ? rosterNoRsvpN
                           : null;
               return (
                 <label class="group/r cursor-pointer">
@@ -326,10 +335,46 @@ try {
       );
     }
 
+    const subjectInput = form.elements.subject;
+    const bodyInput    = form.elements.body;
+
+    const NUDGE_SUBJECT = 'Our 20-year reunion is this November — please RSVP';
+    const NUDGE_BODY = `Hey {firstName},
+
+Quick note from the Clio High School Class of 2006 reunion crew. Our
+20-year reunion is happening this November at Round Em Up Ranch in
+Clio. All the details (date, venue, schedule, what to bring) live on
+the site:
+
+  https://cliohsreunion.com
+
+We're getting close to head-count time and don't see an RSVP from you
+yet. Even a quick "yes / maybe / no" helps us plan food, drinks, and
+seating, so please take a minute to fill it out:
+
+  https://cliohsreunion.com/rsvp
+
+If you've already replied somewhere else, sorry for the nudge — you
+can ignore this. Otherwise, we'd love to see you in November.
+
+— The planning crew
+cliohsreunion.com`;
+
     audienceInputs.forEach((input) => {
       input.addEventListener('change', () => {
-        if (input.checked && input.value === 'custom') customWrap.classList.remove('hidden');
-        else if (input.checked) customWrap.classList.add('hidden');
+        if (!input.checked) return;
+        if (input.value === 'custom') customWrap.classList.remove('hidden');
+        else customWrap.classList.add('hidden');
+
+        // For the "haven't RSVP'd yet" audience, drop in a ready-made nudge
+        // template — but only if both fields are still empty so we never
+        // trample a draft the admin was writing.
+        if (input.value === 'roster-no-rsvp'
+            && !subjectInput.value.trim()
+            && !bodyInput.value.trim()) {
+          subjectInput.value = NUDGE_SUBJECT;
+          bodyInput.value = NUDGE_BODY;
+        }
       });
     });
 
@@ -405,6 +450,7 @@ try {
         'rsvp-all': 'all RSVPs',
         'volunteers': 'volunteers',
         'everyone': 'everyone',
+        'roster-no-rsvp': 'classmates who haven\'t RSVPd yet',
         'custom': `${payload.customEmails?.length ?? 0} custom recipients`,
       };
       const label = audienceLabels[payload.audience] ?? payload.audience;

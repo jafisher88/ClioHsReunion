@@ -11,6 +11,7 @@ const VALID_AUDIENCES = new Set([
   'rsvp-all',
   'volunteers',
   'everyone',
+  'roster-no-rsvp',
   'custom',
 ]);
 
@@ -48,6 +49,12 @@ async function recipientsFor(audience: string, db: D1Database, customEmails: str
                  UNION
                  SELECT DISTINCT LOWER(Email) AS email FROM Volunteers
                )`;
+        break;
+      case 'roster-no-rsvp':
+        sql = `SELECT DISTINCT LOWER(Email) AS email FROM Classmates
+                WHERE IsDeceased = 0
+                  AND Email IS NOT NULL AND TRIM(Email) <> ''
+                  AND LOWER(Email) NOT IN (SELECT LOWER(Email) FROM Rsvps WHERE Email IS NOT NULL)`;
         break;
       default:
         return [];
