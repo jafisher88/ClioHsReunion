@@ -3,6 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 import { daysUntilEvent, getTemplateText, type ReminderKind } from '../../lib/reminders';
+import { dbToIso } from '../../lib/admin-dates';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -217,7 +218,7 @@ const reminderStatus = (() => {
               <tr>
                 <td class="mono dim">{r.ReminderKind}</td>
                 <td>{r.Email}</td>
-                <td class="mono dim whitespace-nowrap">{fmtDate(r.SentAt)}</td>
+                <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(r.SentAt)}>{fmtDate(r.SentAt)}</time></td>
               </tr>
             ))}
           </tbody>

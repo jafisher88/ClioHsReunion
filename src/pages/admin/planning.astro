@@ -2,6 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+import { dbToIso } from '../../lib/admin-dates';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -84,9 +85,10 @@ const percent = total === 0 ? 0 : Math.round((done / total) * 100);
     ) : (
       <ul class="space-y-3">
         {items.map((item) => {
-          const updatedLabel = item.UpdatedBy && item.UpdatedAt
-            ? `Last updated by ${item.UpdatedBy.split('@')[0]} · ${new Date(item.UpdatedAt + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+          const updatedBy = item.UpdatedBy && item.UpdatedAt
+            ? item.UpdatedBy.split('@')[0]
             : '';
+          const updatedIso = item.UpdatedBy && item.UpdatedAt ? dbToIso(item.UpdatedAt) : '';
           return (
             <li
               class:list={[
@@ -119,7 +121,11 @@ const percent = total === 0 ? 0 : Math.round((done / total) * 100);
                     data-initial={item.Notes ?? ''}
                   >{item.Notes ?? ''}</textarea>
                   <div class="mt-1.5 flex items-center justify-between gap-2 text-xs">
-                    <span class="status-label font-mono uppercase tracking-[0.18em] text-cream-700">{updatedLabel}</span>
+                    <span class="status-label font-mono uppercase tracking-[0.18em] text-cream-700">
+                      {updatedBy ? (
+                        <>Last updated by {updatedBy} · <time datetime={updatedIso}>{item.UpdatedAt}</time></>
+                      ) : null}
+                    </span>
                     <span class="save-flag hidden font-mono uppercase tracking-[0.18em]"></span>
                   </div>
                 </div>

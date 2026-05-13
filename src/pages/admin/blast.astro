@@ -2,6 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+import { dbToIso } from '../../lib/admin-dates';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -256,8 +257,8 @@ try {
               <tr>
                 <td class="mono">{u.Email}</td>
                 <td><span class="pill self">{u.Source}</span></td>
-                <td class="mono dim whitespace-nowrap">{fmtDate(u.UnsubscribedAt ?? '') || '—'}</td>
-                <td class="mono dim whitespace-nowrap">{fmtDate(u.SyncedAt)}</td>
+                <td class="mono dim whitespace-nowrap">{u.UnsubscribedAt ? <time datetime={dbToIso(u.UnsubscribedAt)}>{fmtDate(u.UnsubscribedAt)}</time> : '—'}</td>
+                <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(u.SyncedAt)}>{fmtDate(u.SyncedAt)}</time></td>
               </tr>
             ))}
           </tbody>
@@ -292,7 +293,7 @@ try {
                 <td class="mono dim">{audienceLabel[b.Audience] ?? b.Audience}</td>
                 <td class="num">{b.RecipientCount}</td>
                 <td class="mono dim">{b.SentBy.split('@')[0]}</td>
-                <td class="mono dim whitespace-nowrap">{fmtDate(b.SentAt)}</td>
+                <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(b.SentAt)}>{fmtDate(b.SentAt)}</time></td>
               </tr>
             ))}
           </tbody>

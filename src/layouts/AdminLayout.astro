@@ -275,5 +275,35 @@ const isActive = (href: string) => {
       .check-mark { color: #16a34a; font-weight: 700; }
       .dash-mark  { color: var(--color-cream-500); }
     </style>
+
+    <script is:inline>
+      // Convert every <time datetime="…"> on the page from UTC ISO into the
+      // viewer's local 12-hour time. Server-rendered fallback text remains
+      // until this runs (a few ms after parse).
+      (function () {
+        const now = new Date();
+        const sameYear = now.getFullYear();
+        document.querySelectorAll('time[datetime]').forEach(function (el) {
+          const iso = el.getAttribute('datetime');
+          if (!iso) return;
+          const d = new Date(iso);
+          if (isNaN(d.getTime())) return;
+          const opts = {
+            month: 'short',
+            day: 'numeric',
+            year: d.getFullYear() === sameYear ? undefined : 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          };
+          el.textContent = d.toLocaleString('en-US', opts);
+          if (!el.getAttribute('title')) {
+            el.setAttribute('title', d.toLocaleString('en-US', {
+              dateStyle: 'full', timeStyle: 'long',
+            }));
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

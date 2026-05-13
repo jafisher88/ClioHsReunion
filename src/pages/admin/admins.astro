@@ -2,6 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+import { dbToIso } from '../../lib/admin-dates';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -109,8 +110,8 @@ function fmtDate(iso: string | null): string {
                 {a.Email === admin.email && <span class="ml-2 pill self">YOU</span>}
               </td>
               <td class="mono dim">{a.AddedBy ?? '—'}</td>
-              <td class="mono dim whitespace-nowrap">{fmtDate(a.AddedAt)}</td>
-              <td class="mono dim whitespace-nowrap">{fmtDate(a.LastLoginAt)}</td>
+              <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(a.AddedAt)}>{fmtDate(a.AddedAt)}</time></td>
+              <td class="mono dim whitespace-nowrap">{a.LastLoginAt ? <time datetime={dbToIso(a.LastLoginAt)}>{fmtDate(a.LastLoginAt)}</time> : '—'}</td>
               <td class="num">
                 {a.Email === admin.email ? (
                   <span class="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-cream-700">self · locked</span>

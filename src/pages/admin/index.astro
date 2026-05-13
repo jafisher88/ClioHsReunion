@@ -2,6 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+import { dbToIso } from '../../lib/admin-dates';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -256,7 +257,7 @@ function yearbookIdentity(r: { FullName: string; GraduationName: string | null; 
                 <td><span class:list={['pill', r.Attending]}>{r.Attending}</span></td>
                 <td class="num">{r.GuestCount}</td>
                 <td class="dim max-w-xs whitespace-pre-wrap">{r.Notes ?? '—'}</td>
-                <td class="mono dim whitespace-nowrap">{fmtDate(r.CreatedAt)}</td>
+                <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(r.CreatedAt)}>{fmtDate(r.CreatedAt)}</time></td>
               </tr>
             );
           })}
@@ -296,7 +297,7 @@ function yearbookIdentity(r: { FullName: string; GraduationName: string | null; 
               <td>{v.RoleSetup ? <span class="check-mark">✓</span> : <span class="dash-mark">—</span>}</td>
               <td>{v.RoleCleanup ? <span class="check-mark">✓</span> : <span class="dash-mark">—</span>}</td>
               <td class="dim max-w-xs whitespace-pre-wrap">{v.Notes ?? '—'}</td>
-              <td class="mono dim whitespace-nowrap">{fmtDate(v.CreatedAt)}</td>
+              <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(v.CreatedAt)}>{fmtDate(v.CreatedAt)}</time></td>
             </tr>
           ))}
         </tbody>

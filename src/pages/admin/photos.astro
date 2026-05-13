@@ -2,6 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
+import { dbToIso } from '../../lib/admin-dates';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -105,7 +106,7 @@ function fmtDate(iso: string): string {
           <div class="p-4 space-y-2 text-sm">
             <div class="flex items-baseline justify-between gap-2">
               <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">#{p.Id}</span>
-              <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">{fmtDate(p.CreatedAt)}</span>
+              <time datetime={dbToIso(p.CreatedAt)} class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">{fmtDate(p.CreatedAt)}</time>
             </div>
 
             {p.Caption && (
