@@ -16,6 +16,11 @@ interface RosterRow {
   Email: string | null;
   Notes: string | null;
   IsDeceased: number;
+  BirthYear: number | null;
+  PassingYear: number | null;
+  Tribute: string | null;
+  PhotoUrl: string | null;
+  ObituaryUrl: string | null;
   RsvpAttending: 'yes' | 'no' | 'maybe' | null;
   RsvpGuests: number | null;
   RsvpEmail: string | null;
@@ -31,6 +36,7 @@ interface RosterRow {
 const rosterResult = await env.DB
   .prepare(
     `SELECT c.Id, c.FullName, c.MaidenName, c.PreferredFirstName, c.Email, c.Notes, c.IsDeceased,
+            c.BirthYear, c.PassingYear, c.Tribute, c.PhotoUrl, c.ObituaryUrl,
             r.Attending      AS RsvpAttending,
             r.GuestCount     AS RsvpGuests,
             r.Email          AS RsvpEmail
@@ -174,6 +180,11 @@ const unmatched = unmatchedResult.results ?? [];
                 email: r.Email ?? '',
                 notes: r.Notes ?? '',
                 isDeceased: r.IsDeceased === 1,
+                birthYear: r.BirthYear ?? '',
+                passingYear: r.PassingYear ?? '',
+                tribute: r.Tribute ?? '',
+                photoUrl: r.PhotoUrl ?? '',
+                obituaryUrl: r.ObituaryUrl ?? '',
               });
               const searchHay = `${r.FullName} ${r.MaidenName ?? ''} ${r.PreferredFirstName ?? ''} ${r.Email ?? ''} ${r.RsvpEmail ?? ''}`.toLowerCase();
               const nameParts = r.FullName.trim().split(/\s+/);
@@ -322,9 +333,70 @@ const unmatched = unmatchedResult.results ?? [];
           </label>
 
           <label class="flex items-center gap-2 sm:col-span-2">
-            <input type="checkbox" name="isDeceased" class="h-4 w-4 accent-brand-500" />
-            <span class="text-sm text-brand-900">Mark as deceased (and add a tribute on the In Memoriam page if you'd like).</span>
+            <input id="cm-deceased-cb" type="checkbox" name="isDeceased" class="h-4 w-4 accent-brand-500" />
+            <span class="text-sm text-brand-900">Mark as deceased — show memorial details below.</span>
           </label>
+
+          <div id="cm-memorial-section" class="hidden sm:col-span-2 mt-1 rounded-2xl border border-cream-300 bg-cream-100/60 p-4 space-y-4">
+            <header class="flex items-baseline justify-between gap-2">
+              <p class="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-brand-700">Memorial details</p>
+              <p class="text-xs italic text-cream-700">Shown on the public <a href="/memoriam" class="underline hover:text-brand-700" target="_blank" rel="noopener">In Memoriam</a> page.</p>
+            </header>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label class="block">
+                <span class="block text-sm font-semibold text-brand-900">Birth year <span class="font-normal text-cream-700">(optional)</span></span>
+                <input
+                  type="number"
+                  name="birthYear"
+                  min="1900"
+                  max="2100"
+                  class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 tabular-nums transition-colors duration-150 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                />
+              </label>
+
+              <label class="block">
+                <span class="block text-sm font-semibold text-brand-900">Passing year <span class="font-normal text-cream-700">(optional)</span></span>
+                <input
+                  type="number"
+                  name="passingYear"
+                  min="1900"
+                  max="2100"
+                  class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 tabular-nums transition-colors duration-150 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                />
+              </label>
+
+              <label class="block sm:col-span-2">
+                <span class="block text-sm font-semibold text-brand-900">Obituary URL <span class="font-normal text-cream-700">(optional)</span></span>
+                <p class="text-xs text-cream-700">Funeral home / Legacy.com / newspaper link.</p>
+                <input
+                  type="url"
+                  name="obituaryUrl"
+                  placeholder="https://www.legacy.com/…"
+                  class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                />
+              </label>
+
+              <label class="block sm:col-span-2">
+                <span class="block text-sm font-semibold text-brand-900">Photo URL <span class="font-normal text-cream-700">(optional)</span></span>
+                <input
+                  type="url"
+                  name="photoUrl"
+                  placeholder="https://…"
+                  class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                />
+              </label>
+
+              <label class="block sm:col-span-2">
+                <span class="block text-sm font-semibold text-brand-900">Tribute <span class="font-normal text-cream-700">(optional)</span></span>
+                <textarea
+                  name="tribute"
+                  rows="4"
+                  class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                ></textarea>
+              </label>
+            </div>
+          </div>
         </div>
       </form>
       <footer class="flex items-center justify-end gap-3 border-t border-cream-300 bg-cream-100/50 px-6 py-3">
@@ -466,6 +538,13 @@ const unmatched = unmatchedResult.results ?? [];
       );
     }
 
+    const cmMemorialSection = document.getElementById('cm-memorial-section');
+    const cmDeceasedCb = document.getElementById('cm-deceased-cb');
+    function syncMemorialVisibility() {
+      cmMemorialSection?.classList.toggle('hidden', !cmDeceasedCb?.checked);
+    }
+    cmDeceasedCb?.addEventListener('change', syncMemorialVisibility);
+
     // -------- Add/Edit modal --------
     function openClassmateModal(data) {
       cmForm.reset();
@@ -481,12 +560,18 @@ const unmatched = unmatchedResult.results ?? [];
         cmForm.elements.email.value = data.email ?? '';
         cmForm.elements.notes.value = data.notes ?? '';
         cmForm.elements.isDeceased.checked = !!data.isDeceased;
+        cmForm.elements.birthYear.value   = data.birthYear   ?? '';
+        cmForm.elements.passingYear.value = data.passingYear ?? '';
+        cmForm.elements.tribute.value     = data.tribute     ?? '';
+        cmForm.elements.photoUrl.value    = data.photoUrl    ?? '';
+        cmForm.elements.obituaryUrl.value = data.obituaryUrl ?? '';
       } else {
         cmKicker.textContent = 'Roster';
         cmTitle.textContent = 'Add classmate';
         cmSubmitLabel.textContent = 'Save classmate';
         cmForm.elements.id.value = '';
       }
+      syncMemorialVisibility();
       cmModal.classList.remove('hidden');
       cmModal.classList.add('flex');
       setTimeout(() => cmForm.elements.fullName.focus(), 0);
@@ -513,6 +598,11 @@ const unmatched = unmatchedResult.results ?? [];
         email: fd.get('email'),
         notes: fd.get('notes'),
         isDeceased: fd.get('isDeceased') === 'on',
+        birthYear:   fd.get('birthYear')   ? Number(fd.get('birthYear'))   : null,
+        passingYear: fd.get('passingYear') ? Number(fd.get('passingYear')) : null,
+        tribute:     fd.get('tribute'),
+        photoUrl:    fd.get('photoUrl'),
+        obituaryUrl: fd.get('obituaryUrl'),
       };
       setMessage(cmMessage, 'Saving…', 'info');
       try {

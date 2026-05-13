@@ -10,13 +10,15 @@ interface MemoriamRow {
   PassingYear: number | null;
   Tribute: string | null;
   PhotoUrl: string | null;
+  ObituaryUrl: string | null;
 }
 
 const result = await env.DB
   .prepare(
-    `SELECT Id, FullName, MaidenName, BirthYear, PassingYear, Tribute, PhotoUrl
-       FROM MemoriamEntries
-       ORDER BY FullName ASC`
+    `SELECT Id, FullName, MaidenName, BirthYear, PassingYear, Tribute, PhotoUrl, ObituaryUrl
+       FROM Classmates
+      WHERE IsDeceased = 1
+      ORDER BY FullName COLLATE NOCASE ASC`
   )
   .all<MemoriamRow>();
 const entries = result.results ?? [];
@@ -81,6 +83,19 @@ const entries = result.results ?? [];
                 )}
                 {e.Tribute && (
                   <p class="mt-4 text-brand-800 leading-relaxed whitespace-pre-line">{e.Tribute}</p>
+                )}
+                {e.ObituaryUrl && (
+                  <p class="mt-4">
+                    <a
+                      href={e.ObituaryUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1.5 font-mono text-[0.7rem] uppercase tracking-[0.18em] text-brand-700 underline decoration-accent-400 decoration-2 underline-offset-4 hover:text-brand-900"
+                    >
+                      Read obituary
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                  </p>
                 )}
               </div>
             </div>

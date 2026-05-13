@@ -5,6 +5,10 @@ import { getAdmin } from '../../../lib/admin-auth';
 const MAX_NAME = 200;
 const MAX_NOTES = 2000;
 const MAX_EMAIL = 320;
+const MAX_TRIBUTE = 4000;
+const MAX_URL = 2000;
+const MIN_YEAR = 1900;
+const MAX_YEAR = 2100;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function jsonError(message: string, status: number): Response {
@@ -17,6 +21,14 @@ function clampText(value: unknown, max: number): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
+function parseYear(value: unknown): number | null | 'invalid' {
+  if (value === null || value === undefined || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(n)) return 'invalid';
+  if (n < MIN_YEAR || n > MAX_YEAR) return 'invalid';
+  return n;
+}
+
 interface ClassmateInput {
   fullName: string;
   maidenName: string | null;
@@ -24,6 +36,11 @@ interface ClassmateInput {
   email: string | null;
   notes: string | null;
   isDeceased: boolean;
+  birthYear: number | null;
+  passingYear: number | null;
+  tribute: string | null;
+  photoUrl: string | null;
+  obituaryUrl: string | null;
 }
 
 function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: false; error: string } {
@@ -37,6 +54,11 @@ function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: fa
   const email = emailRaw ? emailRaw.toLowerCase() : null;
   if (email && !EMAIL_RE.test(email)) return { ok: false, error: 'Email looks invalid.' };
 
+  const birthYear = parseYear(b.birthYear);
+  if (birthYear === 'invalid') return { ok: false, error: `Birth year must be between ${MIN_YEAR} and ${MAX_YEAR}.` };
+  const passingYear = parseYear(b.passingYear);
+  if (passingYear === 'invalid') return { ok: false, error: `Passing year must be between ${MIN_YEAR} and ${MAX_YEAR}.` };
+
   return {
     ok: true,
     value: {
@@ -46,6 +68,11 @@ function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: fa
       email,
       notes: clampText(b.notes, MAX_NOTES),
       isDeceased: b.isDeceased === true,
+      birthYear,
+      passingYear,
+      tribute: clampText(b.tribute, MAX_TRIBUTE),
+      photoUrl: clampText(b.photoUrl, MAX_URL),
+      obituaryUrl: clampText(b.obituaryUrl, MAX_URL),
     },
   };
 }
@@ -102,8 +129,10 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const res = await env.DB
       .prepare(
-        `INSERT INTO Classmates (FullName, MaidenName, PreferredFirstName, Email, Notes, IsDeceased, CreatedBy)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+        `INSERT INTO Classmates
+           (FullName, MaidenName, PreferredFirstName, Email, Notes, IsDeceased,
+            BirthYear, PassingYear, Tribute, PhotoUrl, ObituaryUrl, CreatedBy)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
       )
       .bind(
         result.value.fullName,
@@ -112,6 +141,11 @@ export const POST: APIRoute = async ({ request }) => {
         result.value.email,
         result.value.notes,
         result.value.isDeceased ? 1 : 0,
+        result.value.isDeceased ? result.value.birthYear   : null,
+        result.value.isDeceased ? result.value.passingYear : null,
+        result.value.isDeceased ? result.value.tribute     : null,
+        result.value.isDeceased ? result.value.photoUrl    : null,
+        result.value.isDeceased ? result.value.obituaryUrl : null,
         admin.email,
       )
       .run();
@@ -148,8 +182,13 @@ export const PATCH: APIRoute = async ({ request }) => {
         `UPDATE Classmates
             SET FullName = ?1, MaidenName = ?2, PreferredFirstName = ?3,
                 Email = ?4, Notes = ?5, IsDeceased = ?6,
+                BirthYear   = ?7,
+                PassingYear = ?8,
+                Tribute     = ?9,
+                PhotoUrl    = ?10,
+                ObituaryUrl = ?11,
                 UpdatedAt = CURRENT_TIMESTAMP
-          WHERE Id = ?7`
+          WHERE Id = ?12`
       )
       .bind(
         result.value.fullName,
@@ -158,6 +197,11 @@ export const PATCH: APIRoute = async ({ request }) => {
         result.value.email,
         result.value.notes,
         result.value.isDeceased ? 1 : 0,
+        result.value.isDeceased ? result.value.birthYear   : null,
+        result.value.isDeceased ? result.value.passingYear : null,
+        result.value.isDeceased ? result.value.tribute     : null,
+        result.value.isDeceased ? result.value.photoUrl    : null,
+        result.value.isDeceased ? result.value.obituaryUrl : null,
         id,
       )
       .run();
