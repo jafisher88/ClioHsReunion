@@ -24,7 +24,16 @@ interface UnsubRow {
   SyncedAt: string;
 }
 
-const BUILD_MARKER = '2026-05-12T21:30Z';
+const BUILD_MARKER = '2026-05-12T21:35Z';
+
+const audienceLabel: Record<string, string> = {
+  'rsvp-yes':   'RSVPs · Yes',
+  'rsvp-maybe': 'RSVPs · Maybe',
+  'rsvp-all':   'All RSVPs',
+  'volunteers': 'Volunteers',
+  'everyone':   'Everyone',
+  'custom':     'Custom list',
+};
 
 function fmtDate(iso: string): string {
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
@@ -259,7 +268,186 @@ try {
     )}
   </section>
 
+  {blastHistory.length > 0 ? (
+    <section class="mb-12">
+      <header class="mb-4 flex items-baseline justify-between gap-3">
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Recent sends</h2>
+        <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">last 10</span>
+      </header>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Subject</th>
+              <th>Audience</th>
+              <th class="num">Recipients</th>
+              <th>Sent by</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody>
+            {blastHistory.map((b) => (
+              <tr>
+                <td class="num mono dim">#{b.Id}</td>
+                <td><span class="font-semibold">{b.Subject}</span></td>
+                <td class="mono dim">{audienceLabel[b.Audience] ?? b.Audience}</td>
+                <td class="num">{b.RecipientCount}</td>
+                <td class="mono dim">{b.SentBy.split('@')[0]}</td>
+                <td class="mono dim whitespace-nowrap">{fmtDate(b.SentAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ) : null}
+
   <p style="margin-top:32px; padding:16px; background:#dcfce7; border-radius:8px; font-family:monospace;">
-    STAGE 3 OK · unsubs section added. Will add History next.
+    STAGE 4 OK · history section added + client JS. Will remove debug banner next.
   </p>
 </AdminLayout>
+
+<script is:inline>
+  (function () {
+    const form = document.getElementById('blast-form');
+    const message = document.getElementById('blast-message');
+    const sendTestBtn = document.getElementById('send-test');
+    const sendLiveBtn = document.getElementById('send-live');
+    const sendLiveLabel = document.getElementById('send-live-label');
+    const customWrap = document.getElementById('custom-emails-wrap');
+    const customTextarea = document.getElementById('custom-emails');
+    if (!form) return;
+    const audienceInputs = form.querySelectorAll('input[name="audience"]');
+
+    function setMessage(text, tone) {
+      message.textContent = text;
+      message.classList.remove('hidden', 'text-brand-700', 'text-rose-700', 'text-emerald-700');
+      message.classList.add(
+        tone === 'error' ? 'text-rose-700' :
+        tone === 'ok'    ? 'text-emerald-700' :
+                           'text-brand-700',
+      );
+    }
+
+    audienceInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        if (input.checked && input.value === 'custom') customWrap.classList.remove('hidden');
+        else if (input.checked) customWrap.classList.add('hidden');
+      });
+    });
+
+    function parseCustomEmails() {
+      return (customTextarea.value || '').split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    }
+
+    function readPayload() {
+      const fd = new FormData(form);
+      const audience = String(fd.get('audience') ?? '');
+      const payload = {
+        subject: String(fd.get('subject') ?? '').trim(),
+        body:    String(fd.get('body') ?? '').trim(),
+        audience,
+      };
+      if (audience === 'custom') payload.customEmails = parseCustomEmails();
+      return payload;
+    }
+
+    async function send(testMode) {
+      const payload = readPayload();
+      if (!payload.audience) { setMessage('Pick an audience.', 'error'); return; }
+      if (!payload.subject)  { setMessage('Subject required.', 'error'); return; }
+      if (!payload.body)     { setMessage('Message body required.', 'error'); return; }
+      if (payload.audience === 'custom' && (!payload.customEmails || payload.customEmails.length === 0)) {
+        setMessage('Add at least one custom email.', 'error');
+        return;
+      }
+      sendTestBtn.disabled = true;
+      sendLiveBtn.disabled = true;
+      sendLiveLabel.textContent = testMode ? 'Sending test…' : 'Sending…';
+      setMessage(testMode ? 'Sending test to you…' : 'Sending blast…', 'info');
+      try {
+        const res = await fetch('/api/admin/blast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, testMode: !!testMode }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessage((body && body.error) || `Failed (${res.status})`, 'error');
+          return;
+        }
+        if (testMode) setMessage('Test sent — check your inbox.', 'ok');
+        else {
+          setMessage(`Sent to ${body.recipientCount} recipient${body.recipientCount === 1 ? '' : 's'}. Reloading…`, 'ok');
+          setTimeout(() => location.reload(), 1200);
+        }
+      } catch {
+        setMessage('Network error.', 'error');
+      } finally {
+        sendTestBtn.disabled = false;
+        sendLiveBtn.disabled = false;
+        sendLiveLabel.textContent = 'Send to audience';
+      }
+    }
+
+    sendTestBtn.addEventListener('click', () => {
+      const payload = readPayload();
+      if (!payload.subject || !payload.body) {
+        setMessage('Fill out subject + body before sending a test.', 'error');
+        return;
+      }
+      send(true);
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const payload = readPayload();
+      const audienceLabels = {
+        'rsvp-yes': 'Yes RSVPs',
+        'rsvp-maybe': 'Maybe RSVPs',
+        'rsvp-all': 'all RSVPs',
+        'volunteers': 'volunteers',
+        'everyone': 'everyone',
+        'custom': `${payload.customEmails?.length ?? 0} custom recipients`,
+      };
+      const label = audienceLabels[payload.audience] ?? payload.audience;
+      if (!confirm(`Send "${payload.subject}" to ${label}? This cannot be unsent.`)) return;
+      send(false);
+    });
+  })();
+
+  (function () {
+    const btn = document.getElementById('unsubs-sync-btn');
+    const label = document.getElementById('unsubs-sync-label');
+    const msg = document.getElementById('unsubs-sync-message');
+    if (!btn || !label || !msg) return;
+    function show(text, tone) {
+      msg.textContent = text;
+      msg.classList.remove('hidden', 'border-rose-300', 'bg-rose-50', 'text-rose-800', 'border-emerald-300', 'bg-emerald-50', 'text-emerald-800', 'border-cream-300', 'bg-white/70', 'text-brand-800');
+      if (tone === 'error') msg.classList.add('border-rose-300', 'bg-rose-50', 'text-rose-800');
+      else if (tone === 'ok') msg.classList.add('border-emerald-300', 'bg-emerald-50', 'text-emerald-800');
+      else msg.classList.add('border-cream-300', 'bg-white/70', 'text-brand-800');
+    }
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      label.textContent = 'Syncing…';
+      try {
+        const res = await fetch('/api/admin/unsubscribes/sync', { method: 'POST' });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          show(body && body.error ? body.error : `Sync failed (${res.status})`, 'error');
+          btn.disabled = false;
+          label.textContent = 'Sync from Resend';
+          return;
+        }
+        show(`Synced — ${body.fetched} contacts · ${body.upserted} opted out · ${body.cleared} re-subscribed. Reloading…`, 'ok');
+        setTimeout(() => location.reload(), 1200);
+      } catch {
+        show('Network error.', 'error');
+        btn.disabled = false;
+        label.textContent = 'Sync from Resend';
+      }
+    });
+  })();
+</script>
