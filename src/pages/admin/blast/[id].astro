@@ -94,6 +94,15 @@ for (const s of sends) {
 }
 const tallyEntries = Object.entries(tally).sort((a, b) => b[1] - a[1]);
 
+// "Stats freshness" — newest LastCheckedAt across all sends. Now that the
+// webhook lands events in real time, this also serves as a "data is live"
+// indicator: if the freshest check is recent, you're looking at live state.
+let freshestCheck: string | null = null;
+for (const s of sends) {
+  if (!s.LastCheckedAt) continue;
+  if (!freshestCheck || s.LastCheckedAt > freshestCheck) freshestCheck = s.LastCheckedAt;
+}
+
 // Status pill color map. Anything not listed falls back to "neutral".
 function statusClass(status: string): string {
   switch (status) {
@@ -161,18 +170,37 @@ const noTracking = sends.length === 0;
           {sends.length > 0 ? <span class="ml-1 font-mono text-xs font-bold text-brand-700">·{sends.length}</span> : null}
         </h2>
         <p class="mt-1 max-w-2xl text-xs text-cream-700">
-          Status comes from Resend. Click <strong>Refresh statuses</strong> to poll the latest event for every recipient.
+          Statuses arrive automatically via Resend's webhook. Use <strong>Refresh</strong> if you suspect drift.
         </p>
+        {freshestCheck ? (
+          <p class="mt-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-cream-700">
+            Freshest update: <time datetime={dbToIso(freshestCheck)} data-relative="true">{fmtDate(freshestCheck)}</time>
+          </p>
+        ) : (
+          <p class="mt-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-cream-700">
+            No update yet — webhook hasn't fired and no manual refresh.
+          </p>
+        )}
       </div>
       {!noTracking ? (
-        <button
-          id="refresh-btn"
-          type="button"
-          class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-400 transition-all hover:bg-brand-50 hover:ring-brand-300"
-        >
-          <span id="refresh-label">Refresh statuses</span>
-          <span aria-hidden="true">⟳</span>
-        </button>
+        <div class="flex flex-col items-end gap-1">
+          <button
+            id="refresh-btn"
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-400 transition-all hover:bg-brand-50 hover:ring-brand-300"
+          >
+            <span id="refresh-label">Refresh statuses</span>
+            <span aria-hidden="true">⟳</span>
+          </button>
+          <button
+            id="refresh-force-btn"
+            type="button"
+            class="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-cream-700 underline-offset-2 hover:text-brand-700 hover:underline"
+            title="Re-poll every recipient, even ones we just checked"
+          >
+            Force re-poll all
+          </button>
+        </div>
       ) : null}
     </header>
 
@@ -242,8 +270,34 @@ const noTracking = sends.length === 0;
 </style>
 
 <script is:inline define:vars={{ blastId }}>
+  // Render any <time data-relative="true"> as a relative phrase
+  // ("3 minutes ago", "just now"). Overrides the AdminLayout's absolute
+  // formatter for these specific elements.
+  (function () {
+    function relative(then) {
+      const seconds = Math.max(0, (Date.now() - then.getTime()) / 1000);
+      if (seconds < 45)             return 'just now';
+      if (seconds < 90)             return 'about a minute ago';
+      const minutes = Math.round(seconds / 60);
+      if (minutes < 60)             return `${minutes} minutes ago`;
+      const hours = Math.round(minutes / 60);
+      if (hours < 24)               return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+      const days = Math.round(hours / 24);
+      return `${days} day${days === 1 ? '' : 's'} ago`;
+    }
+    document.querySelectorAll('time[data-relative="true"][datetime]').forEach((el) => {
+      const iso = el.getAttribute('datetime');
+      if (!iso) return;
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return;
+      el.textContent = relative(d);
+      el.setAttribute('title', d.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'long' }));
+    });
+  })();
+
   (function () {
     const btn = document.getElementById('refresh-btn');
+    const forceBtn = document.getElementById('refresh-force-btn');
     const label = document.getElementById('refresh-label');
     const msg = document.getElementById('refresh-message');
     if (!btn || !label || !msg) return;
@@ -261,16 +315,30 @@ const noTracking = sends.length === 0;
       else                       msg.classList.add('border-cream-300', 'bg-white/70', 'text-brand-800');
     }
 
-    btn.addEventListener('click', async () => {
+    function summarizeSkips(skipped) {
+      if (!skipped || typeof skipped !== 'object') return '';
+      const parts = [];
+      if (skipped.recentlyChecked) parts.push(`${skipped.recentlyChecked} recently checked`);
+      if (skipped.terminal)        parts.push(`${skipped.terminal} terminal`);
+      if (skipped.noResendId)      parts.push(`${skipped.noResendId} no Resend id`);
+      return parts.length ? ` · skipped ${parts.join(', ')}` : '';
+    }
+
+    async function runRefresh(force) {
       btn.disabled = true;
-      label.textContent = 'Refreshing…';
-      show('Polling Resend for each recipient — this can take a minute on bigger sends.', 'info');
+      if (forceBtn) forceBtn.disabled = true;
+      label.textContent = force ? 'Force re-polling…' : 'Refreshing…';
+      show(force
+        ? 'Re-polling every recipient regardless of recency. This can take a bit on bigger sends.'
+        : 'Polling Resend for recipients without a recent update.', 'info');
       try {
-        const res = await fetch(`/api/admin/blast/${blastId}/refresh`, { method: 'POST' });
+        const url = `/api/admin/blast/${blastId}/refresh${force ? '?force=1' : ''}`;
+        const res = await fetch(url, { method: 'POST' });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
           show((body && body.error) || `Refresh failed (${res.status})`, 'error');
           btn.disabled = false;
+          if (forceBtn) forceBtn.disabled = false;
           label.textContent = 'Refresh statuses';
           return;
         }
@@ -279,6 +347,7 @@ const noTracking = sends.length === 0;
         show(
           `Polled ${body.polled} · ${body.updated} status changes` +
             (body.notFound ? ` · ${body.notFound} not found in Resend` : '') +
+            summarizeSkips(body.skipped) +
             (parts.length ? ` · ${parts.join(', ')}` : '') +
             '. Reloading…',
           'ok',
@@ -287,8 +356,12 @@ const noTracking = sends.length === 0;
       } catch {
         show('Network error.', 'error');
         btn.disabled = false;
+        if (forceBtn) forceBtn.disabled = false;
         label.textContent = 'Refresh statuses';
       }
-    });
+    }
+
+    btn.addEventListener('click', () => runRefresh(false));
+    if (forceBtn) forceBtn.addEventListener('click', () => runRefresh(true));
   })();
 </script>
