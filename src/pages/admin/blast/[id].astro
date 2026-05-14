@@ -169,16 +169,24 @@ const noTracking = sends.length === 0;
           Per-recipient status
           {sends.length > 0 ? <span class="ml-1 font-mono text-xs font-bold text-brand-700">·{sends.length}</span> : null}
         </h2>
-        <p class="mt-1 max-w-2xl text-xs text-cream-700">
-          Statuses arrive automatically via Resend's webhook. Use <strong>Refresh</strong> if you suspect drift.
-        </p>
-        {freshestCheck ? (
-          <p class="mt-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-cream-700">
-            Freshest update: <time datetime={dbToIso(freshestCheck)} data-relative="true">{fmtDate(freshestCheck)}</time>
-          </p>
+        {!noTracking ? (
+          <>
+            <p class="mt-1 max-w-2xl text-xs text-cream-700">
+              Statuses arrive automatically via Resend's webhook. Use <strong>Refresh</strong> if you suspect drift.
+            </p>
+            {freshestCheck ? (
+              <p class="mt-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-cream-700">
+                Freshest update: <time datetime={dbToIso(freshestCheck)} data-relative="true">{fmtDate(freshestCheck)}</time>
+              </p>
+            ) : (
+              <p class="mt-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-cream-700">
+                No update yet — webhook hasn't fired and no manual refresh.
+              </p>
+            )}
+          </>
         ) : (
-          <p class="mt-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-cream-700">
-            No update yet — webhook hasn't fired and no manual refresh.
+          <p class="mt-1 max-w-2xl text-xs text-cream-700">
+            This blast was sent before per-recipient tracking was added, so there's nothing to refresh — only the aggregate row above is available.
           </p>
         )}
       </div>
