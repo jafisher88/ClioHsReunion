@@ -253,6 +253,44 @@ export async function resendUpsertContact(
 }
 
 // ---------------------------------------------------------------------------
+// Listing — used by the backfill flow to recover per-message ids for blasts
+// that were sent before per-recipient logging existed. We can match by
+// subject + created_at window and pull each message's last_event in one
+// pass. Reference: https://resend.com/docs/api-reference/emails/list-emails
+// ---------------------------------------------------------------------------
+
+export interface ResendListedEmail {
+  id: string;
+  to: string[];
+  from: string;
+  subject: string;
+  created_at: string;
+  last_event?: string;
+}
+
+export interface ResendListEmailsPage {
+  data: ResendListedEmail[];
+  has_more: boolean;
+}
+
+export async function resendListEmails(
+  apiKey: string,
+  opts: { limit?: number; after?: string } = {},
+): Promise<ResendListEmailsPage> {
+  const params = new URLSearchParams();
+  if (opts.limit) params.set('limit', String(opts.limit));
+  if (opts.after) params.set('after', opts.after);
+  const url = `${RESEND_API}/emails${params.toString() ? `?${params}` : ''}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Resend list emails failed (${res.status}): ${body}`);
+  }
+  const json = await res.json() as { data?: ResendListedEmail[]; has_more?: boolean };
+  return { data: json.data ?? [], has_more: !!json.has_more };
+}
+
+// ---------------------------------------------------------------------------
 // Per-message status — used by the blast detail page to show last_event for
 // each recipient. Reference: https://resend.com/docs/api-reference/emails/retrieve-email
 // ---------------------------------------------------------------------------
