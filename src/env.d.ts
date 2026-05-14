@@ -14,6 +14,7 @@ declare namespace Cloudflare {
     SESSION_SECRET?: string;
     // Optional comms
     RESEND_API_KEY?: string;
+    RESEND_WEBHOOK_SECRET?: string;
     ORGANIZER_EMAIL?: string;
     // Shared secret protecting POST /api/cron/run-reminders
     CRON_SECRET?: string;

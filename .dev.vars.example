@@ -16,5 +16,18 @@ SESSION_SECRET=
 # Leave blank to skip email and only persist RSVPs to D1.
 RESEND_API_KEY=
 
+# Resend webhook signing secret. Set this so /api/webhooks/resend can verify
+# inbound events (delivered / opened / clicked / bounced / complained / etc.)
+# and update the per-recipient status on each blast in real time.
+#
+# How to get one:
+#   1. Resend dashboard → Webhooks → Add Endpoint
+#   2. URL: https://cliohsreunion.com/api/webhooks/resend
+#   3. Subscribe to all "email.*" events
+#   4. Copy the "Signing Secret" (starts with `whsec_`) and paste below.
+#
+# In production:  npx wrangler secret put RESEND_WEBHOOK_SECRET
+RESEND_WEBHOOK_SECRET=
+
 # Where confirmation/notification emails should be sent (the organizer).
 ORGANIZER_EMAIL=

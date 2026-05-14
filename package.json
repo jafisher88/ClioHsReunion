@@ -18,7 +18,8 @@
     "@astrojs/react": "5.0.1",
     "astro": "6.0.8",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "standardwebhooks": "^1.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260317.1",
