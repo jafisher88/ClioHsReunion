@@ -252,6 +252,33 @@ export async function resendUpsertContact(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Per-message status — used by the blast detail page to show last_event for
+// each recipient. Reference: https://resend.com/docs/api-reference/emails/retrieve-email
+// ---------------------------------------------------------------------------
+
+export interface ResendEmailStatus {
+  id: string;
+  last_event?: string;          // sent | delivered | delivery_delayed | complained | bounced | opened | clicked
+  created_at?: string;
+}
+
+/**
+ * Fetch the most recent event for a single sent email. Returns `null` if
+ * Resend no longer has the message (404) — older sends past retention.
+ */
+export async function resendGetEmail(apiKey: string, emailId: string): Promise<ResendEmailStatus | null> {
+  const res = await fetch(`${RESEND_API}/emails/${encodeURIComponent(emailId)}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Resend get email failed (${res.status}): ${body}`);
+  }
+  return res.json() as Promise<ResendEmailStatus>;
+}
+
 export async function resendListContacts(apiKey: string, audienceId: string): Promise<ResendContact[]> {
   const res = await fetch(`${RESEND_API}/audiences/${audienceId}/contacts`, {
     headers: { Authorization: `Bearer ${apiKey}` },

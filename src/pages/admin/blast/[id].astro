@@ -1,0 +1,294 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { env } from 'cloudflare:workers';
+import { getAdmin, loginUrlFor } from '../../../lib/admin-auth';
+import { dbToIso } from '../../../lib/admin-dates';
+
+const admin = await getAdmin(Astro.request, env);
+if (!admin) {
+  return Astro.redirect(loginUrlFor(Astro.request));
+}
+
+const blastId = Number.parseInt(String(Astro.params.id ?? ''), 10);
+if (!Number.isInteger(blastId) || blastId <= 0) {
+  return new Response('Bad blast id', { status: 400 });
+}
+
+interface BlastRow {
+  Id: number;
+  Subject: string;
+  BodyText: string;
+  Audience: string;
+  RecipientCount: number;
+  SentBy: string;
+  SentAt: string;
+  ResendId: string | null;
+  Status: string;
+}
+
+interface SendRow {
+  Id: number;
+  Email: string;
+  ResendId: string | null;
+  Status: string;
+  LastCheckedAt: string | null;
+  CreatedAt: string;
+}
+
+const audienceLabel: Record<string, string> = {
+  'rsvp-yes':       'RSVPs · Yes',
+  'rsvp-maybe':     'RSVPs · Maybe',
+  'rsvp-all':       'All RSVPs',
+  'volunteers':     'Volunteers',
+  'everyone':       'Everyone',
+  'roster-no-rsvp': 'Roster · not RSVP\'d',
+  'custom':         'Custom list',
+};
+
+function fmtDate(iso: string): string {
+  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
+}
+
+let blast: BlastRow | null = null;
+let sends: SendRow[] = [];
+let loadError: string | null = null;
+
+try {
+  blast = await env.DB
+    .prepare(
+      `SELECT Id, Subject, BodyText, Audience, RecipientCount, SentBy, SentAt, ResendId, Status
+         FROM EmailBlasts
+        WHERE Id = ?1`
+    )
+    .bind(blastId)
+    .first<BlastRow>();
+
+  if (blast) {
+    const sendsRes = await env.DB
+      .prepare(
+        `SELECT Id, Email, ResendId, Status, LastCheckedAt, CreatedAt
+           FROM EmailBlastSends
+          WHERE BlastId = ?1
+          ORDER BY Email ASC`
+      )
+      .bind(blastId)
+      .all<SendRow>();
+    sends = sendsRes.results ?? [];
+  }
+} catch (err) {
+  console.error('[blast detail] load failed', err);
+  loadError = (err as Error).message;
+}
+
+if (!blast) {
+  return new Response('Blast not found', { status: 404 });
+}
+
+// Build a per-status tally for the summary chips at the top.
+const tally: Record<string, number> = {};
+for (const s of sends) {
+  tally[s.Status] = (tally[s.Status] ?? 0) + 1;
+}
+const tallyEntries = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+
+// Status pill color map. Anything not listed falls back to "neutral".
+function statusClass(status: string): string {
+  switch (status) {
+    case 'delivered':        return 'pill status-delivered';
+    case 'opened':           return 'pill status-opened';
+    case 'clicked':          return 'pill status-clicked';
+    case 'sent':             return 'pill status-sent';
+    case 'delivery_delayed': return 'pill status-delayed';
+    case 'bounced':          return 'pill status-bounced';
+    case 'complained':       return 'pill status-complained';
+    case 'unknown':          return 'pill status-unknown';
+    default:                 return 'pill status-sent';
+  }
+}
+
+const noTracking = sends.length === 0;
+---
+
+<AdminLayout title={`Blast #${blast.Id}`} adminEmail={admin.email}>
+  <header class="mb-8">
+    <div class="flex flex-wrap items-baseline gap-3">
+      <a href="/admin/blast" class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-brand-700 hover:text-brand-900">← All blasts</a>
+      <span class="text-cream-400" aria-hidden="true">·</span>
+      <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">Blast #{blast.Id}</span>
+    </div>
+    <h1 class="mt-2 font-heading text-3xl font-bold uppercase tracking-[0.04em] text-brand-900 sm:text-4xl">
+      {blast.Subject}
+    </h1>
+  </header>
+
+  <section class="mb-8 rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8">
+    <dl class="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <dt class="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-cream-700">Audience</dt>
+        <dd class="mt-1 font-semibold text-brand-900">{audienceLabel[blast.Audience] ?? blast.Audience}</dd>
+      </div>
+      <div>
+        <dt class="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-cream-700">Recipients</dt>
+        <dd class="mt-1 font-semibold text-brand-900">{blast.RecipientCount.toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt class="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-cream-700">Sent by</dt>
+        <dd class="mt-1 font-mono text-xs text-brand-800">{blast.SentBy}</dd>
+      </div>
+      <div>
+        <dt class="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-cream-700">Sent at</dt>
+        <dd class="mt-1 font-mono text-xs text-brand-800"><time datetime={dbToIso(blast.SentAt)}>{fmtDate(blast.SentAt)}</time></dd>
+      </div>
+    </dl>
+
+    <details class="mt-6 group">
+      <summary class="cursor-pointer font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-brand-700 hover:text-brand-900">
+        <span class="group-open:hidden">Show message body ▸</span>
+        <span class="hidden group-open:inline">Hide message body ▾</span>
+      </summary>
+      <pre class="mt-3 overflow-x-auto whitespace-pre-wrap rounded-lg border border-cream-200 bg-cream-50/60 p-4 font-mono text-[0.78rem] leading-relaxed text-brand-900">{blast.BodyText}</pre>
+    </details>
+  </section>
+
+  <section class="mb-8">
+    <header class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+      <div>
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">
+          Per-recipient status
+          {sends.length > 0 ? <span class="ml-1 font-mono text-xs font-bold text-brand-700">·{sends.length}</span> : null}
+        </h2>
+        <p class="mt-1 max-w-2xl text-xs text-cream-700">
+          Status comes from Resend. Click <strong>Refresh statuses</strong> to poll the latest event for every recipient.
+        </p>
+      </div>
+      {!noTracking ? (
+        <button
+          id="refresh-btn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700 ring-1 ring-cream-400 transition-all hover:bg-brand-50 hover:ring-brand-300"
+        >
+          <span id="refresh-label">Refresh statuses</span>
+          <span aria-hidden="true">⟳</span>
+        </button>
+      ) : null}
+    </header>
+
+    {tallyEntries.length > 0 ? (
+      <div class="mb-4 flex flex-wrap gap-2">
+        {tallyEntries.map(([status, count]) => (
+          <span class={statusClass(status)}>{status.replace(/_/g, ' ')} · {count}</span>
+        ))}
+      </div>
+    ) : null}
+
+    <p id="refresh-message" class="mb-3 hidden rounded-lg border px-4 py-2 text-sm"></p>
+
+    {noTracking ? (
+      <div class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-6 text-center">
+        <p class="text-sm text-cream-700">
+          No per-recipient tracking for this blast. It was sent before per-message logging was added —
+          only the aggregate row above is available.
+        </p>
+      </div>
+    ) : (
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Resend id</th>
+              <th>Last checked</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sends.map((s) => (
+              <tr>
+                <td class="mono">{s.Email}</td>
+                <td><span class={statusClass(s.Status)}>{s.Status.replace(/_/g, ' ')}</span></td>
+                <td class="mono dim text-[0.7rem]">{s.ResendId ?? <span class="dash-mark">—</span>}</td>
+                <td class="mono dim whitespace-nowrap">
+                  {s.LastCheckedAt
+                    ? <time datetime={dbToIso(s.LastCheckedAt)}>{fmtDate(s.LastCheckedAt)}</time>
+                    : <span class="dash-mark">never</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  {loadError ? (
+    <p class="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800">
+      Couldn't load some data: {loadError}
+    </p>
+  ) : null}
+</AdminLayout>
+
+<style is:global>
+  .pill.status-sent      { color: #1f2937; background: #f3f4f6; border-color: #d1d5db; }
+  .pill.status-delivered { color: #1d4ed8; background: #dbeafe; border-color: #93c5fd; }
+  .pill.status-opened    { color: #0f766e; background: #ccfbf1; border-color: #5eead4; }
+  .pill.status-clicked   { color: #166534; background: #dcfce7; border-color: #86efac; }
+  .pill.status-delayed   { color: #92400e; background: #fef3c7; border-color: #fcd34d; }
+  .pill.status-bounced   { color: #9f1239; background: #ffe4e6; border-color: #fda4af; }
+  .pill.status-complained{ color: #831843; background: #fce7f3; border-color: #f9a8d4; }
+  .pill.status-unknown   { color: var(--color-cream-700); background: var(--color-cream-100); border-color: var(--color-cream-300); }
+</style>
+
+<script is:inline define:vars={{ blastId }}>
+  (function () {
+    const btn = document.getElementById('refresh-btn');
+    const label = document.getElementById('refresh-label');
+    const msg = document.getElementById('refresh-message');
+    if (!btn || !label || !msg) return;
+
+    function show(text, tone) {
+      msg.textContent = text;
+      msg.classList.remove(
+        'hidden',
+        'border-rose-300', 'bg-rose-50',  'text-rose-800',
+        'border-emerald-300', 'bg-emerald-50', 'text-emerald-800',
+        'border-cream-300', 'bg-white/70', 'text-brand-800',
+      );
+      if (tone === 'error')      msg.classList.add('border-rose-300', 'bg-rose-50',  'text-rose-800');
+      else if (tone === 'ok')    msg.classList.add('border-emerald-300', 'bg-emerald-50', 'text-emerald-800');
+      else                       msg.classList.add('border-cream-300', 'bg-white/70', 'text-brand-800');
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      label.textContent = 'Refreshing…';
+      show('Polling Resend for each recipient — this can take a minute on bigger sends.', 'info');
+      try {
+        const res = await fetch(`/api/admin/blast/${blastId}/refresh`, { method: 'POST' });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          show((body && body.error) || `Refresh failed (${res.status})`, 'error');
+          btn.disabled = false;
+          label.textContent = 'Refresh statuses';
+          return;
+        }
+        const tally = body.tally || {};
+        const parts = Object.entries(tally).map(([k, v]) => `${k.replace(/_/g, ' ')}=${v}`);
+        show(
+          `Polled ${body.polled} · ${body.updated} status changes` +
+            (body.notFound ? ` · ${body.notFound} not found in Resend` : '') +
+            (parts.length ? ` · ${parts.join(', ')}` : '') +
+            '. Reloading…',
+          'ok',
+        );
+        setTimeout(() => location.reload(), 1500);
+      } catch {
+        show('Network error.', 'error');
+        btn.disabled = false;
+        label.textContent = 'Refresh statuses';
+      }
+    });
+  })();
+</script>

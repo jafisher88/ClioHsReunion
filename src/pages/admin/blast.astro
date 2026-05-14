@@ -73,7 +73,7 @@ try {
                        AND Email IS NOT NULL AND TRIM(Email) <> ''
                        AND LOWER(Email) NOT IN (SELECT LOWER(Email) FROM Rsvps WHERE Email IS NOT NULL)
                        AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
-    env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt FROM EmailBlasts ORDER BY SentAt DESC LIMIT 10`).all<BlastRow>(),
+    env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt FROM EmailBlasts ORDER BY SentAt DESC`).all<BlastRow>(),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM Unsubscribes`).first<{ n: number }>(),
   ]);
   yesN = yes?.n ?? 0;
@@ -279,11 +279,11 @@ try {
   {blastHistory.length > 0 ? (
     <section class="mb-12">
       <header class="mb-4 flex items-baseline justify-between gap-3">
-        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Recent sends</h2>
-        <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">last 10</span>
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">Sent blasts</h2>
+        <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">{blastHistory.length} total · click a row for details</span>
       </header>
       <div class="admin-table-wrap">
-        <table class="admin-table">
+        <table class="admin-table admin-table--rows-link">
           <thead>
             <tr>
               <th class="num">#</th>
@@ -296,8 +296,10 @@ try {
           </thead>
           <tbody>
             {blastHistory.map((b) => (
-              <tr>
-                <td class="num mono dim">#{b.Id}</td>
+              <tr class="cursor-pointer hover:bg-brand-50/40" data-href={`/admin/blast/${b.Id}`}>
+                <td class="num mono dim">
+                  <a class="text-brand-700 hover:underline" href={`/admin/blast/${b.Id}`}>#{b.Id}</a>
+                </td>
                 <td><span class="font-semibold">{b.Subject}</span></td>
                 <td class="mono dim">{audienceLabel[b.Audience] ?? b.Audience}</td>
                 <td class="num">{b.RecipientCount}</td>
@@ -456,6 +458,19 @@ cliohsreunion.com`;
       const label = audienceLabels[payload.audience] ?? payload.audience;
       if (!confirm(`Send "${payload.subject}" to ${label}? This cannot be unsent.`)) return;
       send(false);
+    });
+  })();
+
+  (function () {
+    // Make the entire row clickable in any admin table that opted in via
+    // .admin-table--rows-link, while leaving inner <a> clicks alone.
+    document.querySelectorAll('table.admin-table--rows-link tbody tr[data-href]').forEach((row) => {
+      row.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target instanceof HTMLElement && target.closest('a, button, input, label')) return;
+        const href = row.getAttribute('data-href');
+        if (href) window.location.href = href;
+      });
     });
   })();
 

@@ -184,7 +184,10 @@ export const POST: APIRoute = async ({ request }) => {
 
   const headers = audienceId ? listUnsubscribeHeaders() : undefined;
 
-  let firstBatchId: string | undefined;
+  // Resend's batch endpoint returns ids in the same order as the input. We
+  // keep them so we can persist one EmailBlastSends row per recipient and
+  // later poll per-message status (delivered / opened / clicked / bounced).
+  const sentRows: Array<{ email: string; resendId: string | null }> = [];
   for (const batch of batches) {
     const msgs: ResendEmail[] = batch.map((to) => {
       const firstName = byEmail.get(to.toLowerCase().trim()) || fallback;
@@ -195,9 +198,10 @@ export const POST: APIRoute = async ({ request }) => {
     });
     try {
       const res = await resendBatch(env.RESEND_API_KEY!, msgs);
-      if (!firstBatchId && res.data && res.data[0]?.id) {
-        firstBatchId = res.data[0].id;
-      }
+      const ids = res.data ?? [];
+      batch.forEach((email, i) => {
+        sentRows.push({ email, resendId: ids[i]?.id ?? null });
+      });
     } catch (err) {
       console.error('[blast] Resend batch failed', err);
       return jsonError(
@@ -207,13 +211,16 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
+  const firstBatchId = sentRows.find((r) => r.resendId)?.resendId ?? null;
+
   // Log to audit only on actual broadcasts (not test sends).
   if (!result.value.testMode) {
     try {
-      await env.DB
+      const blastInsert = await env.DB
         .prepare(
           `INSERT INTO EmailBlasts (Subject, BodyText, Audience, RecipientCount, SentBy, ResendId)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+           RETURNING Id`
         )
         .bind(
           result.value.subject,
@@ -221,9 +228,28 @@ export const POST: APIRoute = async ({ request }) => {
           result.value.audience,
           recipients.length,
           admin.email,
-          firstBatchId ?? null,
+          firstBatchId,
         )
-        .run();
+        .first<{ Id: number }>();
+
+      const blastId = blastInsert?.Id;
+      if (blastId && sentRows.length > 0) {
+        // D1 has a per-statement variable cap; chunk the batch into
+        // statements of ~100 rows each (3 binds per row → 300 vars).
+        const chunkSize = 100;
+        for (let i = 0; i < sentRows.length; i += chunkSize) {
+          const chunk = sentRows.slice(i, i + chunkSize);
+          const placeholders = chunk.map((_, j) => `(?${j * 3 + 1}, ?${j * 3 + 2}, ?${j * 3 + 3})`).join(', ');
+          const binds: unknown[] = [];
+          for (const row of chunk) {
+            binds.push(blastId, row.email, row.resendId);
+          }
+          await env.DB
+            .prepare(`INSERT INTO EmailBlastSends (BlastId, Email, ResendId) VALUES ${placeholders}`)
+            .bind(...binds)
+            .run();
+        }
+      }
     } catch (err) {
       console.error('[blast] audit log insert failed', err);
     }
