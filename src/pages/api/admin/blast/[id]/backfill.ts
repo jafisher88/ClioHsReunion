@@ -35,6 +35,19 @@ function dbToMs(s: string): number {
 }
 
 export const POST: APIRoute = async ({ request, params }) => {
+  try {
+    return await runBackfill(request, params);
+  } catch (err) {
+    // Surface the actual failure back to the UI so we don't get opaque 500s.
+    // Resend / D1 errors land here; logged for the worker tail too.
+    console.error('[blast backfill] uncaught', err);
+    return Response.json({
+      error: `Backfill crashed: ${(err as Error).message}`,
+    }, { status: 500 });
+  }
+};
+
+async function runBackfill(request: Request, params: Record<string, string | undefined>): Promise<Response> {
   const admin = await getAdmin(request, env);
   if (!admin) return Response.json({ error: 'Not authorized.' }, { status: 401 });
   if (!env.DB) return Response.json({ error: 'Database not configured.' }, { status: 503 });
@@ -122,10 +135,12 @@ export const POST: APIRoute = async ({ request, params }) => {
     await env.DB.prepare('DELETE FROM EmailBlastSends WHERE BlastId = ?1').bind(blastId).run();
   }
 
-  // Insert in chunks of 100 (3 binds per row → 300 vars, under D1's per-statement cap).
+  // Insert in chunks. D1 caps bound params at 100/query; we use 4 binds per
+  // row (BlastId, Email, ResendId, Status) so 20 rows = 80 binds — safely
+  // under the cap with headroom for future column additions.
   const tally: Record<string, number> = {};
   let inserted = 0;
-  const CHUNK = 100;
+  const CHUNK = 20;
 
   for (let i = 0; i < matches.length; i += CHUNK) {
     const chunk = matches.slice(i, i + CHUNK);

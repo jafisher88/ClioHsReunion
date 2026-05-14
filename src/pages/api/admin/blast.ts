@@ -234,9 +234,9 @@ export const POST: APIRoute = async ({ request }) => {
 
       const blastId = blastInsert?.Id;
       if (blastId && sentRows.length > 0) {
-        // D1 has a per-statement variable cap; chunk the batch into
-        // statements of ~100 rows each (3 binds per row → 300 vars).
-        const chunkSize = 100;
+        // D1 caps bound params at 100/query. We use 3 binds per row, so 30
+        // rows = 90 binds — safely under the cap with headroom.
+        const chunkSize = 30;
         for (let i = 0; i < sentRows.length; i += chunkSize) {
           const chunk = sentRows.slice(i, i + chunkSize);
           const placeholders = chunk.map((_, j) => `(?${j * 3 + 1}, ?${j * 3 + 2}, ?${j * 3 + 3})`).join(', ');
