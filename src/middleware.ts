@@ -6,23 +6,27 @@ import { defineMiddleware } from 'astro:middleware';
 // flags) and protects them on hostile networks even on first visit after.
 const BASE_HEADERS: Record<string, string> = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+  'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=(), usb=()',
 };
 
-// `/admin/*` should never be framed — clickjacking on a logged-in admin would
-// let an attacker proxy clicks into destructive actions (delete classmate,
-// remove admin). Public pages stay DENY too; we don't embed our own site.
-const FRAME_OPTIONS = 'DENY';
-
-export const onRequest = defineMiddleware(async (context, next) => {
+export const onRequest = defineMiddleware(async (_context, next) => {
   const response = await next();
+
+  // Workers Response headers are immutable on responses produced by some
+  // adapters; mutating `response.headers` in place can break the body
+  // streaming. The safe pattern is to clone into a new Response, copying
+  // the body through and the headers we want to ensure are present.
+  const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(BASE_HEADERS)) {
-    if (!response.headers.has(name)) response.headers.set(name, value);
+    if (!headers.has(name)) headers.set(name, value);
   }
-  if (!response.headers.has('X-Frame-Options')) {
-    response.headers.set('X-Frame-Options', FRAME_OPTIONS);
-  }
-  return response;
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 });
