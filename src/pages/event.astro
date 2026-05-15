@@ -2,6 +2,10 @@
 import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
 import Step from '../components/Step.astro';
+import { env } from 'cloudflare:workers';
+import { getEventDateInfo } from '../lib/event-date';
+
+const eventDate = await getEventDateInfo(env.DB);
 ---
 
 <Layout title="Event">
@@ -18,11 +22,15 @@ import Step from '../components/Step.astro';
 
   <section class="reveal mt-12 grid gap-4 sm:grid-cols-2 sm:gap-5">
     <Card icon="📅" title="Date">
-      <p class="font-display italic text-lg text-brand-900">November 2026</p>
-      <p class="mt-1.5 text-sm text-cream-700">
-        Exact date being voted on in the
-        <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="text-brand-700 underline decoration-accent-400 decoration-2 underline-offset-4 hover:text-brand-900">Class of 2006 Facebook group</a>.
-      </p>
+      <p class="font-display italic text-lg text-brand-900">{eventDate.longDisplay}</p>
+      {eventDate.isLocked ? (
+        <p class="mt-1.5 text-sm text-cream-700">Doors at 6:00 PM.</p>
+      ) : (
+        <p class="mt-1.5 text-sm text-cream-700">
+          Exact date being voted on in the
+          <a href="https://www.facebook.com/share/g/1G2ZxKc1GP/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="text-brand-700 underline decoration-accent-400 decoration-2 underline-offset-4 hover:text-brand-900">Class of 2006 Facebook group</a>.
+        </p>
+      )}
     </Card>
     <a
       href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"

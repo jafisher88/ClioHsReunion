@@ -3,6 +3,9 @@ import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
 import VolunteerForm from '../components/VolunteerForm.tsx';
 import { env } from 'cloudflare:workers';
+import { getEventDateInfo } from '../lib/event-date';
+
+const eventDate = await getEventDateInfo(env.DB);
 
 interface MemoriamPreviewRow {
   FullName: string;
@@ -105,7 +108,11 @@ try {
 
     <div class="grid gap-4 sm:grid-cols-3 sm:gap-5">
       <Card icon="📅" title="When">
-        <p>November 2026 — the exact date is being voted on in the Facebook group.</p>
+        {eventDate.isLocked ? (
+          <p><span class="font-semibold text-brand-900">{eventDate.longDisplay}</span> · Doors at 6:00 PM.</p>
+        ) : (
+          <p>November 2026 — the exact date is being voted on in the Facebook group.</p>
+        )}
       </Card>
       <a
         href="https://www.google.com/maps/search/?api=1&query=Round+Em+Up+Ranch+Clio+MI"
