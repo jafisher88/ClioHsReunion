@@ -5,6 +5,17 @@ interface Props {
 }
 
 const { title, adminEmail } = Astro.props;
+
+// Security headers — same pattern as Layout.astro (see comment there for why
+// it's not in a global middleware). X-Frame-Options=DENY is especially
+// important on admin pages: clickjacking a logged-in admin would let an
+// attacker proxy clicks into destructive actions like revoke-admin /
+// delete-classmate.
+Astro.response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+Astro.response.headers.set('X-Frame-Options', 'DENY');
+Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
+Astro.response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+Astro.response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=()');
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/admin';
 
 const navItems = [

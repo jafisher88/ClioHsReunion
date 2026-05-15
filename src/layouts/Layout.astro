@@ -2,6 +2,17 @@
 import Logo from '../components/Logo.astro';
 import MobileMenu from '../components/MobileMenu.tsx';
 
+// Security headers — set per-page on Astro.response.headers since a global
+// `defineMiddleware` rewriting the Response broke body streaming on the
+// Cloudflare Workers adapter (see HOTFIX 3 / commit 4ce9f1f). Setting them
+// here runs inside the page handler before the response leaves Astro, which
+// the adapter handles cleanly.
+Astro.response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+Astro.response.headers.set('X-Frame-Options', 'DENY');
+Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
+Astro.response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+Astro.response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=()');
+
 interface Props {
   title: string;
   description?: string;
