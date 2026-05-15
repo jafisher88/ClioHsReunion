@@ -1,6 +1,10 @@
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers';
+import {
+  TEST_RESEND_WEBHOOK_SECRET,
+  TEST_SESSION_SECRET,
+} from './tests/fixtures/test-secrets';
 
 // Read every `migrations/*.sql` once at config-load time. The workers project
 // gets these handed to it as a `TEST_MIGRATIONS` binding so its setup file
@@ -30,7 +34,18 @@ export default defineConfig({
               // SQLite for `DB` regardless of the production database_id in
               // wrangler.toml. The TEST_MIGRATIONS binding is what
               // `tests/d1/apply-migrations.ts` reads to seed schema.
-              bindings: { TEST_MIGRATIONS: migrations },
+              // SESSION_SECRET lets tests construct valid signed session
+              // tokens for `getAdmin` coverage (F1) — it's intentionally a
+              // long static string, NOT a leaked production secret.
+              bindings: {
+                TEST_MIGRATIONS: migrations,
+                // SESSION_SECRET + RESEND_WEBHOOK_SECRET imported from
+                // tests/fixtures/test-secrets.ts — that file labels the
+                // values as PUBLIC_TEST_VALUE_NOT_A_SECRET_* so a future
+                // grep can't confuse them with production credentials.
+                SESSION_SECRET: TEST_SESSION_SECRET,
+                RESEND_WEBHOOK_SECRET: TEST_RESEND_WEBHOOK_SECRET,
+              },
             },
           }),
         ],
