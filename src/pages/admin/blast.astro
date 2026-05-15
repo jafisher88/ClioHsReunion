@@ -3,11 +3,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 import { dbToIso } from '../../lib/admin-dates';
+import { getEventDateInfo } from '../../lib/event-date';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
   return Astro.redirect(loginUrlFor(Astro.request));
 }
+
+const eventDate = await getEventDateInfo(env.DB);
 
 interface BlastRow {
   Id: number;
@@ -315,7 +318,7 @@ try {
 
 </AdminLayout>
 
-<script is:inline>
+<script is:inline define:vars={{ EVENT_MONTH: eventDate.monthLong, EVENT_LONG: eventDate.longDisplay, EVENT_IS_LOCKED: eventDate.isLocked }}>
   (function () {
     const form = document.getElementById('blast-form');
     const message = document.getElementById('blast-message');
@@ -340,11 +343,14 @@ try {
     const subjectInput = form.elements.subject;
     const bodyInput    = form.elements.body;
 
-    const NUDGE_SUBJECT = 'Our 20-year reunion is this November — please RSVP';
+    // Built from the admin-set event date so the nudge always names the
+    // right month. Falls back to "November" when no date is locked in.
+    const whenSentence = EVENT_IS_LOCKED ? `on ${EVENT_LONG}` : `this ${EVENT_MONTH}`;
+    const NUDGE_SUBJECT = `Our 20-year reunion is ${EVENT_IS_LOCKED ? 'happening ' + EVENT_LONG : 'this ' + EVENT_MONTH} — please RSVP`;
     const NUDGE_BODY = `Hey {firstName},
 
 Quick note from the Clio High School Class of 2006 reunion crew. Our
-20-year reunion is happening this November at Round Em Up Ranch in
+20-year reunion is happening ${whenSentence} at Round Em Up Ranch in
 Clio. All the details (date, venue, schedule, what to bring) live on
 the site:
 
@@ -357,7 +363,7 @@ seating, so please take a minute to fill it out:
   https://cliohsreunion.com/rsvp
 
 If you've already replied somewhere else, sorry for the nudge — you
-can ignore this. Otherwise, we'd love to see you in November.
+can ignore this. Otherwise, we'd love to see you in ${EVENT_MONTH}.
 
 — The planning crew
 cliohsreunion.com`;
