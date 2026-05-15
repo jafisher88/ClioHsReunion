@@ -10,7 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "pretest": "node scripts/audit-personalization-tests.mjs && node scripts/audit-event-date-tests.mjs && node scripts/audit-url-validator-tests.mjs && node scripts/check-single-assert.mjs",
+    "pretest": "node scripts/audit-personalization-tests.mjs && node scripts/audit-event-date-tests.mjs && node scripts/audit-url-validator-tests.mjs && node scripts/check-single-assert.mjs && node scripts/check-coverage-manifest.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

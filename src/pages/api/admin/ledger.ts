@@ -1,62 +1,10 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin } from '../../../lib/admin-auth';
-import { parseAmount } from '../../../lib/ledger-amount';
+import { validate } from '../../../lib/validators/ledger';
 
 function jsonError(message: string, status: number): Response {
   return Response.json({ error: message }, { status });
-}
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_TEXT = 500;
-
-interface LedgerInput {
-  entryDate: string;
-  direction: 'in' | 'out';
-  amountCents: number;
-  category: string;
-  counterparty: string | null;
-  description: string | null;
-  method: string | null;
-  notes: string | null;
-}
-
-function clamp(value: unknown, max: number): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim().slice(0, max);
-  return trimmed.length === 0 ? null : trimmed;
-}
-
-function validate(body: unknown): { ok: true; value: LedgerInput } | { ok: false; error: string } {
-  if (!body || typeof body !== 'object') return { ok: false, error: 'Invalid request body.' };
-  const b = body as Record<string, unknown>;
-
-  const entryDate = typeof b.entryDate === 'string' ? b.entryDate.trim() : '';
-  if (!DATE_RE.test(entryDate)) return { ok: false, error: 'Please provide a valid date (YYYY-MM-DD).' };
-
-  const direction = b.direction;
-  if (direction !== 'in' && direction !== 'out') return { ok: false, error: "Direction must be 'in' or 'out'." };
-
-  const amountCents = parseAmount(b.amount ?? b.amountCents);
-  if (amountCents === null) return { ok: false, error: 'Please enter a valid positive amount.' };
-  if (amountCents > 100_000_000) return { ok: false, error: 'Amount looks too large — double-check.' };
-
-  const category = clamp(b.category, 80);
-  if (!category) return { ok: false, error: 'Please select or enter a category.' };
-
-  return {
-    ok: true,
-    value: {
-      entryDate,
-      direction,
-      amountCents,
-      category,
-      counterparty: clamp(b.counterparty, MAX_TEXT),
-      description: clamp(b.description, MAX_TEXT),
-      method: clamp(b.method, 40),
-      notes: clamp(b.notes, 2000),
-    },
-  };
 }
 
 export const POST: APIRoute = async ({ request }) => {
