@@ -230,6 +230,28 @@ const isActive = (href: string) => {
         border-bottom: 1px solid var(--color-cream-300);
         white-space: nowrap;
       }
+      /* Sortable headers — wired up by the global sort helper below.
+         The helper toggles .sort-asc / .sort-desc; CSS handles affordance. */
+      .admin-table thead th.sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+      .admin-table thead th.sortable:hover {
+        color: var(--color-brand-900);
+        background: var(--color-cream-200);
+      }
+      .admin-table thead th.sortable .sort-indicator {
+        display: inline-block;
+        margin-left: 0.35em;
+        color: var(--color-cream-500);
+        font-size: 0.85em;
+        font-weight: 700;
+        transition: color 0.12s ease;
+      }
+      .admin-table thead th.sort-asc  .sort-indicator,
+      .admin-table thead th.sort-desc .sort-indicator {
+        color: var(--color-brand-700);
+      }
       .admin-table tbody td {
         padding: 0.75rem 1rem;
         vertical-align: top;
@@ -312,6 +334,144 @@ const isActive = (href: string) => {
             }));
           }
         });
+      })();
+
+      // Universal click-to-sort for any <table class="admin-table">.
+      // Opt out of the entire table with .admin-table--no-sort, or skip a
+      // single column by adding .no-sort (or data-no-sort) to its <th>.
+      // Detection: numeric cells get numeric compare, <time datetime>
+      // cells get ISO compare, everything else case-insensitive string.
+      (function () {
+        function cellSortValue(cell) {
+          if (!cell) return '';
+          const timeEl = cell.querySelector('time[datetime]');
+          if (timeEl) return { iso: timeEl.getAttribute('datetime') || '' };
+          // Strip whitespace and the en-dash placeholder we use for empty.
+          const raw = (cell.textContent || '').trim();
+          if (raw === '' || raw === '—' || raw === '–') return '';
+          return raw;
+        }
+
+        function detectKind(values) {
+          // Need at least one non-empty cell to decide.
+          let sawValue = false;
+          let allTime = true;
+          let allNumeric = true;
+          const numRe = /^-?\$?[\d,]+(\.\d+)?%?$/;
+          for (const v of values) {
+            if (v === '' || v == null) continue;
+            sawValue = true;
+            if (typeof v === 'object' && v.iso) {
+              allNumeric = false;
+            } else {
+              allTime = false;
+              if (!numRe.test(String(v).trim())) allNumeric = false;
+            }
+          }
+          if (!sawValue) return 'string';
+          if (allTime) return 'time';
+          if (allNumeric) return 'numeric';
+          return 'string';
+        }
+
+        function compareFor(kind) {
+          if (kind === 'time') {
+            return (a, b) => {
+              const ai = a && typeof a === 'object' ? Date.parse(a.iso) : NaN;
+              const bi = b && typeof b === 'object' ? Date.parse(b.iso) : NaN;
+              if (isNaN(ai) && isNaN(bi)) return 0;
+              if (isNaN(ai)) return 1;
+              if (isNaN(bi)) return -1;
+              return ai - bi;
+            };
+          }
+          if (kind === 'numeric') {
+            const toNum = (v) => {
+              if (v === '' || v == null) return NaN;
+              return parseFloat(String(v).replace(/[$,%]/g, ''));
+            };
+            return (a, b) => {
+              const an = toNum(a), bn = toNum(b);
+              if (isNaN(an) && isNaN(bn)) return 0;
+              if (isNaN(an)) return 1;
+              if (isNaN(bn)) return -1;
+              return an - bn;
+            };
+          }
+          // String fallback — empties always sort to the bottom regardless of dir.
+          const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
+          return (a, b) => {
+            const ae = a === '' || a == null;
+            const be = b === '' || b == null;
+            if (ae && be) return 0;
+            if (ae) return 1;
+            if (be) return -1;
+            return collator.compare(String(a), String(b));
+          };
+        }
+
+        function sortTable(table, colIndex, direction) {
+          const tbody = table.tBodies[0];
+          if (!tbody) return;
+          const rows = Array.from(tbody.rows).filter((r) => !r.classList.contains('empty-row'));
+          if (rows.length < 2) return;
+
+          const values = rows.map((row) => cellSortValue(row.cells[colIndex]));
+          const kind = detectKind(values);
+          const cmp = compareFor(kind);
+          const indexed = rows.map((row, i) => ({ row, val: values[i] }));
+          indexed.sort((a, b) => {
+            const c = cmp(a.val, b.val);
+            return direction === 'desc' ? -c : c;
+          });
+          // Re-append in new order; "empties always last" for string/numeric is
+          // baked into compareFor, but for desc we want empties to still trail
+          // — re-pin them after the sort.
+          const empties = indexed.filter((x) => x.val === '' || x.val == null);
+          const filled  = indexed.filter((x) => !(x.val === '' || x.val == null));
+          for (const x of filled)  tbody.appendChild(x.row);
+          for (const x of empties) tbody.appendChild(x.row);
+        }
+
+        function setIndicator(th, state) {
+          th.classList.remove('sort-asc', 'sort-desc');
+          let ind = th.querySelector('.sort-indicator');
+          if (!ind) {
+            ind = document.createElement('span');
+            ind.className = 'sort-indicator';
+            th.appendChild(ind);
+          }
+          if (state === 'asc')       { th.classList.add('sort-asc');  ind.textContent = '▲'; }
+          else if (state === 'desc') { th.classList.add('sort-desc'); ind.textContent = '▼'; }
+          else                       { ind.textContent = '↕'; }
+        }
+
+        function wireTable(table) {
+          if (table.classList.contains('admin-table--no-sort')) return;
+          if (table.dataset.sortWired === '1') return;
+          table.dataset.sortWired = '1';
+          const headRow = table.tHead && table.tHead.rows[0];
+          if (!headRow) return;
+          const ths = Array.from(headRow.cells);
+          ths.forEach((th, i) => {
+            if (th.classList.contains('no-sort') || th.dataset.noSort != null) return;
+            // Skip headers spanning multiple columns — sort can't disambiguate.
+            if (th.colSpan && th.colSpan > 1) return;
+            th.classList.add('sortable');
+            setIndicator(th, 'none');
+            th.addEventListener('click', () => {
+              const cur = th.classList.contains('sort-asc')  ? 'asc'
+                        : th.classList.contains('sort-desc') ? 'desc'
+                        : null;
+              const next = cur === 'asc' ? 'desc' : 'asc';
+              ths.forEach((other) => { if (other !== th) setIndicator(other, 'none'); });
+              setIndicator(th, next);
+              sortTable(table, i, next);
+            });
+          });
+        }
+
+        document.querySelectorAll('table.admin-table').forEach(wireTable);
       })();
     </script>
   </body>
