@@ -3,10 +3,95 @@ name: Deploy to Cloudflare Workers
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
+  # A10: tests run first; deploy depends on this job. `npm test` invokes the
+  # pretest chain (audit-personalization, audit-event-date,
+  # audit-url-validator, check-single-assert) before vitest runs.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run audit scripts + vitest
+        run: npm test 2>&1 | tee test-output.log
+
+      # A9: pass count must stay ≥ the baseline committed in
+      # tests/.baseline-count. Catches accidental test deletions that
+      # vitest would otherwise show as "still green, just smaller."
+      - name: Verify pass count ≥ baseline (A9)
+        run: |
+          BASELINE=$(cat tests/.baseline-count)
+          ACTUAL=$(sed 's/\x1b\[[0-9;]*m//g' test-output.log \
+                   | grep -oE "Tests +[0-9]+ passed" \
+                   | head -1 \
+                   | grep -oE "[0-9]+")
+          echo "Baseline: $BASELINE, Actual: $ACTUAL"
+          if [ -z "$ACTUAL" ] || [ "$ACTUAL" -lt "$BASELINE" ]; then
+            echo "FAIL: passing test count ($ACTUAL) is below baseline ($BASELINE)."
+            echo "If you intentionally removed tests, bump tests/.baseline-count in the same PR."
+            exit 1
+          fi
+          echo "OK — $ACTUAL ≥ $BASELINE"
+
+      # Catch Astro build errors that aren't covered by vitest (e.g. SSR
+      # type checks, route resolution).
+      - name: Build (production)
+        run: npm run build
+
+  # A13: separate job runs npm test 3× in sequence and fails if pass counts
+  # drift. Does not gate deploy directly — its job is to surface flake
+  # before it lands in main, not to block emergency fixes.
+  flake-check:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: npm test ×3 and compare pass counts
+        run: |
+          : > counts.txt
+          for i in 1 2 3; do
+            echo "::group::Run $i"
+            npm test 2>&1 \
+              | sed 's/\x1b\[[0-9;]*m//g' \
+              | tee -a all-runs.log \
+              | grep -oE "Tests +[0-9]+ passed" \
+              | head -1 \
+              >> counts.txt
+            echo "::endgroup::"
+          done
+          echo "Recorded pass-count lines across 3 runs:"
+          cat counts.txt
+          uniques=$(sort -u counts.txt | wc -l)
+          if [ "$uniques" -ne 1 ]; then
+            echo "FAIL: pass count drifted across 3 runs — suspected flake."
+            exit 1
+          fi
+          echo "OK — identical pass counts on all 3 runs."
+
   deploy:
     runs-on: ubuntu-latest
+    needs: test
+    # Only deploy on push-to-main, never on PRs. PRs run test + flake-check
+    # for visibility; deploy happens on merge.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
