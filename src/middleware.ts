@@ -16,15 +16,23 @@ export const onRequest = defineMiddleware(async (_context, next) => {
   const response = await next();
 
   // Workers Response headers are immutable on responses produced by some
-  // adapters; mutating `response.headers` in place can break the body
-  // streaming. The safe pattern is to clone into a new Response, copying
-  // the body through and the headers we want to ensure are present.
+  // adapters; mutating in place silently breaks body streaming (the body
+  // came out as "[object Object]" on production). Read the body bytes
+  // through arrayBuffer() before constructing a new Response, so the
+  // stream is fully materialized once and the new Response wraps a
+  // concrete buffer.
   const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(BASE_HEADERS)) {
     if (!headers.has(name)) headers.set(name, value);
   }
 
-  return new Response(response.body, {
+  // 204/304 must not carry a body.
+  if (response.status === 204 || response.status === 304) {
+    return new Response(null, { status: response.status, statusText: response.statusText, headers });
+  }
+
+  const body = await response.arrayBuffer();
+  return new Response(body, {
     status: response.status,
     statusText: response.statusText,
     headers,
