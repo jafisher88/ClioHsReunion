@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const links = [
   { href: '/', label: 'Home' },
@@ -10,14 +10,49 @@ const links = [
   { href: '/contact', label: 'Contact' },
 ];
 
+const PANEL_ID = 'mobile-menu-panel';
+
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // Escape closes; click outside the menu closes; focus returns to the
+  // toggle so keyboard users don't get stripped of context.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (panelRef.current?.contains(target)) return;
+      if (buttonRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    // Focus the first link so keyboard users start inside the menu.
+    panelRef.current?.querySelector<HTMLAnchorElement>('a')?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open]);
+
   return (
     <div className="md:hidden">
       <button
+        ref={buttonRef}
         type="button"
-        aria-label="Open menu"
+        aria-label={open ? 'Close menu' : 'Open menu'}
         aria-expanded={open}
+        aria-controls={PANEL_ID}
         onClick={() => setOpen(v => !v)}
         className="rounded-md p-2 text-brand-800 hover:bg-cream-200/60"
       >
@@ -31,6 +66,11 @@ export default function MobileMenu() {
       </button>
       {open && (
         <div
+          ref={panelRef}
+          id={PANEL_ID}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site navigation"
           className="absolute left-0 right-0 top-full border-b border-cream-300/60 bg-cream-50 shadow-lg"
           style={{ zIndex: 90 }}
         >

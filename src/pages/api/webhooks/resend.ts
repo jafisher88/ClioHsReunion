@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { TRACKED_EVENT_TYPES, verifyResendWebhook, WebhookVerificationError } from '../../../lib/resend-webhook';
+import { shouldUpdate } from '../../../lib/webhook-status';
 
 /**
  * Public webhook receiver for Resend events.
@@ -20,26 +21,6 @@ import { TRACKED_EVENT_TYPES, verifyResendWebhook, WebhookVerificationError } fr
  *      with backoff on non-2xx, and we don't want a transient DB blip to
  *      trigger a retry storm. Errors get logged and the next event self-heals.
  */
-
-// Positive funnel rank — higher wins, lower never overwrites higher.
-const POSITIVE_RANK: Record<string, number> = {
-  sent:      1,
-  delivered: 2,
-  opened:    3,
-  clicked:   4,
-};
-
-// Terminal negative events — once one of these is recorded we never go back.
-const NEGATIVE_STATUSES = new Set(['bounced', 'complained', 'failed']);
-
-function shouldUpdate(currentStatus: string, newStatus: string): boolean {
-  if (NEGATIVE_STATUSES.has(newStatus))     return true;   // bad news always overwrites
-  if (NEGATIVE_STATUSES.has(currentStatus)) return false;  // never overwrite bad news with good
-  if (newStatus === 'delivery_delayed')     return currentStatus === 'sent';
-  const cur = POSITIVE_RANK[currentStatus] ?? 0;
-  const nxt = POSITIVE_RANK[newStatus] ?? 0;
-  return nxt > cur;
-}
 
 export const POST: APIRoute = async ({ request }) => {
   if (!env.RESEND_WEBHOOK_SECRET) {

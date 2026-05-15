@@ -13,15 +13,22 @@ interface MemoriamRow {
   ObituaryUrl: string | null;
 }
 
-const result = await env.DB
-  .prepare(
-    `SELECT Id, FullName, MaidenName, BirthYear, PassingYear, Tribute, PhotoUrl, ObituaryUrl
-       FROM Classmates
-      WHERE IsDeceased = 1
-      ORDER BY FullName COLLATE NOCASE ASC`
-  )
-  .all<MemoriamRow>();
-const entries = result.results ?? [];
+let entries: MemoriamRow[] = [];
+try {
+  if (env.DB) {
+    const result = await env.DB
+      .prepare(
+        `SELECT Id, FullName, MaidenName, BirthYear, PassingYear, Tribute, PhotoUrl, ObituaryUrl
+           FROM Classmates
+          WHERE IsDeceased = 1
+          ORDER BY FullName COLLATE NOCASE ASC`
+      )
+      .all<MemoriamRow>();
+    entries = result.results ?? [];
+  }
+} catch (err) {
+  console.error('[memoriam] query failed', err);
+}
 ---
 
 <Layout title="In Memoriam">

@@ -240,6 +240,12 @@ const isActive = (href: string) => {
         color: var(--color-brand-900);
         background: var(--color-cream-200);
       }
+      .admin-table thead th.sortable:focus-visible {
+        outline: 2px solid var(--color-brand-500);
+        outline-offset: -2px;
+        color: var(--color-brand-900);
+        background: var(--color-cream-200);
+      }
       .admin-table thead th.sortable .sort-indicator {
         display: inline-block;
         margin-left: 0.35em;
@@ -441,9 +447,18 @@ const isActive = (href: string) => {
             ind.className = 'sort-indicator';
             th.appendChild(ind);
           }
-          if (state === 'asc')       { th.classList.add('sort-asc');  ind.textContent = '▲'; }
-          else if (state === 'desc') { th.classList.add('sort-desc'); ind.textContent = '▼'; }
-          else                       { ind.textContent = '↕'; }
+          if (state === 'asc') {
+            th.classList.add('sort-asc');
+            ind.textContent = '▲';
+            th.setAttribute('aria-sort', 'ascending');
+          } else if (state === 'desc') {
+            th.classList.add('sort-desc');
+            ind.textContent = '▼';
+            th.setAttribute('aria-sort', 'descending');
+          } else {
+            ind.textContent = '↕';
+            th.setAttribute('aria-sort', 'none');
+          }
         }
 
         function wireTable(table) {
@@ -458,8 +473,13 @@ const isActive = (href: string) => {
             // Skip headers spanning multiple columns — sort can't disambiguate.
             if (th.colSpan && th.colSpan > 1) return;
             th.classList.add('sortable');
+            // Keyboard parity: focusable + button role + aria-sort so
+            // screen-reader users hear the state change.
+            th.setAttribute('tabindex', '0');
+            th.setAttribute('role', 'button');
             setIndicator(th, 'none');
-            th.addEventListener('click', () => {
+
+            const activate = () => {
               const cur = th.classList.contains('sort-asc')  ? 'asc'
                         : th.classList.contains('sort-desc') ? 'desc'
                         : null;
@@ -467,6 +487,14 @@ const isActive = (href: string) => {
               ths.forEach((other) => { if (other !== th) setIndicator(other, 'none'); });
               setIndicator(th, next);
               sortTable(table, i, next);
+            };
+
+            th.addEventListener('click', activate);
+            th.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+              }
             });
           });
         }

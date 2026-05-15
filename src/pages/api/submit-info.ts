@@ -35,8 +35,14 @@ function validate(body: unknown): { ok: true; value: SubmitPayload } | { ok: fal
     return { ok: false, error: 'Spam detected.' };
   }
 
-  let category = clampString(b.category, 40).toLowerCase();
-  if (!ALLOWED_CATEGORIES.has(category)) category = 'general';
+  const categoryRaw = clampString(b.category, 40).toLowerCase();
+  // Empty / missing → default to general; explicit but unknown values are an
+  // input error rather than something to silently rewrite, so a typo on the
+  // form payload isn't quietly absorbed.
+  const category = categoryRaw === '' ? 'general' : categoryRaw;
+  if (!ALLOWED_CATEGORIES.has(category)) {
+    return { ok: false, error: 'Pick a valid category.' };
+  }
 
   const message = clampString(b.message, 5000);
   if (!message) return { ok: false, error: 'Please add a message.' };

@@ -29,6 +29,21 @@ function parseYear(value: unknown): number | null | 'invalid' {
   return n;
 }
 
+// Defense in depth on admin form fields that land in `<a href>` / `<img src>`
+// on the public memoriam page: only http(s) URLs are allowed. Blocks
+// `javascript:` and `data:` schemes that would otherwise execute on click.
+function parseHttpUrl(value: unknown): string | null | 'invalid' {
+  const clamped = clampText(value, MAX_URL);
+  if (!clamped) return null;
+  try {
+    const u = new URL(clamped);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'invalid';
+    return u.href;
+  } catch {
+    return 'invalid';
+  }
+}
+
 interface ClassmateInput {
   fullName: string;
   maidenName: string | null;
@@ -59,6 +74,11 @@ function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: fa
   const passingYear = parseYear(b.passingYear);
   if (passingYear === 'invalid') return { ok: false, error: `Passing year must be between ${MIN_YEAR} and ${MAX_YEAR}.` };
 
+  const photoUrl = parseHttpUrl(b.photoUrl);
+  if (photoUrl === 'invalid') return { ok: false, error: 'Photo URL must start with http(s)://' };
+  const obituaryUrl = parseHttpUrl(b.obituaryUrl);
+  if (obituaryUrl === 'invalid') return { ok: false, error: 'Obituary URL must start with http(s)://' };
+
   return {
     ok: true,
     value: {
@@ -71,8 +91,8 @@ function validate(body: unknown): { ok: true; value: ClassmateInput } | { ok: fa
       birthYear,
       passingYear,
       tribute: clampText(b.tribute, MAX_TRIBUTE),
-      photoUrl: clampText(b.photoUrl, MAX_URL),
-      obituaryUrl: clampText(b.obituaryUrl, MAX_URL),
+      photoUrl,
+      obituaryUrl,
     },
   };
 }
@@ -151,6 +171,10 @@ export const POST: APIRoute = async ({ request }) => {
       .run();
     return Response.json({ ok: true, id: res.meta?.last_row_id ?? null });
   } catch (err) {
+    const msg = String((err as Error)?.message ?? err);
+    if (msg.includes('UNIQUE') && msg.toLowerCase().includes('email')) {
+      return jsonError('Another classmate already has that email.', 409);
+    }
     console.error('[admin/classmates POST] insert failed', err);
     return jsonError('Could not save classmate.', 500);
   }
@@ -208,6 +232,10 @@ export const PATCH: APIRoute = async ({ request }) => {
     if ((res.meta?.changes ?? 0) === 0) return jsonError('Classmate not found.', 404);
     return Response.json({ ok: true });
   } catch (err) {
+    const msg = String((err as Error)?.message ?? err);
+    if (msg.includes('UNIQUE') && msg.toLowerCase().includes('email')) {
+      return jsonError('Another classmate already has that email.', 409);
+    }
     console.error('[admin/classmates PATCH] update failed', err);
     return jsonError('Could not update classmate.', 500);
   }

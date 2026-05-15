@@ -105,7 +105,10 @@ export const GET: APIRoute = async ({ request }) => {
   const sessionToken = await createSessionToken(email, sessionSecret);
   const next = savedState.next || '/admin/';
 
-  const headers = new Headers({ Location: next.startsWith('/admin') ? next : '/admin/' });
+  // Only allow same-site admin paths. `next.startsWith('/admin')` would also
+  // accept `/adminx` etc.; require the slash boundary.
+  const safeNext = next === '/admin' || next.startsWith('/admin/') ? next : '/admin/';
+  const headers = new Headers({ Location: safeNext });
   headers.append(
     'Set-Cookie',
     `admin_session=${encodeURIComponent(sessionToken)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24 * 7}`,

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin } from '../../../lib/admin-auth';
+import { parseAmount } from '../../../lib/ledger-amount';
 
 function jsonError(message: string, status: number): Response {
   return Response.json({ error: message }, { status });
@@ -24,23 +25,6 @@ function clamp(value: unknown, max: number): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim().slice(0, max);
   return trimmed.length === 0 ? null : trimmed;
-}
-
-function parseAmount(raw: unknown): number | null {
-  // Accept either a dollar string ("12.50") or a number; store as integer cents.
-  if (typeof raw === 'number') {
-    if (!Number.isFinite(raw) || raw <= 0) return null;
-    return Math.round(raw * 100);
-  }
-  if (typeof raw !== 'string') return null;
-  const cleaned = raw.replace(/[\s$,]/g, '');
-  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
-  const value = parseFloat(cleaned);
-  if (!Number.isFinite(value) || value <= 0) return null;
-  // Avoid floating round-trips
-  const [whole, fraction = ''] = cleaned.split('.');
-  const paddedFraction = (fraction + '00').slice(0, 2);
-  return parseInt(whole, 10) * 100 + parseInt(paddedFraction, 10);
 }
 
 function validate(body: unknown): { ok: true; value: LedgerInput } | { ok: false; error: string } {
