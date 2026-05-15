@@ -30,7 +30,8 @@ export interface EventDateInfo {
 
 // Generate Roman numerals up to 3999 (more than enough for any plausible
 // reunion year). Used for the masthead's stylized "Anno MMXXVI".
-function toRoman(num: number): string {
+// Exported for unit testing — the actual consumer is `getEventDateInfo`.
+export function toRoman(num: number): string {
   if (!Number.isInteger(num) || num <= 0 || num >= 4000) return String(num);
   const pairs: Array<[number, string]> = [
     [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],

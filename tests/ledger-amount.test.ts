@@ -6,42 +6,54 @@ describe('parseAmount — string inputs', () => {
     expect(parseAmount('12')).toBe(1200);
   });
 
-  it('parses cents', () => {
-    expect(parseAmount('12.50')).toBe(1250);
-    expect(parseAmount('12.05')).toBe(1205);
+  it.each([
+    ['12.50', 1250],
+    ['12.05', 1205],
+  ])('parses cents %s → %i', (input, expected) => {
+    expect(parseAmount(input)).toBe(expected);
   });
 
   it('parses single-digit cents (e.g. .5 → 50¢)', () => {
     expect(parseAmount('12.5')).toBe(1250);
   });
 
-  it('strips dollar sign and commas', () => {
-    expect(parseAmount('$1,234.56')).toBe(123456);
-    expect(parseAmount('  $42  ')).toBe(4200);
+  it.each([
+    ['$1,234.56', 123456],
+    ['  $42  ', 4200],
+  ])('strips dollar sign and commas %j → %i', (input, expected) => {
+    expect(parseAmount(input)).toBe(expected);
   });
 });
 
 describe('parseAmount — number inputs', () => {
-  it('parses a finite positive number', () => {
-    expect(parseAmount(12.5)).toBe(1250);
-    expect(parseAmount(0.05)).toBe(5);
+  it.each([
+    [12.5, 1250],
+    [0.05, 5],
+  ])('parses finite positive number %j → %i', (input, expected) => {
+    expect(parseAmount(input)).toBe(expected);
   });
 
-  it('rejects zero', () => {
-    expect(parseAmount(0)).toBe(null);
-    expect(parseAmount('0')).toBe(null);
-    expect(parseAmount('0.00')).toBe(null);
+  it.each([
+    [0],
+    ['0'],
+    ['0.00'],
+  ])('rejects zero (%j)', (input) => {
+    expect(parseAmount(input)).toBe(null);
   });
 
-  it('rejects negative numbers', () => {
-    expect(parseAmount(-1)).toBe(null);
-    expect(parseAmount('-5.00')).toBe(null);
+  it.each([
+    [-1],
+    ['-5.00'],
+  ])('rejects negative %j', (input) => {
+    expect(parseAmount(input)).toBe(null);
   });
 
-  it('rejects NaN and Infinity', () => {
-    expect(parseAmount(NaN)).toBe(null);
-    expect(parseAmount(Infinity)).toBe(null);
-    expect(parseAmount(-Infinity)).toBe(null);
+  it.each([
+    [Number.NaN],
+    [Number.POSITIVE_INFINITY],
+    [Number.NEGATIVE_INFINITY],
+  ])('rejects non-finite number %j', (input) => {
+    expect(parseAmount(input)).toBe(null);
   });
 });
 
@@ -50,16 +62,20 @@ describe('parseAmount — bad inputs', () => {
     expect(parseAmount('12.555')).toBe(null);
   });
 
-  it('rejects non-numeric strings', () => {
-    expect(parseAmount('twelve')).toBe(null);
-    expect(parseAmount('12abc')).toBe(null);
-    expect(parseAmount('')).toBe(null);
+  it.each([
+    ['twelve'],
+    ['12abc'],
+    [''],
+  ])('rejects non-numeric string %j', (input) => {
+    expect(parseAmount(input)).toBe(null);
   });
 
-  it('rejects null / undefined / boolean / object', () => {
-    expect(parseAmount(null)).toBe(null);
-    expect(parseAmount(undefined)).toBe(null);
-    expect(parseAmount(true as unknown)).toBe(null);
-    expect(parseAmount({} as unknown)).toBe(null);
+  it.each([
+    [null],
+    [undefined],
+    [true],
+    [{}],
+  ])('rejects non-numeric value %j', (input) => {
+    expect(parseAmount(input as unknown)).toBe(null);
   });
 });

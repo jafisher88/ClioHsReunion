@@ -51,14 +51,19 @@ describe('session token round-trip', () => {
     expect(payload).toBe(null);
   });
 
-  it('rejects malformed tokens', async () => {
-    expect(await readSessionToken('', SECRET)).toBe(null);
-    expect(await readSessionToken('no-dot-here', SECRET)).toBe(null);
-    expect(await readSessionToken('.', SECRET)).toBe(null);
-    expect(await readSessionToken('only.', SECRET)).toBe(null);
-    expect(await readSessionToken('.only', SECRET)).toBe(null);
+  it.each([
+    [''],
+    ['no-dot-here'],
+    ['.'],
+    ['only.'],
+    ['.only'],
+  ])('rejects malformed token %j', async (input) => {
+    expect(await readSessionToken(input, SECRET)).toBe(null);
   });
 
+  // @multi-assert — three constraints on a single returned timestamp (not
+  // null, within a ±2s window of the configured TTL). Cannot collapse into
+  // one expect without losing failure diagnostics.
   it('roundtrip preserves the configured TTL', async () => {
     const before = Math.floor(Date.now() / 1000);
     const token = await createSessionToken('jane@example.com', SECRET, 3600);

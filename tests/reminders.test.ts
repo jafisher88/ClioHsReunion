@@ -6,10 +6,12 @@ describe('daysUntilEvent', () => {
     expect(daysUntilEvent(null)).toBe(null);
   });
 
-  it('returns null for malformed dates', () => {
-    expect(daysUntilEvent('not-a-date')).toBe(null);
-    expect(daysUntilEvent('2026-1-1')).toBe(null);
-    expect(daysUntilEvent('20260101')).toBe(null);
+  it.each([
+    ['not-a-date'],
+    ['2026-1-1'],
+    ['20260101'],
+  ])('returns null for malformed date %j', (input) => {
+    expect(daysUntilEvent(input)).toBe(null);
   });
 
   it('returns 0 on the day of the event', () => {

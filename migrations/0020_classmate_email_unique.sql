@@ -29,6 +29,10 @@ UPDATE Classmates
  );
 
 DROP INDEX IF EXISTS idx_classmates_email;
-CREATE UNIQUE INDEX idx_classmates_email_unique
+-- IF NOT EXISTS makes the migration safe to re-apply on a fresh local DB
+-- whose `d1_migrations` tracking is reset (the existing production DB has
+-- this migration tracked, so wrangler skips it there). Caught by the
+-- idempotency test in tests/d1/migrations-idempotent.test.ts.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_classmates_email_unique
   ON Classmates (LOWER(TRIM(Email)))
   WHERE Email IS NOT NULL AND TRIM(Email) <> '';

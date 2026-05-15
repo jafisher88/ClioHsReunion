@@ -35,3 +35,10 @@ pnpm-debug.log*
 # jetbrains
 .idea/
 /local/
+
+# Hyperpowers task directories — local working state per the
+# `using-hyper` skill convention (delete when the work is done).
+/plans/active/
+
+# Local QA / review artifacts (one-off reports).
+/.evaluations/

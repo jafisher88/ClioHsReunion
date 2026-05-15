@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin } from '../../../lib/admin-auth';
+import { parseHttpUrl } from '../../../lib/url-validator';
 
 const MAX_NAME = 200;
 const MAX_NOTES = 2000;
 const MAX_EMAIL = 320;
 const MAX_TRIBUTE = 4000;
-const MAX_URL = 2000;
 const MIN_YEAR = 1900;
 const MAX_YEAR = 2100;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,21 +27,6 @@ function parseYear(value: unknown): number | null | 'invalid' {
   if (!Number.isInteger(n)) return 'invalid';
   if (n < MIN_YEAR || n > MAX_YEAR) return 'invalid';
   return n;
-}
-
-// Defense in depth on admin form fields that land in `<a href>` / `<img src>`
-// on the public memoriam page: only http(s) URLs are allowed. Blocks
-// `javascript:` and `data:` schemes that would otherwise execute on click.
-function parseHttpUrl(value: unknown): string | null | 'invalid' {
-  const clamped = clampText(value, MAX_URL);
-  if (!clamped) return null;
-  try {
-    const u = new URL(clamped);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'invalid';
-    return u.href;
-  } catch {
-    return 'invalid';
-  }
 }
 
 interface ClassmateInput {
