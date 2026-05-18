@@ -4,6 +4,7 @@ import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 import { dbToIso } from '../../lib/admin-dates';
 import { getEventDateInfo } from '../../lib/event-date';
+import { BLAST_TEMPLATES, renderTemplate, type RenderedTemplate } from '../../lib/blast-templates';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -11,6 +12,15 @@ if (!admin) {
 }
 
 const eventDate = await getEventDateInfo(env.DB);
+
+const renderedTemplates: Record<string, RenderedTemplate> = {};
+for (const tpl of BLAST_TEMPLATES) {
+  renderedTemplates[tpl.id] = renderTemplate(tpl.id, {
+    monthLong: eventDate.monthLong,
+    longDisplay: eventDate.longDisplay,
+    isLocked: eventDate.isLocked,
+  });
+}
 
 interface BlastRow {
   Id: number;
@@ -181,6 +191,35 @@ try {
           </label>
         </div>
 
+        <fieldset>
+          <legend class="block text-sm font-semibold text-brand-900">
+            Template <span class="text-brand-500">*</span>
+          </legend>
+          <p class="mt-1 text-xs text-cream-700">
+            Pick a preset to drop into the subject + body fields, or pick
+            Custom to write your own. Switching templates after typing will
+            ask before replacing your draft.
+          </p>
+          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {BLAST_TEMPLATES.map((tpl, i) => (
+              <label class="group/t cursor-pointer">
+                <input type="radio" name="template" value={tpl.id} required checked={i === 0} class="peer sr-only" />
+                <span class="block rounded-xl border-2 border-cream-300 bg-white p-4 transition-all duration-150 group-hover/t:border-brand-300 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:shadow-[inset_0_0_0_1px_var(--color-brand-500)]">
+                  <span class="flex items-baseline justify-between gap-2">
+                    <span class="font-semibold text-brand-900">{tpl.label}</span>
+                    {tpl.audienceHint ? (
+                      <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">
+                        pairs · {audienceLabel[tpl.audienceHint] ?? tpl.audienceHint}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span class="mt-1 block text-xs text-cream-700">{tpl.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
         <label class="block">
           <span class="block text-sm font-semibold text-brand-900">Subject <span class="text-brand-500">*</span></span>
           <input
@@ -323,7 +362,7 @@ try {
 
 </AdminLayout>
 
-<script is:inline define:vars={{ EVENT_MONTH: eventDate.monthLong, EVENT_LONG: eventDate.longDisplay, EVENT_IS_LOCKED: eventDate.isLocked }}>
+<script is:inline define:vars={{ RENDERED_TEMPLATES: renderedTemplates }}>
   (function () {
     const form = document.getElementById('blast-form');
     const message = document.getElementById('blast-message');
@@ -347,47 +386,35 @@ try {
 
     const subjectInput = form.elements.subject;
     const bodyInput    = form.elements.body;
-
-    // Built from the admin-set event date so the nudge always names the
-    // right month. Falls back to "November" when no date is locked in.
-    const whenSentence = EVENT_IS_LOCKED ? `on ${EVENT_LONG}` : `this ${EVENT_MONTH}`;
-    const NUDGE_SUBJECT = `Our 20-year reunion is ${EVENT_IS_LOCKED ? 'happening ' + EVENT_LONG : 'this ' + EVENT_MONTH} — please RSVP`;
-    const NUDGE_BODY = `Hey {firstName},
-
-Quick note from the Clio High School Class of 2006 reunion crew. Our
-20-year reunion is happening ${whenSentence} at Round Em Up Ranch in
-Clio. All the details (date, venue, schedule, what to bring) live on
-the site:
-
-  https://cliohsreunion.com
-
-We're getting close to head-count time and don't see an RSVP from you
-yet. Even a quick "yes / maybe / no" helps us plan food, drinks, and
-seating, so please take a minute to fill it out:
-
-  https://cliohsreunion.com/rsvp
-
-If you've already replied somewhere else, sorry for the nudge — you
-can ignore this. Otherwise, we'd love to see you in ${EVENT_MONTH}.
-
-— The planning crew
-cliohsreunion.com`;
+    const templateInputs = form.querySelectorAll('input[name="template"]');
 
     audienceInputs.forEach((input) => {
       input.addEventListener('change', () => {
         if (!input.checked) return;
         if (input.value === 'custom') customWrap.classList.remove('hidden');
         else customWrap.classList.add('hidden');
+      });
+    });
 
-        // For the "haven't RSVP'd yet" audience, drop in a ready-made nudge
-        // template — but only if both fields are still empty so we never
-        // trample a draft the admin was writing.
-        if (input.value === 'roster-no-rsvp'
-            && !subjectInput.value.trim()
-            && !bodyInput.value.trim()) {
-          subjectInput.value = NUDGE_SUBJECT;
-          bodyInput.value = NUDGE_BODY;
+    // Template picker: clicking a non-custom preset fills subject + body
+    // from the server-rendered template map. If the admin has typed
+    // anything, confirm before clobbering — bail back to "Custom" on
+    // cancel so the radio state stays honest.
+    templateInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        if (!input.checked) return;
+        const rendered = RENDERED_TEMPLATES[input.value];
+        if (!rendered) return;
+        if (input.value === 'custom') return; // Custom = leave fields alone.
+
+        const dirty = subjectInput.value.trim() !== '' || bodyInput.value.trim() !== '';
+        if (dirty && !confirm('Replace your current draft with the "' + input.value + '" template?')) {
+          const customRadio = form.querySelector('input[name="template"][value="custom"]');
+          if (customRadio) customRadio.checked = true;
+          return;
         }
+        subjectInput.value = rendered.subject;
+        bodyInput.value = rendered.body;
       });
     });
 
