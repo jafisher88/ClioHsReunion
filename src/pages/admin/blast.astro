@@ -31,6 +31,7 @@ interface UnsubRow {
 const audienceLabel: Record<string, string> = {
   'rsvp-yes':       'RSVPs · Yes',
   'rsvp-maybe':     'RSVPs · Maybe',
+  'rsvp-yes-maybe': 'RSVPs · Yes + Maybe',
   'rsvp-all':       'All RSVPs',
   'volunteers':     'Volunteers',
   'everyone':       'Everyone',
@@ -48,6 +49,7 @@ function fmtDate(iso: string): string {
 const audienceOptions = [
   { value: 'rsvp-yes',       label: 'RSVPs · Yes only',     desc: 'Confirmed attendees.' },
   { value: 'rsvp-maybe',     label: 'RSVPs · Maybe only',   desc: 'Tentative replies.' },
+  { value: 'rsvp-yes-maybe', label: 'RSVPs · Yes + Maybe',  desc: 'Anyone still planning to come.' },
   { value: 'rsvp-all',       label: 'RSVPs · All',           desc: 'Yes / maybe / no.' },
   { value: 'volunteers',     label: 'Volunteers',            desc: 'Day-before & day-after helpers.' },
   { value: 'everyone',       label: 'Everyone',              desc: 'RSVPs ∪ volunteers, deduped.' },
@@ -55,15 +57,16 @@ const audienceOptions = [
   { value: 'custom',         label: 'Custom list',           desc: 'Type emails by hand.' },
 ];
 
-let yesN = 0, maybeN = 0, allN = 0, volsN = 0, everyN = 0, rosterNoRsvpN = 0, optedOutCount = 0;
+let yesN = 0, maybeN = 0, yesMaybeN = 0, allN = 0, volsN = 0, everyN = 0, rosterNoRsvpN = 0, optedOutCount = 0;
 let blastHistory: BlastRow[] = [];
 let unsubs: UnsubRow[] = [];
 let audienceConfigured = false;
 
 try {
-  const [yes, maybe, all, vols, every, rosterNoRsvp, history, optedOut] = await Promise.all([
+  const [yes, maybe, yesMaybe, all, vols, every, rosterNoRsvp, history, optedOut] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'yes' AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending = 'maybe' AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE Attending IN ('yes','maybe') AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Rsvps WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
     env.DB.prepare(`SELECT COUNT(DISTINCT LOWER(Email)) AS n FROM Volunteers WHERE LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM (
@@ -81,6 +84,7 @@ try {
   ]);
   yesN = yes?.n ?? 0;
   maybeN = maybe?.n ?? 0;
+  yesMaybeN = yesMaybe?.n ?? 0;
   allN = all?.n ?? 0;
   volsN = vols?.n ?? 0;
   everyN = every?.n ?? 0;
@@ -139,6 +143,7 @@ try {
             {audienceOptions.map((opt) => {
               const count = opt.value === 'rsvp-yes'       ? yesN
                           : opt.value === 'rsvp-maybe'     ? maybeN
+                          : opt.value === 'rsvp-yes-maybe' ? yesMaybeN
                           : opt.value === 'rsvp-all'       ? allN
                           : opt.value === 'volunteers'     ? volsN
                           : opt.value === 'everyone'       ? everyN
@@ -455,6 +460,7 @@ cliohsreunion.com`;
       const audienceLabels = {
         'rsvp-yes': 'Yes RSVPs',
         'rsvp-maybe': 'Maybe RSVPs',
+        'rsvp-yes-maybe': 'Yes + Maybe RSVPs',
         'rsvp-all': 'all RSVPs',
         'volunteers': 'volunteers',
         'everyone': 'everyone',

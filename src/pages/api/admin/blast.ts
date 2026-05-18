@@ -8,6 +8,7 @@ import { getAudienceId, listUnsubscribeHeaders } from '../../../lib/audience';
 const VALID_AUDIENCES = new Set([
   'rsvp-yes',
   'rsvp-maybe',
+  'rsvp-yes-maybe',
   'rsvp-all',
   'volunteers',
   'everyone',
@@ -26,7 +27,7 @@ async function unsubscribedSet(db: D1Database): Promise<Set<string>> {
   return new Set((res.results ?? []).map((r) => r.Email.toLowerCase().trim()));
 }
 
-async function recipientsFor(audience: string, db: D1Database, customEmails: string[] = []): Promise<string[]> {
+export async function recipientsFor(audience: string, db: D1Database, customEmails: string[] = []): Promise<string[]> {
   let raw: string[];
   if (audience === 'custom') {
     raw = Array.from(
@@ -39,9 +40,10 @@ async function recipientsFor(audience: string, db: D1Database, customEmails: str
   } else {
     let sql: string;
     switch (audience) {
-      case 'rsvp-yes':   sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'yes'`; break;
-      case 'rsvp-maybe': sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'maybe'`; break;
-      case 'rsvp-all':   sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps`; break;
+      case 'rsvp-yes':       sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'yes'`; break;
+      case 'rsvp-maybe':     sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending = 'maybe'`; break;
+      case 'rsvp-yes-maybe': sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps WHERE Attending IN ('yes','maybe')`; break;
+      case 'rsvp-all':       sql = `SELECT DISTINCT LOWER(Email) AS email FROM Rsvps`; break;
       case 'volunteers': sql = `SELECT DISTINCT LOWER(Email) AS email FROM Volunteers`; break;
       case 'everyone':
         sql = `SELECT email FROM (
