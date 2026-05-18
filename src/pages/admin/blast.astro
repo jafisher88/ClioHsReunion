@@ -191,34 +191,24 @@ try {
           </label>
         </div>
 
-        <fieldset>
-          <legend class="block text-sm font-semibold text-brand-900">
-            Template <span class="text-brand-500">*</span>
-          </legend>
-          <p class="mt-1 text-xs text-cream-700">
-            Pick a preset to drop into the subject + body fields, or pick
-            Custom to write your own. Switching templates after typing will
-            ask before replacing your draft.
-          </p>
-          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <label class="block">
+          <span class="block text-sm font-semibold text-brand-900">
+            Campaign template <span class="text-brand-500">*</span>
+          </span>
+          <select
+            id="template-select"
+            name="template"
+            required
+            class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          >
             {BLAST_TEMPLATES.map((tpl, i) => (
-              <label class="group/t cursor-pointer">
-                <input type="radio" name="template" value={tpl.id} required checked={i === 0} class="peer sr-only" />
-                <span class="block rounded-xl border-2 border-cream-300 bg-white p-4 transition-all duration-150 group-hover/t:border-brand-300 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:shadow-[inset_0_0_0_1px_var(--color-brand-500)]">
-                  <span class="flex items-baseline justify-between gap-2">
-                    <span class="font-semibold text-brand-900">{tpl.label}</span>
-                    {tpl.audienceHint ? (
-                      <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">
-                        pairs · {audienceLabel[tpl.audienceHint] ?? tpl.audienceHint}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span class="mt-1 block text-xs text-cream-700">{tpl.description}</span>
-                </span>
-              </label>
+              <option value={tpl.id} selected={i === 0}>{tpl.label}</option>
             ))}
-          </div>
-        </fieldset>
+          </select>
+          <p id="template-description" class="mt-2 text-xs text-cream-700">
+            {BLAST_TEMPLATES[0]?.description}
+          </p>
+        </label>
 
         <label class="block">
           <span class="block text-sm font-semibold text-brand-900">Subject <span class="text-brand-500">*</span></span>
@@ -362,7 +352,7 @@ try {
 
 </AdminLayout>
 
-<script is:inline define:vars={{ RENDERED_TEMPLATES: renderedTemplates }}>
+<script is:inline define:vars={{ RENDERED_TEMPLATES: renderedTemplates, TEMPLATE_META: BLAST_TEMPLATES.map((t) => ({ id: t.id, description: t.description, audienceHint: t.audienceHint ?? null, audienceLabel: t.audienceHint ? (audienceLabel[t.audienceHint] ?? t.audienceHint) : null })) }}>
   (function () {
     const form = document.getElementById('blast-form');
     const message = document.getElementById('blast-message');
@@ -386,7 +376,13 @@ try {
 
     const subjectInput = form.elements.subject;
     const bodyInput    = form.elements.body;
-    const templateInputs = form.querySelectorAll('input[name="template"]');
+    const templateSelect = document.getElementById('template-select');
+    const templateDescription = document.getElementById('template-description');
+    const templateMetaById = Object.fromEntries((TEMPLATE_META || []).map((m) => [m.id, m]));
+
+    // Remember which template id is currently considered "applied" so we
+    // can revert the <select> on cancel from a dirty-replace confirm.
+    let appliedTemplateId = templateSelect ? templateSelect.value : 'custom';
 
     audienceInputs.forEach((input) => {
       input.addEventListener('change', () => {
@@ -396,27 +392,44 @@ try {
       });
     });
 
-    // Template picker: clicking a non-custom preset fills subject + body
-    // from the server-rendered template map. If the admin has typed
-    // anything, confirm before clobbering — bail back to "Custom" on
-    // cancel so the radio state stays honest.
-    templateInputs.forEach((input) => {
-      input.addEventListener('change', () => {
-        if (!input.checked) return;
-        const rendered = RENDERED_TEMPLATES[input.value];
-        if (!rendered) return;
-        if (input.value === 'custom') return; // Custom = leave fields alone.
+    function updateTemplateDescription(id) {
+      if (!templateDescription) return;
+      const meta = templateMetaById[id];
+      if (!meta) { templateDescription.textContent = ''; return; }
+      const hint = meta.audienceLabel ? ` · Pairs with: ${meta.audienceLabel}` : '';
+      templateDescription.textContent = (meta.description || '') + hint;
+    }
+
+    // Template dropdown: picking a non-custom preset fills subject + body
+    // from the server-rendered template map. Custom leaves the fields
+    // alone (so switching to Custom mid-edit preserves the in-progress
+    // draft). If the admin has typed anything, confirm before clobbering
+    // — bail back to the previously applied template on cancel so the
+    // <select>'s value stays honest.
+    if (templateSelect) {
+      templateSelect.addEventListener('change', () => {
+        const id = templateSelect.value;
+        updateTemplateDescription(id);
+
+        const rendered = RENDERED_TEMPLATES[id];
+        if (!rendered) { appliedTemplateId = id; return; }
+        if (id === 'custom') { appliedTemplateId = id; return; }
 
         const dirty = subjectInput.value.trim() !== '' || bodyInput.value.trim() !== '';
-        if (dirty && !confirm('Replace your current draft with the "' + input.value + '" template?')) {
-          const customRadio = form.querySelector('input[name="template"][value="custom"]');
-          if (customRadio) customRadio.checked = true;
+        if (dirty && !confirm('Replace your current draft with the "' + id + '" template?')) {
+          templateSelect.value = appliedTemplateId;
+          updateTemplateDescription(appliedTemplateId);
           return;
         }
         subjectInput.value = rendered.subject;
         bodyInput.value = rendered.body;
+        appliedTemplateId = id;
       });
-    });
+
+      // Seed the description on load so any pairs-with hint shows up
+      // before the first interaction.
+      updateTemplateDescription(templateSelect.value);
+    }
 
     function parseCustomEmails() {
       return (customTextarea.value || '').split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
