@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin } from '../../../lib/admin-auth';
-import { renderHtmlEmail, resendBatch, resendUpsertContact, type ResendEmail } from '../../../lib/resend';
+import { renderHtmlEmail, resendBatch, resendUpsertContacts, type ResendEmail } from '../../../lib/resend';
 import { personalize, resolveFirstNames } from '../../../lib/personalization';
 import { getAudienceId, listUnsubscribeHeaders } from '../../../lib/audience';
 
@@ -166,16 +166,19 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // Upsert every recipient into the audience first so unsubscribes flow back.
-  // Best-effort; we don't want a single contact failure to block the blast.
+  // Best-effort + throttled to stay under Resend's 5 req/sec ceiling — a
+  // naive Promise.all here will rate-limit the batch send that follows.
   if (audienceId) {
-    await Promise.all(recipients.map(async (email) => {
-      const firstName = byEmail.get(email.toLowerCase().trim());
-      try {
-        await resendUpsertContact(env.RESEND_API_KEY!, audienceId!, { email, firstName });
-      } catch (err) {
-        console.error('[blast] upsert contact failed', email, err);
-      }
+    const contacts = recipients.map((email) => ({
+      email,
+      firstName: byEmail.get(email.toLowerCase().trim()),
     }));
+    await resendUpsertContacts(
+      env.RESEND_API_KEY!,
+      audienceId,
+      contacts,
+      (email, err) => console.error('[blast] upsert contact failed', email, err),
+    );
   }
 
   // Send in batches of 100 (Resend's batch endpoint limit).

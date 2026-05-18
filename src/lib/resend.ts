@@ -252,6 +252,43 @@ export async function resendUpsertContact(
   }
 }
 
+/**
+ * Upsert many contacts while staying inside Resend's 5 req/sec rate limit.
+ *
+ * Sends in chunks of 4 with a ~1.1s pause between chunks — leaving headroom
+ * for the email send that typically follows. Per-contact errors are caught
+ * and forwarded to `onError`; the helper never throws, since contact upsert
+ * is best-effort (the send itself doesn't depend on it).
+ *
+ * Why this exists: a naive `Promise.all(emails.map(upsert))` blows the
+ * 5 req/sec ceiling on any audience > ~5 recipients, and the immediately
+ * following batch send eats a 429.
+ */
+export async function resendUpsertContacts(
+  apiKey: string,
+  audienceId: string,
+  contacts: Array<{ email: string; firstName?: string; lastName?: string; unsubscribed?: boolean }>,
+  onError?: (email: string, err: unknown) => void,
+  options: { chunkSize?: number; delayMs?: number } = {},
+): Promise<void> {
+  const chunkSize = options.chunkSize ?? 4;
+  const delayMs = options.delayMs ?? 1100;
+
+  for (let i = 0; i < contacts.length; i += chunkSize) {
+    const chunk = contacts.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (c) => {
+      try {
+        await resendUpsertContact(apiKey, audienceId, c);
+      } catch (err) {
+        if (onError) onError(c.email, err);
+      }
+    }));
+    if (delayMs > 0 && i + chunkSize < contacts.length) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Listing — used by the backfill flow to recover per-message ids for blasts
 // that were sent before per-recipient logging existed. We can match by

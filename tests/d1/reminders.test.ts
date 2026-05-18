@@ -139,6 +139,7 @@ describe('runReminder (F4)', () => {
       resendApiKey: FAKE_API_KEY,
       overrideRecipients: recipients,
       skipRecording: true, // keeps the per-row Insert noise out of fetchCalls
+      skipContactUpsert: true, // avoid the ~28s rate-limit throttle on 105 contacts
     });
 
     const batchCalls = fetchCalls.filter(

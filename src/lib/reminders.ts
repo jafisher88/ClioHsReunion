@@ -1,4 +1,4 @@
-import { renderHtmlEmail, resendBatch, resendUpsertContact, type ResendEmail } from './resend';
+import { renderHtmlEmail, resendBatch, resendUpsertContacts, type ResendEmail } from './resend';
 import { personalize, resolveFirstNames } from './personalization';
 import { getAudienceId, listUnsubscribeHeaders } from './audience';
 
@@ -141,6 +141,10 @@ export async function runReminder(args: {
   resendApiKey: string;
   overrideRecipients?: string[];
   skipRecording?: boolean;
+  /** Test-only: bypass the throttled contact upsert (which inserts seconds
+   *  of real-time sleep into long-recipient tests). The send itself still
+   *  passes audienceId per message, so unsubscribes still flow back. */
+  skipContactUpsert?: boolean;
   replyTo?: string;
 }): Promise<ReminderRunResult> {
   const result: ReminderRunResult = {
@@ -174,15 +178,17 @@ export async function runReminder(args: {
     console.error('[reminders] audience resolve failed', err);
   }
 
-  if (audienceId) {
-    await Promise.all(recipients.map(async (email) => {
-      const firstName = byEmail.get(email.toLowerCase().trim());
-      try {
-        await resendUpsertContact(args.resendApiKey, audienceId!, { email, firstName });
-      } catch (err) {
-        console.error('[reminders] upsert contact failed', email, err);
-      }
+  if (audienceId && !args.skipContactUpsert) {
+    const contacts = recipients.map((email) => ({
+      email,
+      firstName: byEmail.get(email.toLowerCase().trim()),
     }));
+    await resendUpsertContacts(
+      args.resendApiKey,
+      audienceId,
+      contacts,
+      (email, err) => console.error('[reminders] upsert contact failed', email, err),
+    );
   }
 
   const headers = audienceId ? listUnsubscribeHeaders() : undefined;
