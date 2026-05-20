@@ -5,6 +5,7 @@ import { getAdmin, loginUrlFor } from '../../lib/admin-auth';
 import { dbToIso } from '../../lib/admin-dates';
 import { getEventDateInfo } from '../../lib/event-date';
 import { BLAST_TEMPLATES, renderTemplate, type RenderedTemplate } from '../../lib/blast-templates';
+import { AUDIENCE_LABEL } from '../../lib/blast-audiences';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -29,6 +30,7 @@ interface BlastRow {
   RecipientCount: number;
   SentBy: string;
   SentAt: string;
+  ParentBlastId: number | null;
 }
 
 interface UnsubRow {
@@ -37,17 +39,6 @@ interface UnsubRow {
   UnsubscribedAt: string | null;
   SyncedAt: string;
 }
-
-const audienceLabel: Record<string, string> = {
-  'rsvp-yes':       'RSVPs · Yes',
-  'rsvp-maybe':     'RSVPs · Maybe',
-  'rsvp-yes-maybe': 'RSVPs · Yes + Maybe',
-  'rsvp-all':       'All RSVPs',
-  'volunteers':     'Volunteers',
-  'everyone':       'Everyone',
-  'roster-no-rsvp': 'Roster · not RSVP\'d',
-  'custom':         'Custom list',
-};
 
 function fmtDate(iso: string): string {
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
@@ -89,7 +80,7 @@ try {
                        AND Email IS NOT NULL AND TRIM(Email) <> ''
                        AND LOWER(Email) NOT IN (SELECT LOWER(Email) FROM Rsvps WHERE Email IS NOT NULL)
                        AND LOWER(Email) NOT IN (SELECT Email FROM Unsubscribes)`).first<{ n: number }>(),
-    env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt FROM EmailBlasts ORDER BY SentAt DESC`).all<BlastRow>(),
+    env.DB.prepare(`SELECT Id, Subject, Audience, RecipientCount, SentBy, SentAt, ParentBlastId FROM EmailBlasts ORDER BY SentAt DESC`).all<BlastRow>(),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM Unsubscribes`).first<{ n: number }>(),
   ]);
   yesN = yes?.n ?? 0;
@@ -337,8 +328,20 @@ try {
                 <td class="num mono dim">
                   <a class="text-brand-700 hover:underline" href={`/admin/blast/${b.Id}`}>#{b.Id}</a>
                 </td>
-                <td><span class="font-semibold">{b.Subject}</span></td>
-                <td class="mono dim">{audienceLabel[b.Audience] ?? b.Audience}</td>
+                <td>
+                  <span class="font-semibold">{b.Subject}</span>
+                  {b.ParentBlastId !== null ? (
+                    <a
+                      href={`/admin/blast/${b.ParentBlastId}`}
+                      data-testid="campaign-followup-badge"
+                      class="ml-2 inline-block rounded-full bg-cream-100 px-2 py-0.5 align-middle font-mono text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-brand-700 ring-1 ring-cream-300 hover:bg-brand-50 hover:ring-brand-300"
+                      title={`Follow-up sent as part of campaign #${b.ParentBlastId}`}
+                    >
+                      ↳ part of campaign #{b.ParentBlastId}
+                    </a>
+                  ) : null}
+                </td>
+                <td class="mono dim">{AUDIENCE_LABEL[b.Audience] ?? b.Audience}</td>
                 <td class="num">{b.RecipientCount}</td>
                 <td class="mono dim">{b.SentBy.split('@')[0]}</td>
                 <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(b.SentAt)}>{fmtDate(b.SentAt)}</time></td>
@@ -352,7 +355,7 @@ try {
 
 </AdminLayout>
 
-<script is:inline define:vars={{ RENDERED_TEMPLATES: renderedTemplates, TEMPLATE_META: BLAST_TEMPLATES.map((t) => ({ id: t.id, description: t.description, audienceHint: t.audienceHint ?? null, audienceLabel: t.audienceHint ? (audienceLabel[t.audienceHint] ?? t.audienceHint) : null })) }}>
+<script is:inline define:vars={{ RENDERED_TEMPLATES: renderedTemplates, TEMPLATE_META: BLAST_TEMPLATES.map((t) => ({ id: t.id, description: t.description, audienceHint: t.audienceHint ?? null, audienceLabel: t.audienceHint ? (AUDIENCE_LABEL[t.audienceHint] ?? t.audienceHint) : null })) }}>
   (function () {
     const form = document.getElementById('blast-form');
     const message = document.getElementById('blast-message');

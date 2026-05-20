@@ -3,6 +3,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { env } from 'cloudflare:workers';
 import { getAdmin, loginUrlFor } from '../../../lib/admin-auth';
 import { dbToIso } from '../../../lib/admin-dates';
+import { recipientsForFollowUp, type FollowUpPreview } from '../../../lib/blast-resend';
+import { AUDIENCE_LABEL } from '../../../lib/blast-audiences';
 
 const admin = await getAdmin(Astro.request, env);
 if (!admin) {
@@ -24,6 +26,14 @@ interface BlastRow {
   SentAt: string;
   ResendId: string | null;
   Status: string;
+  ParentBlastId: number | null;
+}
+
+interface FollowUpRow {
+  Id: number;
+  Subject: string;
+  RecipientCount: number;
+  SentAt: string;
 }
 
 interface SendRow {
@@ -35,17 +45,6 @@ interface SendRow {
   CreatedAt: string;
 }
 
-const audienceLabel: Record<string, string> = {
-  'rsvp-yes':       'RSVPs · Yes',
-  'rsvp-maybe':     'RSVPs · Maybe',
-  'rsvp-yes-maybe': 'RSVPs · Yes + Maybe',
-  'rsvp-all':       'All RSVPs',
-  'volunteers':     'Volunteers',
-  'everyone':       'Everyone',
-  'roster-no-rsvp': 'Roster · not RSVP\'d',
-  'custom':         'Custom list',
-};
-
 function fmtDate(iso: string): string {
   const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
   if (!m) return iso;
@@ -55,12 +54,13 @@ function fmtDate(iso: string): string {
 
 let blast: BlastRow | null = null;
 let sends: SendRow[] = [];
+let followUps: FollowUpRow[] = [];
 let loadError: string | null = null;
 
 try {
   blast = await env.DB
     .prepare(
-      `SELECT Id, Subject, BodyText, Audience, RecipientCount, SentBy, SentAt, ResendId, Status
+      `SELECT Id, Subject, BodyText, Audience, RecipientCount, SentBy, SentAt, ResendId, Status, ParentBlastId
          FROM EmailBlasts
         WHERE Id = ?1`
     )
@@ -78,6 +78,22 @@ try {
       .bind(blastId)
       .all<SendRow>();
     sends = sendsRes.results ?? [];
+
+    // Follow-ups: every child blast where ParentBlastId points to this
+    // page's blast. Since ParentBlastId always points to ROOT, this only
+    // populates when viewing a root's detail page (follow-up pages have
+    // no descendants and instead show the campaign-root link in the
+    // header).
+    const followsRes = await env.DB
+      .prepare(
+        `SELECT Id, Subject, RecipientCount, SentAt
+           FROM EmailBlasts
+          WHERE ParentBlastId = ?1
+          ORDER BY SentAt ASC`
+      )
+      .bind(blastId)
+      .all<FollowUpRow>();
+    followUps = followsRes.results ?? [];
   }
 } catch (err) {
   console.error('[blast detail] load failed', err);
@@ -120,6 +136,28 @@ function statusClass(status: string): string {
 }
 
 const noTracking = sends.length === 0;
+
+// Resend-to-new preview. Custom-audience blasts don't get a card at
+// all (recipientsForFollowUp returns reason='custom-audience' and we
+// special-case it below). Any other reason value renders an explanatory
+// disabled card; the happy path renders the editable composer form.
+let resendPreview: FollowUpPreview | null = null;
+let resendError: string | null = null;
+try {
+  resendPreview = await recipientsForFollowUp(blastId, env.DB);
+} catch (err) {
+  console.error('[blast detail] resend preview failed', err);
+  resendError = (err as Error).message;
+}
+
+function daysAgo(iso: string): string {
+  const t = Date.parse(iso.replace(' ', 'T') + 'Z');
+  if (!Number.isFinite(t)) return iso;
+  const days = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
+  if (days < 1) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+}
 ---
 
 <AdminLayout title={`Blast #${blast.Id}`} adminEmail={admin.email}>
@@ -128,6 +166,18 @@ const noTracking = sends.length === 0;
       <a href="/admin/blast" class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-brand-700 hover:text-brand-900">← All blasts</a>
       <span class="text-cream-400" aria-hidden="true">·</span>
       <span class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-cream-700">Blast #{blast.Id}</span>
+      {blast.ParentBlastId !== null ? (
+        <>
+          <span class="text-cream-400" aria-hidden="true">·</span>
+          <a
+            href={`/admin/blast/${blast.ParentBlastId}`}
+            data-testid="campaign-root-link"
+            class="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-brand-700 hover:text-brand-900"
+          >
+            Part of campaign #{blast.ParentBlastId}
+          </a>
+        </>
+      ) : null}
     </div>
     <h1 class="mt-2 font-heading text-3xl font-bold uppercase tracking-[0.04em] text-brand-900 sm:text-4xl">
       {blast.Subject}
@@ -138,7 +188,7 @@ const noTracking = sends.length === 0;
     <dl class="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <dt class="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-cream-700">Audience</dt>
-        <dd class="mt-1 font-semibold text-brand-900">{audienceLabel[blast.Audience] ?? blast.Audience}</dd>
+        <dd class="mt-1 font-semibold text-brand-900">{AUDIENCE_LABEL[blast.Audience] ?? blast.Audience}</dd>
       </div>
       <div>
         <dt class="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-cream-700">Recipients</dt>
@@ -162,6 +212,133 @@ const noTracking = sends.length === 0;
       <pre class="mt-3 overflow-x-auto whitespace-pre-wrap rounded-lg border border-cream-200 bg-cream-50/60 p-4 font-mono text-[0.78rem] leading-relaxed text-brand-900">{blast.BodyText}</pre>
     </details>
   </section>
+
+  {resendPreview ? (
+    <section class="mb-8">
+      <header class="mb-4">
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">
+          Resend to new audience members
+        </h2>
+        <p class="mt-1 max-w-2xl text-xs text-cream-700">
+          Send this campaign again to anyone in
+          <span class="font-mono text-brand-700">{AUDIENCE_LABEL[resendPreview.rootRow.Audience] ?? resendPreview.rootRow.Audience}</span>
+          who hasn't received it yet. Already-sent recipients are skipped automatically.
+        </p>
+      </header>
+
+      {resendPreview.reason === 'custom-audience' ? (
+        <div
+          data-testid="resend-card-custom"
+          class="rounded-2xl border border-dashed border-cream-300 bg-white/40 p-6 text-sm text-cream-700 sm:p-8"
+        >
+          <p class="font-semibold text-brand-900">Custom audiences can't be re-sent.</p>
+          <p class="mt-2">
+            The original recipient list was hand-typed for this blast, so we can't re-evaluate it to find "new" people. To reach additional folks, compose a fresh blast from
+            <a href="/admin/blast" class="text-brand-700 underline-offset-2 hover:underline">the blast page</a>.
+          </p>
+        </div>
+      ) : resendPreview.reason === 'no-new-recipients' ? (
+        <div
+          data-testid="resend-card-empty"
+          class="rounded-2xl border border-cream-300 bg-white/60 p-6 text-sm sm:p-8"
+        >
+          <p class="font-semibold text-brand-900">No new audience members since last send.</p>
+          <p class="mt-2 text-cream-700">
+            All
+            <span class="font-mono">{resendPreview.totalAudienceNow}</span>
+            current
+            <span class="font-mono text-brand-700">{AUDIENCE_LABEL[resendPreview.rootRow.Audience] ?? resendPreview.rootRow.Audience}</span>
+            recipients have already received this campaign. Last sent
+            <time datetime={dbToIso(resendPreview.rootRow.SentAt)}>{daysAgo(resendPreview.rootRow.SentAt)}</time>.
+          </p>
+        </div>
+      ) : resendPreview.reason === 'no-audience' ? (
+        <div
+          data-testid="resend-card-empty"
+          class="rounded-2xl border border-cream-300 bg-white/60 p-6 text-sm sm:p-8"
+        >
+          <p class="font-semibold text-brand-900">No one currently matches this audience.</p>
+          <p class="mt-2 text-cream-700">
+            The
+            <span class="font-mono text-brand-700">{AUDIENCE_LABEL[resendPreview.rootRow.Audience] ?? resendPreview.rootRow.Audience}</span>
+            selector returns zero recipients right now — there's no one to send to.
+          </p>
+        </div>
+      ) : (
+        <div
+          data-testid="resend-card-active"
+          class="rounded-2xl border border-cream-300 bg-white/85 p-6 shadow-soft sm:p-8"
+        >
+          <div class="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+            <p class="text-sm text-brand-900">
+              <span class="font-mono text-base font-bold text-brand-700" data-testid="resend-new-count">
+                {resendPreview.recipients.length}
+              </span>
+              new
+              {resendPreview.recipients.length === 1 ? ' audience member' : ' audience members'}
+              since last send.
+            </p>
+            <p class="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-cream-700">
+              Last sent <time datetime={dbToIso(resendPreview.rootRow.SentAt)}>{daysAgo(resendPreview.rootRow.SentAt)}</time>
+              · already received: {resendPreview.alreadySentCount}
+            </p>
+          </div>
+
+          <form id="resend-form" class="space-y-5">
+            <label class="block">
+              <span class="block text-sm font-semibold text-brand-900">Subject <span class="text-brand-500">*</span></span>
+              <input
+                type="text"
+                name="subject"
+                required
+                maxlength="200"
+                value={resendPreview.rootRow.Subject}
+                class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+              />
+            </label>
+
+            <label class="block">
+              <span class="block text-sm font-semibold text-brand-900">Message <span class="text-brand-500">*</span></span>
+              <p class="mt-0.5 text-xs text-cream-700">
+                Pre-filled from the original. Edit if you want to add a "Quick reminder —" note or update a date. Use
+                <code class="rounded bg-cream-100 px-1.5 py-0.5 font-mono text-brand-700">{`{firstName}`}</code>
+                for personalization.
+              </p>
+              <textarea
+                name="body"
+                required
+                rows="10"
+                class="mt-1.5 block w-full rounded-lg border-2 border-cream-300 bg-white px-3 py-2.5 text-brand-900 transition-colors duration-150 placeholder-cream-500 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+              >{resendPreview.rootRow.BodyText}</textarea>
+            </label>
+
+            <div class="flex flex-wrap items-center gap-3 border-t border-cream-200 pt-5">
+              <button
+                type="button"
+                id="resend-test-btn"
+                class="inline-flex items-center gap-2 rounded-full border-2 border-cream-400 bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 transition-all duration-200 hover:border-brand-500 hover:bg-brand-50 hover:-translate-y-0.5"
+              >
+                Send test to me
+                <span aria-hidden="true">→</span>
+              </button>
+              <button
+                type="submit"
+                id="resend-live-btn"
+                class="group/cta inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-cream-50 shadow-[0_2px_0_rgba(13,11,10,0.04),0_8px_18px_-6px_rgba(242,105,1,0.5)] transition-all duration-200 hover:bg-brand-600 hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+              >
+                <span id="resend-live-label">
+                  Send to {resendPreview.recipients.length} new
+                  {resendPreview.recipients.length === 1 ? ' recipient' : ' recipients'}
+                </span>
+                <span class="text-cream-50/70 transition-transform duration-200 group-hover/cta:translate-x-0.5" aria-hidden="true">→</span>
+              </button>
+              <p id="resend-message" class="hidden text-sm"></p>
+            </div>
+          </form>
+        </div>
+      )}
+    </section>
+  ) : null}
 
   <section class="mb-8">
     <header class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
@@ -271,6 +448,44 @@ const noTracking = sends.length === 0;
       </div>
     )}
   </section>
+
+  {followUps.length > 0 ? (
+    <section id="followups" class="mb-8">
+      <header class="mb-4">
+        <h2 class="font-heading text-lg font-semibold uppercase tracking-[0.08em] text-brand-900 sm:text-xl">
+          Follow-ups
+          <span class="ml-1 font-mono text-xs font-bold text-brand-700">·{followUps.length}</span>
+        </h2>
+        <p class="mt-1 max-w-2xl text-xs text-cream-700">
+          Additional sends to new audience members for this campaign. Click any row for its per-recipient status.
+        </p>
+      </header>
+      <div class="admin-table-wrap">
+        <table class="admin-table admin-table--rows-link">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Subject</th>
+              <th class="num">Recipients</th>
+              <th>Sent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {followUps.map((f) => (
+              <tr class="cursor-pointer hover:bg-brand-50/40" data-href={`/admin/blast/${f.Id}`}>
+                <td class="num mono dim">
+                  <a class="text-brand-700 hover:underline" href={`/admin/blast/${f.Id}`}>#{f.Id}</a>
+                </td>
+                <td><span class="font-semibold">{f.Subject}</span></td>
+                <td class="num">{f.RecipientCount}</td>
+                <td class="mono dim whitespace-nowrap"><time datetime={dbToIso(f.SentAt)}>{fmtDate(f.SentAt)}</time></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ) : null}
 
   {loadError ? (
     <p class="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800">
@@ -430,6 +645,142 @@ const noTracking = sends.length === 0;
         show('Network error.', 'error');
         btn.disabled = false;
         label.textContent = 'Backfill from Resend';
+      }
+    });
+  })();
+
+  (function () {
+    // Make the entire row clickable in any admin table that opted in via
+    // .admin-table--rows-link, while leaving inner <a> clicks alone.
+    // Mirrors the helper in /admin/blast.astro — duplicated here rather
+    // than pulled into AdminLayout because only two pages use the
+    // pattern today.
+    document.querySelectorAll('table.admin-table--rows-link tbody tr[data-href]').forEach((row) => {
+      row.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target instanceof HTMLElement && target.closest('a, button, input, label')) return;
+        const href = row.getAttribute('data-href');
+        if (href) window.location.href = href;
+      });
+    });
+  })();
+</script>
+
+<script is:inline define:vars={{ blastId, rootAudience: resendPreview?.rootRow.Audience ?? null }}>
+  // Resend-to-new form handlers (only active when the page rendered the
+  // has-new card with [data-testid="resend-card-active"]).
+  //
+  // Two buttons share the same form values:
+  //   - "Send test to me"  →  POST /api/admin/blast with testMode:true
+  //   - "Send to N new ..."→  POST /api/admin/blast/:id/resend
+  //
+  // Both sync-disable their button BEFORE the fetch so a fat-finger
+  // double-click can't fire two POSTs. The server-side ResendLocks
+  // table is the safety net for truly concurrent posts; this is the
+  // primary UX defense.
+  (function () {
+    const form = document.getElementById('resend-form');
+    if (!form) return;
+    const liveBtn   = document.getElementById('resend-live-btn');
+    const liveLabel = document.getElementById('resend-live-label');
+    const testBtn   = document.getElementById('resend-test-btn');
+    const msg       = document.getElementById('resend-message');
+    if (!liveBtn || !liveLabel || !testBtn || !msg) return;
+
+    function show(text, tone) {
+      msg.textContent = text;
+      msg.classList.remove('hidden', 'text-brand-700', 'text-rose-700', 'text-emerald-700');
+      msg.classList.add(
+        tone === 'error' ? 'text-rose-700' :
+        tone === 'ok'    ? 'text-emerald-700' :
+                           'text-brand-700',
+      );
+    }
+
+    function readPayload() {
+      const fd = new FormData(form);
+      return {
+        subject: String(fd.get('subject') ?? '').trim(),
+        body:    String(fd.get('body') ?? '').trim(),
+      };
+    }
+
+    function validateBeforeSend() {
+      const p = readPayload();
+      if (!p.subject) { show('Subject required.', 'error'); return null; }
+      if (!p.body)    { show('Message body required.', 'error'); return null; }
+      return p;
+    }
+
+    testBtn.addEventListener('click', async () => {
+      const payload = validateBeforeSend();
+      if (!payload) return;
+      // Sync disable so a rapid second click can't fire a second test.
+      testBtn.disabled = true;
+      show('Sending test to you…', 'info');
+      try {
+        const res = await fetch('/api/admin/blast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject: payload.subject,
+            body: payload.body,
+            audience: rootAudience,
+            testMode: true,
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          show((body && body.error) || `Test failed (${res.status})`, 'error');
+          return;
+        }
+        show('Test sent — check your inbox.', 'ok');
+      } catch {
+        show('Network error.', 'error');
+      } finally {
+        testBtn.disabled = false;
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = validateBeforeSend();
+      if (!payload) return;
+      // Sync disable BEFORE the fetch — the server-side ResendLocks
+      // table is the safety net for truly concurrent posts, but this
+      // is the primary fix for "user clicks twice quickly."
+      liveBtn.disabled = true;
+      const originalLabel = liveLabel.textContent;
+      liveLabel.textContent = 'Sending…';
+      show('Sending follow-up…', 'info');
+      try {
+        const res = await fetch(`/api/admin/blast/${blastId}/resend`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          // 409 reasons get friendlier copy than the raw error string.
+          let m = (body && body.error) || `Send failed (${res.status})`;
+          if (body && body.reason === 'recent-resend') {
+            m = `Another resend went out within the last 30 seconds. Wait a moment, then refresh.`;
+          } else if (body && body.reason === 'concurrent-resend') {
+            m = `Another resend is currently in flight for this campaign. Refresh in a moment.`;
+          } else if (body && body.reason === 'no-new-recipients') {
+            m = `No new audience members — someone may have unsubscribed since the page loaded. Refresh.`;
+          }
+          show(m, 'error');
+          liveBtn.disabled = false;
+          liveLabel.textContent = originalLabel;
+          return;
+        }
+        show(`Sent to ${body.recipientCount} recipient${body.recipientCount === 1 ? '' : 's'}. Reloading…`, 'ok');
+        setTimeout(() => location.reload(), 1200);
+      } catch {
+        show('Network error.', 'error');
+        liveBtn.disabled = false;
+        liveLabel.textContent = originalLabel;
       }
     });
   })();
