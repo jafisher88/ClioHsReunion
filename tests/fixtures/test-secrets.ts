@@ -31,3 +31,12 @@ export const TEST_SESSION_SECRET =
 export const TEST_RESEND_WEBHOOK_SECRET = `whsec_${Buffer.from(
   'PUBLIC_TEST_VALUE_NOT_A_SECRET_for_resend_webhook_verify_only',
 ).toString('base64')}`;
+
+/**
+ * Stand-in Resend API key for tests. Production code reads
+ * `env.RESEND_API_KEY` and forwards it as a Bearer token to
+ * api.resend.com; in tests we stub `globalThis.fetch` so no value ever
+ * leaves the test process, and the key just needs to be truthy.
+ */
+export const TEST_RESEND_API_KEY =
+  're_PUBLIC_TEST_VALUE_NOT_A_SECRET_for_blast_resend_tests';

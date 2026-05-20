@@ -23,12 +23,14 @@
     "standardwebhooks": "^1.0.0"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@cloudflare/vitest-pool-workers": "^0.16.6",
     "@cloudflare/workers-types": "^4.20260317.1",
     "@tailwindcss/vite": "4.2.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "tailwindcss": "4.2.2",
+    "typescript": "^5.9.3",
     "vitest": "4.1.1",
     "wrangler": "4.76.0"
   },

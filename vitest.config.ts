@@ -2,6 +2,7 @@ import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers';
 import {
+  TEST_RESEND_API_KEY,
   TEST_RESEND_WEBHOOK_SECRET,
   TEST_SESSION_SECRET,
 } from './tests/fixtures/test-secrets';
@@ -45,6 +46,11 @@ export default defineConfig({
                 // grep can't confuse them with production credentials.
                 SESSION_SECRET: TEST_SESSION_SECRET,
                 RESEND_WEBHOOK_SECRET: TEST_RESEND_WEBHOOK_SECRET,
+                // RESEND_API_KEY is forwarded to api.resend.com as a Bearer
+                // token in production. Tests stub globalThis.fetch via
+                // tests/fixtures/resend-mock.ts so no real request leaves
+                // the process; the binding just needs to be truthy.
+                RESEND_API_KEY: TEST_RESEND_API_KEY,
               },
             },
           }),
