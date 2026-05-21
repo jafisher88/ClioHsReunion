@@ -11,9 +11,21 @@ function jsonError(message: string, status: number): Response {
 
 /**
  * POST /api/admin/classmates
- *   Single add: { fullName, maidenName?, preferredFirstName?, notes?, isDeceased? }
+ *   Single add: { fullName, maidenName?, preferredFirstName?, notes?, isDeceased?,
+ *                 linkRsvpId? }
  *   Bulk add:   { bulk: "line\nline\nline" } — one classmate per line.
  *               Each line may use "FullName | MaidenName" to set maiden.
+ *
+ * The optional `linkRsvpId` on the single-add path performs an atomic
+ * create-and-link via env.DB.batch([INSERT, UPDATE]) — used by the
+ * "Create classmate from this RSVP" button in /admin/classmates'
+ * Unmatched section. D1's batch is a single SQL transaction, so a
+ * UNIQUE-email collision on the INSERT rolls back the whole batch and
+ * the RSVP's ClassmateId stays null. The UPDATE uses last_insert_rowid()
+ * to pick up the just-inserted Classmate's id without a TS round-trip.
+ * The RSVP's existence is pre-validated before the batch — without it,
+ * a non-existent linkRsvpId would silently leave the Classmate row
+ * dangling (SQLite UPDATE matching zero rows is not an error).
  */
 export const POST: APIRoute = async ({ request }) => {
   const admin = await getAdmin(request, env);
@@ -27,8 +39,21 @@ export const POST: APIRoute = async ({ request }) => {
     return jsonError('Could not parse JSON.', 400);
   }
 
+  // linkRsvpId only applies to the single-add path. Surfacing both
+  // fields together is almost certainly a client bug — refuse cleanly
+  // so the caller knows their intent isn't honored.
+  const hasBulk = !!(body && typeof body === 'object'
+    && typeof (body as Record<string, unknown>).bulk === 'string');
+  const linkRsvpIdRaw = body && typeof body === 'object'
+    ? (body as Record<string, unknown>).linkRsvpId
+    : undefined;
+  const hasLink = linkRsvpIdRaw !== undefined && linkRsvpIdRaw !== null;
+  if (hasBulk && hasLink) {
+    return jsonError('linkRsvpId only valid for single-add.', 400);
+  }
+
   // Bulk path
-  if (body && typeof body === 'object' && typeof (body as Record<string, unknown>).bulk === 'string') {
+  if (hasBulk) {
     const text = (body as Record<string, unknown>).bulk as string;
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (lines.length === 0) return jsonError('No lines to import.', 400);
@@ -58,8 +83,27 @@ export const POST: APIRoute = async ({ request }) => {
   // Single-add path
   const result = validate(body);
   if (!result.ok) return jsonError(result.error, 400);
+
+  // Parse + validate the optional link target. Pre-validate that the
+  // RSVP exists BEFORE the batch — see the function-level JSDoc.
+  let linkRsvpId: number | null = null;
+  if (hasLink) {
+    const parsed = typeof linkRsvpIdRaw === 'number'
+      ? linkRsvpIdRaw
+      : Number.parseInt(String(linkRsvpIdRaw), 10);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return jsonError('Missing or invalid linkRsvpId.', 400);
+    }
+    const rsvpExists = await env.DB
+      .prepare('SELECT Id FROM Rsvps WHERE Id = ?1')
+      .bind(parsed)
+      .first<{ Id: number }>();
+    if (!rsvpExists) return jsonError('RSVP not found.', 404);
+    linkRsvpId = parsed;
+  }
+
   try {
-    const res = await env.DB
+    const insert = env.DB
       .prepare(
         `INSERT INTO Classmates
            (FullName, MaidenName, PreferredFirstName, Email, Notes, IsDeceased,
@@ -79,9 +123,29 @@ export const POST: APIRoute = async ({ request }) => {
         result.value.isDeceased ? result.value.photoUrl    : null,
         result.value.isDeceased ? result.value.obituaryUrl : null,
         admin.email,
-      )
-      .run();
-    return Response.json({ ok: true, id: res.meta?.last_row_id ?? null });
+      );
+
+    if (linkRsvpId !== null) {
+      // Atomic create-and-link. last_insert_rowid() inside the second
+      // batch statement resolves to the just-inserted Classmate id.
+      // D1's batch() is one SQL transaction — failure on the INSERT
+      // (e.g. UNIQUE email collision) rolls back both statements.
+      const link = env.DB
+        .prepare(
+          `UPDATE Rsvps
+              SET ClassmateId = last_insert_rowid(),
+                  MatchedBy   = ?1,
+                  MatchedAt   = CURRENT_TIMESTAMP
+            WHERE Id = ?2`
+        )
+        .bind(admin.email, linkRsvpId);
+      const results = await env.DB.batch([insert, link]);
+      const insertedId = results[0]?.meta?.last_row_id ?? null;
+      return Response.json({ ok: true, id: insertedId, linkedRsvpId: linkRsvpId });
+    } else {
+      const res = await insert.run();
+      return Response.json({ ok: true, id: res.meta?.last_row_id ?? null });
+    }
   } catch (err) {
     const msg = String((err as Error)?.message ?? err);
     if (msg.includes('UNIQUE') && msg.toLowerCase().includes('email')) {

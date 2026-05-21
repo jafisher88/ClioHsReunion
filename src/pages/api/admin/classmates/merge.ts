@@ -79,6 +79,14 @@ export const POST: APIRoute = async ({ request }) => {
             WHERE Id = ?6`
         )
         .bind(mergedMaiden, mergedPreferred, mergedEmail, mergedNotes, mergedDeceased, primaryId),
+      // Re-point any RSVPs that had a manual link to the merge loser
+      // onto the merge winner BEFORE deleting the loser. Without this,
+      // the DELETE would null-cascade via ON DELETE SET NULL on
+      // Rsvps.ClassmateId (introduced in migration 0023) and the
+      // manual match would silently disappear.
+      env.DB
+        .prepare(`UPDATE Rsvps SET ClassmateId = ?1 WHERE ClassmateId = ?2`)
+        .bind(primaryId, mergeId),
       env.DB.prepare(`DELETE FROM Classmates WHERE Id = ?1`).bind(mergeId),
     ]);
   } catch (err) {
