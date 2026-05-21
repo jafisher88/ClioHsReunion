@@ -24,36 +24,95 @@ interface RosterRow {
   RsvpAttending: 'yes' | 'no' | 'maybe' | null;
   RsvpGuests: number | null;
   RsvpEmail: string | null;
+  RsvpId: number | null;
+  RsvpClassmateId: number | null;
+  RsvpMatchedBy: string | null;
+  RsvpMatchedAt: string | null;
 }
 
-// Match RSVPs to classmates on three OR-paths:
+interface UnmatchedRsvpRow {
+  Id: number;
+  FullName: string;
+  Email: string;
+  Attending: 'yes' | 'no' | 'maybe';
+  GraduationName: string | null;
+}
+
+interface ClassmatePickerRow {
+  Id: number;
+  FullName: string;
+  MaidenName: string | null;
+  Email: string | null;
+}
+
+// Format a SQLite UTC timestamp into the short admin-pages display
+// format ("May 17 · 14:23"). Used only for static tooltip text — for
+// rendered <time> elements we use the dbToIso() helper + AdminLayout's
+// inline relative-time formatter. Per Slice 3 research (GitLab Pajamas
+// design system): audit trails should use absolute dates, not relative.
+function fmtDate(iso: string | null): string {
+  if (!iso) return '';
+  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[Number(m[2]) - 1]} ${Number(m[3])} · ${m[4]}:${m[5]}`;
+}
+
+// The RSVP↔Classmate join predicate. The first clause is the manual
+// link (set via the match modal / POST /api/admin/rsvps/:id/match) and
+// is authoritative when present. The second clause is the original
+// 3-way heuristic OR-paths, gated on `r.ClassmateId IS NULL` so a
+// manually-linked RSVP can't also heuristic-match a *different*
+// classmate row and appear twice in the roster.
 //   1. exact case-insensitive full-name match (current name ↔ roster current)
 //   2. Classmate.PreferredFirstName + last-of-FullName ↔ RSVP.FullName
 //      (handles "Becky Frey" RSVP against "Rebecca Frey" roster + Becky pref)
 //   3. RSVP.GraduationName ↔ Classmate's first-name + Classmate.MaidenName
 //      (handles "Rebecca Kirby" graduation entry vs "Rebecca Frey" / maiden Kirby)
-// One classmate can match multiple RSVPs; ROW_NUMBER picks the latest.
+//
+// Shared between the roster JOIN and the Unmatched query — extracting
+// it here is the explicit reminder that the two queries must stay in
+// lock-step or RSVPs would show up in both tables.
+const RSVP_JOIN_PREDICATE = `
+  c.Id = r.ClassmateId
+  OR (
+    r.ClassmateId IS NULL AND (
+      LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.FullName))
+      OR (c.PreferredFirstName IS NOT NULL AND c.PreferredFirstName <> ''
+          AND LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.PreferredFirstName || ' ' || substr(c.FullName, instr(c.FullName, ' ') + 1))))
+      OR (c.MaidenName IS NOT NULL AND c.MaidenName <> ''
+          AND r.GraduationName IS NOT NULL AND r.GraduationName <> ''
+          AND LOWER(TRIM(r.GraduationName)) = LOWER(TRIM(substr(c.FullName, 1, instr(c.FullName, ' ') - 1) || ' ' || c.MaidenName)))
+    )
+  )
+`;
+
+// The inner windowed subquery picks one RSVP per FullName for the
+// roster display. ORDER BY prefers manually-linked rows first (so an
+// admin's explicit decision wins even when there's a newer unlinked
+// resubmission with the same FullName), then falls back to most-recent.
 const rosterResult = await env.DB
   .prepare(
     `SELECT c.Id, c.FullName, c.MaidenName, c.PreferredFirstName, c.Email, c.Notes, c.IsDeceased,
             c.BirthYear, c.PassingYear, c.Tribute, c.PhotoUrl, c.ObituaryUrl,
             r.Attending      AS RsvpAttending,
             r.GuestCount     AS RsvpGuests,
-            r.Email          AS RsvpEmail
+            r.Email          AS RsvpEmail,
+            r.Id             AS RsvpId,
+            r.ClassmateId    AS RsvpClassmateId,
+            r.MatchedBy      AS RsvpMatchedBy,
+            r.MatchedAt      AS RsvpMatchedAt
        FROM Classmates c
        LEFT JOIN (
-         SELECT FullName, GraduationName, Attending, GuestCount, Email,
-                ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(FullName)) ORDER BY CreatedAt DESC) AS rn
+         SELECT Id, FullName, GraduationName, Attending, GuestCount, Email, ClassmateId,
+                MatchedBy, MatchedAt,
+                ROW_NUMBER() OVER (
+                  PARTITION BY LOWER(TRIM(FullName))
+                  ORDER BY (ClassmateId IS NOT NULL) DESC, CreatedAt DESC
+                ) AS rn
          FROM Rsvps
        ) r
-         ON r.rn = 1 AND (
-              LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.FullName))
-              OR (c.PreferredFirstName IS NOT NULL AND c.PreferredFirstName <> ''
-                  AND LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.PreferredFirstName || ' ' || substr(c.FullName, instr(c.FullName, ' ') + 1))))
-              OR (c.MaidenName IS NOT NULL AND c.MaidenName <> ''
-                  AND r.GraduationName IS NOT NULL AND r.GraduationName <> ''
-                  AND LOWER(TRIM(r.GraduationName)) = LOWER(TRIM(substr(c.FullName, 1, instr(c.FullName, ' ') - 1) || ' ' || c.MaidenName)))
-            )
+         ON r.rn = 1 AND (${RSVP_JOIN_PREDICATE})
    ORDER BY c.FullName COLLATE NOCASE ASC`
   )
   .all<RosterRow>();
@@ -66,23 +125,37 @@ const rsvpMaybe = roster.filter((r) => r.RsvpAttending === 'maybe').length;
 const deceased = roster.filter((r) => r.IsDeceased === 1).length;
 const notYet = total - rsvped - deceased;
 
-// Unmatched RSVPs — same three OR-paths inverted.
+// Unmatched RSVPs: same predicate, inverted via the WHERE c.Id IS NULL
+// after the LEFT JOIN. A manually-linked RSVP matches c via the first
+// clause of the predicate, so c.Id is NOT NULL and the row is excluded.
+// We pull r.Id into the SELECT so the Match button knows which RSVP to
+// link. NOTE: dropped DISTINCT because we now SELECT a primary key (Id)
+// — multiple submissions from the same person should each be linkable
+// individually.
 const unmatchedResult = await env.DB
   .prepare(
-    `SELECT DISTINCT r.FullName, r.Email, r.Attending, r.GraduationName
+    `SELECT r.Id, r.FullName, r.Email, r.Attending, r.GraduationName
        FROM Rsvps r
-       LEFT JOIN Classmates c
-         ON LOWER(TRIM(c.FullName)) = LOWER(TRIM(r.FullName))
-         OR (c.PreferredFirstName IS NOT NULL AND c.PreferredFirstName <> ''
-             AND LOWER(TRIM(r.FullName)) = LOWER(TRIM(c.PreferredFirstName || ' ' || substr(c.FullName, instr(c.FullName, ' ') + 1))))
-         OR (c.MaidenName IS NOT NULL AND c.MaidenName <> ''
-             AND r.GraduationName IS NOT NULL AND r.GraduationName <> ''
-             AND LOWER(TRIM(r.GraduationName)) = LOWER(TRIM(substr(c.FullName, 1, instr(c.FullName, ' ') - 1) || ' ' || c.MaidenName)))
+       LEFT JOIN Classmates c ON (${RSVP_JOIN_PREDICATE})
       WHERE c.Id IS NULL
-   ORDER BY r.FullName COLLATE NOCASE ASC`
+   ORDER BY r.FullName COLLATE NOCASE ASC, r.CreatedAt ASC`
   )
-  .all<{ FullName: string; Email: string; Attending: string; GraduationName: string | null }>();
+  .all<UnmatchedRsvpRow>();
 const unmatched = unmatchedResult.results ?? [];
+
+// Compact list of every classmate, used to populate the Match modal's
+// picker. ~80 rows; ordered the same way the roster table is, so the
+// admin sees a familiar layout. Cheap server-side render avoids a
+// fetch round-trip when the modal opens.
+const classmatePickerResult = await env.DB
+  .prepare(
+    `SELECT Id, FullName, MaidenName, Email
+       FROM Classmates
+      WHERE IsDeceased = 0
+   ORDER BY FullName COLLATE NOCASE ASC`
+  )
+  .all<ClassmatePickerRow>();
+const classmatePicker = classmatePickerResult.results ?? [];
 ---
 
 <AdminLayout title="Classmates" adminEmail={admin.email}>
@@ -214,6 +287,39 @@ const unmatched = unmatchedResult.results ?? [];
                     : r.RsvpAttending === 'maybe' ? <span class="pill maybe">? Maybe</span>
                     : r.RsvpAttending === 'no'    ? <span class="pill no">✗ No</span>
                     : <span class="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-cream-700">not yet</span>}
+                    {/* Linked-manually badge: shown when this row's RSVP came
+                        from an explicit POST /api/admin/rsvps/:id/match
+                        (RsvpClassmateId === c.Id), not from one of the 3
+                        heuristic OR-paths. title="" tooltip shows the
+                        audit trail per Slice 3 research (absolute date,
+                        not relative time — GitLab Pajamas guidance for
+                        audit data). */}
+                    {r.RsvpAttending !== null && r.RsvpClassmateId === r.Id ? (
+                      <>
+                        <span
+                          class="ml-1.5 inline-flex items-center rounded-full bg-cream-100 px-1.5 py-0.5 font-mono text-[0.55rem] font-semibold uppercase tracking-[0.12em] text-brand-700 ring-1 ring-cream-300"
+                          data-testid="rsvp-linked-badge"
+                          title={r.RsvpMatchedBy && r.RsvpMatchedAt
+                            ? `Linked manually by ${r.RsvpMatchedBy} · ${fmtDate(r.RsvpMatchedAt)}`
+                            : 'Linked manually by an admin'}
+                        >
+                          ★ linked
+                        </span>
+                        {r.RsvpId !== null ? (
+                          <button
+                            type="button"
+                            class="unlink-rsvp-btn ml-1 inline-flex items-center rounded-full border border-cream-300 bg-white px-1.5 py-0.5 font-mono text-[0.55rem] font-semibold uppercase tracking-[0.12em] text-cream-700 transition-colors hover:border-rose-400 hover:bg-rose-50 hover:text-rose-700"
+                            data-testid="rsvp-unlink-btn"
+                            data-rsvp-id={String(r.RsvpId)}
+                            data-rsvp-name={r.FullName}
+                            title={`Unlink this RSVP from ${r.FullName}`}
+                            aria-label={`Unlink RSVP from ${r.FullName}`}
+                          >
+                            ✕
+                          </button>
+                        ) : null}
+                      </>
+                    ) : null}
                   </td>
                   <td class="mono dim">
                     {(() => {
@@ -280,6 +386,10 @@ const unmatched = unmatchedResult.results ?? [];
       </header>
       <form id="classmate-modal-form" class="flex-1 overflow-y-auto px-6 py-5">
         <input type="hidden" name="id" value="" />
+        <!-- Set by the "Create from RSVP" button on the Unmatched table.
+             When non-empty, the POST endpoint atomically links the newly
+             created Classmate to this RSVP via env.DB.batch(). -->
+        <input type="hidden" name="linkRsvpId" value="" />
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <label class="block sm:col-span-1">
             <span class="block text-sm font-semibold text-brand-900">Full name <span class="text-brand-500">*</span></span>
@@ -471,7 +581,8 @@ const unmatched = unmatchedResult.results ?? [];
       </header>
       <p class="mb-3 text-sm text-cream-700">
         These RSVP submissions don't match any roster name (even with preferred name).
-        Add a preferred name to a roster row, fix a typo, or add the missing classmate.
+        Click <strong>Match</strong> to link to an existing classmate, or
+        <strong>Create</strong> to add a new roster row prefilled from the RSVP.
       </p>
       <div class="admin-table-wrap">
         <table class="admin-table">
@@ -480,25 +591,117 @@ const unmatched = unmatchedResult.results ?? [];
               <th>RSVP name</th>
               <th>Status</th>
               <th>Email</th>
+              <th class="num">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {unmatched.map((u) => (
-              <tr>
-                <td><span class="font-semibold">{u.FullName}</span></td>
-                <td>
-                  {u.Attending === 'yes'   ? <span class="pill yes">✓ Yes</span>
-                  : u.Attending === 'maybe' ? <span class="pill maybe">? Maybe</span>
-                  : <span class="pill no">✗ No</span>}
-                </td>
-                <td class="mono dim">{u.Email}</td>
-              </tr>
-            ))}
+            {unmatched.map((u: UnmatchedRsvpRow) => {
+              const prefill = JSON.stringify({
+                rsvpId: u.Id,
+                fullName: u.FullName,
+                email: u.Email,
+                graduationName: u.GraduationName ?? '',
+              });
+              return (
+                <tr>
+                  <td><span class="font-semibold">{u.FullName}</span></td>
+                  <td>
+                    {u.Attending === 'yes'   ? <span class="pill yes">✓ Yes</span>
+                    : u.Attending === 'maybe' ? <span class="pill maybe">? Maybe</span>
+                    : <span class="pill no">✗ No</span>}
+                  </td>
+                  <td class="mono dim">{u.Email}</td>
+                  <td class="num">
+                    <button
+                      type="button"
+                      class="match-btn rounded-full border border-cream-400 bg-white px-3 py-1 text-xs font-semibold text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+                      data-rsvp-id={String(u.Id)}
+                      data-rsvp-name={u.FullName}
+                      data-rsvp-email={u.Email}
+                    >
+                      Match
+                    </button>
+                    <button
+                      type="button"
+                      class="create-from-rsvp-btn ml-1 rounded-full border border-cream-400 bg-white px-3 py-1 text-xs font-semibold text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+                      data-rsvp={prefill}
+                    >
+                      Create
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </section>
   )}
+
+  <!-- Match-RSVP modal — mirrors the merge-modal pattern (filter input
+       + scrollable pre-rendered list + cancel). The list is the entire
+       Classmates roster (~80 rows) rendered server-side so client-side
+       filtering happens with no fetch round-trip. Per the research,
+       no debounce needed at this scale; plain Array.filter is fine. -->
+  <div
+    id="match-modal"
+    data-testid="match-modal"
+    class="hidden fixed inset-0 items-center justify-center p-4"
+    style="z-index: 200;"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="match-modal-title"
+  >
+    <div id="match-modal-backdrop" class="absolute inset-0 bg-brand-900/55"></div>
+    <div class="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-cream-300 bg-cream-50 shadow-2xl">
+      <header class="border-b border-cream-300 px-6 py-4">
+        <p class="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-brand-700">Match RSVP</p>
+        <h2 id="match-modal-title" class="mt-1 font-heading text-xl font-semibold text-brand-900">—</h2>
+        <p id="match-modal-subtitle" class="mt-1 text-xs text-cream-700">Pick the classmate this RSVP belongs to.</p>
+      </header>
+      <div class="px-6 py-4">
+        <input
+          type="text"
+          id="match-modal-filter"
+          role="searchbox"
+          aria-label="Filter classmates by name or email"
+          placeholder="Filter by name or email…"
+          class="block w-full rounded-full border-2 border-cream-300 bg-white px-4 py-2 text-sm text-brand-900 placeholder-cream-500 transition-colors duration-150 hover:border-cream-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+        />
+      </div>
+      <div id="match-modal-list" class="flex-1 overflow-y-auto border-t border-cream-200">
+        {classmatePicker.map((c: ClassmatePickerRow) => (
+          <button
+            type="button"
+            class="match-modal-classmate-row block w-full border-b border-cream-200 px-6 py-3 text-left transition-colors hover:bg-brand-50 focus:bg-brand-50 focus:outline-none"
+            data-testid="match-modal-classmate-row"
+            data-classmate-id={String(c.Id)}
+            data-haystack={`${c.FullName} ${c.MaidenName ?? ''} ${c.Email ?? ''}`.toLowerCase()}
+          >
+            <span class="block font-semibold text-brand-900">{c.FullName}</span>
+            <span class="mt-0.5 block font-mono text-[0.7rem] text-cream-700">
+              {c.MaidenName ? <>née {c.MaidenName} · </> : null}
+              {c.Email ? c.Email : <em>no email on file</em>}
+            </span>
+          </button>
+        ))}
+        <p id="match-modal-empty" class="hidden px-6 py-8 text-center text-sm text-cream-700"></p>
+      </div>
+      <footer class="flex items-center justify-between gap-3 border-t border-cream-300 bg-cream-100/50 px-6 py-3">
+        <span id="match-modal-count" class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cream-700">
+          {classmatePicker.length} classmate{classmatePicker.length === 1 ? '' : 's'}
+        </span>
+        <span id="match-modal-message" class="hidden text-sm"></span>
+        <button
+          type="button"
+          id="match-modal-close"
+          class="rounded-full border border-cream-400 bg-white px-4 py-1.5 text-sm font-medium text-brand-700 transition-colors hover:border-brand-500 hover:text-brand-900"
+        >
+          Cancel
+        </button>
+      </footer>
+    </div>
+  </div>
 </AdminLayout>
 
 <script is:inline>
@@ -546,7 +749,16 @@ const unmatched = unmatchedResult.results ?? [];
     cmDeceasedCb?.addEventListener('change', syncMemorialVisibility);
 
     // -------- Add/Edit modal --------
-    function openClassmateModal(data) {
+    // Three open modes:
+    //   openClassmateModal(null)       — blank add form
+    //   openClassmateModal(rosterData) — edit existing (id present)
+    //   openClassmateModal(null, {linkRsvpId, fullName, email, graduationName})
+    //                                  — "Create from RSVP" prefill: links
+    //                                    the newly created Classmate to the
+    //                                    named RSVP via the linkRsvpId
+    //                                    hidden field (POST endpoint runs
+    //                                    env.DB.batch atomically).
+    function openClassmateModal(data, prefillFromRsvp) {
       cmForm.reset();
       cmMessage.classList.add('hidden');
       if (data) {
@@ -554,6 +766,7 @@ const unmatched = unmatchedResult.results ?? [];
         cmTitle.textContent = data.fullName || 'Edit classmate';
         cmSubmitLabel.textContent = 'Update classmate';
         cmForm.elements.id.value = data.id;
+        cmForm.elements.linkRsvpId.value = '';
         cmForm.elements.fullName.value = data.fullName ?? '';
         cmForm.elements.maidenName.value = data.maidenName ?? '';
         cmForm.elements.preferredFirstName.value = data.preferredFirstName ?? '';
@@ -565,11 +778,33 @@ const unmatched = unmatchedResult.results ?? [];
         cmForm.elements.tribute.value     = data.tribute     ?? '';
         cmForm.elements.photoUrl.value    = data.photoUrl    ?? '';
         cmForm.elements.obituaryUrl.value = data.obituaryUrl ?? '';
+      } else if (prefillFromRsvp) {
+        cmKicker.textContent = `From RSVP "${prefillFromRsvp.fullName}"`;
+        cmTitle.textContent = 'Create classmate from RSVP';
+        cmSubmitLabel.textContent = 'Create + link';
+        cmForm.elements.id.value = '';
+        cmForm.elements.linkRsvpId.value = String(prefillFromRsvp.rsvpId);
+        cmForm.elements.fullName.value = prefillFromRsvp.fullName || '';
+        cmForm.elements.email.value = prefillFromRsvp.email || '';
+        // GraduationName captures "name at yearbook time" — if it differs
+        // from current FullName, the surname-difference is a strong hint
+        // for the MaidenName field (e.g. graduation "Rebecca Kirby" vs
+        // current "Rebecca Frey" → MaidenName=Kirby).
+        if (prefillFromRsvp.graduationName) {
+          const gradParts = prefillFromRsvp.graduationName.trim().split(/\s+/);
+          const currParts = (prefillFromRsvp.fullName || '').trim().split(/\s+/);
+          const gradLast = gradParts[gradParts.length - 1];
+          const currLast = currParts[currParts.length - 1];
+          if (gradLast && currLast && gradLast.toLowerCase() !== currLast.toLowerCase()) {
+            cmForm.elements.maidenName.value = gradLast;
+          }
+        }
       } else {
         cmKicker.textContent = 'Roster';
         cmTitle.textContent = 'Add classmate';
         cmSubmitLabel.textContent = 'Save classmate';
         cmForm.elements.id.value = '';
+        cmForm.elements.linkRsvpId.value = '';
       }
       syncMemorialVisibility();
       cmModal.classList.remove('hidden');
@@ -590,8 +825,11 @@ const unmatched = unmatchedResult.results ?? [];
       e.preventDefault();
       const fd = new FormData(cmForm);
       const id = fd.get('id');
+      const linkRsvpIdRaw = fd.get('linkRsvpId');
+      const linkRsvpId = linkRsvpIdRaw ? Number(linkRsvpIdRaw) : null;
       const payload = {
         ...(id ? { id: Number(id) } : {}),
+        ...(linkRsvpId ? { linkRsvpId } : {}),
         fullName: fd.get('fullName'),
         maidenName: fd.get('maidenName'),
         preferredFirstName: fd.get('preferredFirstName'),
@@ -754,6 +992,180 @@ const unmatched = unmatchedResult.results ?? [];
       document.querySelectorAll('tr[data-search]').forEach((row) => {
         const hay = row.getAttribute('data-search') || '';
         row.style.display = !q || hay.includes(q) ? '' : 'none';
+      });
+    });
+
+    // -------- Match RSVP modal (Slice 2) --------
+    // Lives inside the same IIFE so it can call openClassmateModal (the
+    // existing add/edit modal) for the "Create from RSVP" handoff.
+    const mmModal = document.getElementById('match-modal');
+    const mmBackdrop = document.getElementById('match-modal-backdrop');
+    const mmClose = document.getElementById('match-modal-close');
+    const mmTitle = document.getElementById('match-modal-title');
+    const mmSubtitle = document.getElementById('match-modal-subtitle');
+    const mmFilter = document.getElementById('match-modal-filter');
+    const mmList = document.getElementById('match-modal-list');
+    const mmCount = document.getElementById('match-modal-count');
+    const mmEmpty = document.getElementById('match-modal-empty');
+    const mmMessage = document.getElementById('match-modal-message');
+    const mmRows = mmList ? Array.from(mmList.querySelectorAll('.match-modal-classmate-row')) : [];
+    const totalRows = mmRows.length;
+
+    // The RSVP id the modal is currently matching. Set when "Match" is
+    // clicked in the Unmatched table; consumed when the user picks a
+    // classmate row.
+    let currentRsvpId = null;
+
+    function openMatchModal(rsvpId, rsvpName, rsvpEmail) {
+      currentRsvpId = rsvpId;
+      mmTitle.textContent = rsvpName;
+      mmSubtitle.textContent = rsvpEmail
+        ? `Pick the classmate for the RSVP from ${rsvpEmail}.`
+        : 'Pick the classmate this RSVP belongs to.';
+      mmFilter.value = '';
+      mmMessage.classList.add('hidden');
+      mmEmpty.classList.add('hidden');
+      mmRows.forEach((row) => { row.style.display = ''; });
+      mmCount.textContent = `${totalRows} classmate${totalRows === 1 ? '' : 's'}`;
+      mmModal.classList.remove('hidden');
+      mmModal.classList.add('flex');
+      setTimeout(() => mmFilter.focus(), 0);
+    }
+
+    function closeMatchModal() {
+      mmModal.classList.add('hidden');
+      mmModal.classList.remove('flex');
+      currentRsvpId = null;
+    }
+
+    // Per the Slice 2 research: ~80 rows + .includes() per keystroke is
+    // instant — no debounce needed.
+    if (mmFilter) {
+      mmFilter.addEventListener('input', () => {
+        const q = mmFilter.value.trim().toLowerCase();
+        let visible = 0;
+        mmRows.forEach((row) => {
+          const hay = row.getAttribute('data-haystack') || '';
+          const show = !q || hay.includes(q);
+          row.style.display = show ? '' : 'none';
+          if (show) visible += 1;
+        });
+        mmCount.textContent = `${visible} of ${totalRows}`;
+        if (visible === 0 && q) {
+          mmEmpty.textContent = `No matches for "${mmFilter.value}".`;
+          mmEmpty.classList.remove('hidden');
+        } else {
+          mmEmpty.classList.add('hidden');
+        }
+      });
+    }
+
+    // Row click → POST the match. Delegated on mmList so future rows
+    // (added via, say, a refresh) work too — and avoids 80 listeners.
+    if (mmList) {
+      mmList.addEventListener('click', async (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        const row = target.closest('.match-modal-classmate-row');
+        if (!row) return;
+        const classmateId = Number(row.getAttribute('data-classmate-id'));
+        if (!classmateId || !currentRsvpId) return;
+
+        mmMessage.classList.remove('hidden', 'text-rose-700', 'text-emerald-700');
+        mmMessage.classList.add('text-brand-700');
+        mmMessage.textContent = 'Linking…';
+
+        try {
+          const res = await fetch(`/api/admin/rsvps/${currentRsvpId}/match`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ classmateId }),
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            mmMessage.classList.remove('text-brand-700');
+            mmMessage.classList.add('text-rose-700');
+            mmMessage.textContent = (body && body.error) || `Failed (${res.status})`;
+            return;
+          }
+          mmMessage.classList.remove('text-brand-700');
+          mmMessage.classList.add('text-emerald-700');
+          mmMessage.textContent = 'Linked · reloading';
+          setTimeout(() => location.reload(), 400);
+        } catch {
+          mmMessage.classList.remove('text-brand-700');
+          mmMessage.classList.add('text-rose-700');
+          mmMessage.textContent = 'Network error.';
+        }
+      });
+    }
+
+    mmClose?.addEventListener('click', closeMatchModal);
+    mmBackdrop?.addEventListener('click', closeMatchModal);
+
+    // Wire the per-row "Match" + "Create" buttons in the Unmatched table.
+    document.querySelectorAll('.match-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const rsvpId = Number(btn.getAttribute('data-rsvp-id'));
+        const rsvpName = btn.getAttribute('data-rsvp-name') || 'this RSVP';
+        const rsvpEmail = btn.getAttribute('data-rsvp-email') || '';
+        if (rsvpId) openMatchModal(rsvpId, rsvpName, rsvpEmail);
+      });
+    });
+    document.querySelectorAll('.create-from-rsvp-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const raw = btn.getAttribute('data-rsvp');
+        if (!raw) return;
+        try {
+          const prefill = JSON.parse(raw);
+          openClassmateModal(null, prefill);
+        } catch {
+          // Malformed data-rsvp attribute — fail silently rather than
+          // crash the page; the admin can use the plain "+ add" button.
+        }
+      });
+    });
+
+    // -------- Unlink button (Slice 4) --------
+    // Lives in roster rows that came from a manual RSVP↔Classmate link
+    // (the ones showing the ★ linked badge from Slice 3). Clicking
+    // confirms → DELETE /api/admin/rsvps/:id/match → reload.
+    //
+    // window.confirm() is intentional for this low-stakes action:
+    //   - relinking is one click from the Unmatched section
+    //   - desktop-only admin tool with ~3 users
+    //   - matches the existing delete-classmate confirm pattern lower
+    //     in this script
+    // The confirm text restates the action (not just "Are you sure?")
+    // per Material Design / Beth Aitman writing guidance.
+    document.querySelectorAll('.unlink-rsvp-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        // Stop the row-edit click handler from also firing (the roster
+        // table rows are clickable to open the edit modal).
+        e.stopPropagation();
+        const rsvpId = btn.getAttribute('data-rsvp-id');
+        const rsvpName = btn.getAttribute('data-rsvp-name') || 'this classmate';
+        if (!rsvpId) return;
+        if (!confirm(`Unlink this RSVP from ${rsvpName}? It will return to the Unmatched section.`)) {
+          return;
+        }
+        const buttonEl = btn instanceof HTMLButtonElement ? btn : null;
+        if (buttonEl) buttonEl.disabled = true;
+        try {
+          const res = await fetch(`/api/admin/rsvps/${encodeURIComponent(rsvpId)}/match`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            alert((body && body.error) || `Unlink failed (${res.status})`);
+            if (buttonEl) buttonEl.disabled = false;
+            return;
+          }
+          location.reload();
+        } catch {
+          alert('Network error.');
+          if (buttonEl) buttonEl.disabled = false;
+        }
       });
     });
   })();
